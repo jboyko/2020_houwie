@@ -1,29 +1,44 @@
 # calculates tip edge stats based step 1 of Ho and Ane's (2014) algorithm
 getTipStats <- function(t, y, x){
-  logV = log(t)       #aka logd
-  p = 1/t             # aka vec11
+  logV = log(t)
+  p = 1/t
   uY = y
   uX = x
-  Q = (uX %*% uY)/t
-  return(list(p = p, uY = uY, uX = uX, Q = Q, logV = logV))
+  Qxy = (uX %*% y)/t
+  Qyy = (uY %*% y)/t
+  Qxx = (uX %*% t(x))/t
+  return(list(p = p, uY = uY, uX = uX,
+              Qxy = Qxy, Qyy = Qyy, Qxx = Qxx, 
+              logV = logV))
 }
 
+# combines descendent values
 getNodeStats <- function(time, DescList){
   # descendent subtree values
   ps <- unlist(lapply(DescList, function(x) x$p))
   logVs <- unlist(lapply(DescList, function(x) x$logV))
-  uYs <- unlist(lapply(DescList, function(x) x$uY))
-  uXs <- lapply(DescList, function(x) x$uX)
-  Qs <- lapply(DescList, function(x) x$Q)
+  uYs <- unlist(lapply(DescList, function(x) x$uY)) # currently univariate, could be changed here
+  uXs <- lapply(DescList, function(x) as.matrix(x$uX))
+  Qxy <- lapply(DescList, function(x) as.matrix(x$Qxy))
+  Qyy <- lapply(DescList, function(x) as.matrix(x$Qyy))
+  Qxx <- lapply(DescList, function(x) as.matrix(x$Qxx))
   # combination for node values
   pA <- sum(ps)
   ws <- ps/pA
   logV = sum(logVs) + log(1 + time*pA)
   p = pA/(1 + time*pA)
-  uY = sum(ws * uYs)
-  uX = rowSums(sapply(1:length(ws), function(x) ws[x] * uXs[[x]]))
-  Q = Reduce("+", Qs) - QsSub(time, pA, uX, uY)
-  return(list(p = p, uY = uY, uX = uX, Q = Q, logV = logV))
+  uY = sum(ws * uYs) 
+  if(dim(uXs[[1]])[1] > 1){
+    uX = rowSums(sapply(1:length(ws), function(x) ws[x] * uXs[[x]]))
+  }else{
+    uX = sum(ws * unlist(uXs))
+  }
+  Qxy = Reduce("+", Qxy) - QsSub(time, pA, t(uX), uY)
+  Qxx = Reduce("+", Qxx) - QsSub(time, pA, t(uX), t(uX))
+  Qyy = Reduce("+", Qyy) - QsSub(time, pA, uY, uY)
+  return(list(p = p, uY = uY, uX = uX, 
+              Qxy = Qxy, Qyy = Qyy, Qxx = Qxx,
+              logV = logV))
 }
 
 QsSub <- function(t, pa, ux, uy){
@@ -32,12 +47,13 @@ QsSub <- function(t, pa, ux, uy){
 }
 
 getThreePoint <- function(phy, X, Y){
-  generations <- hisse:::FindGenerations(phy)
+  generations <- corHMM:::FindGenerations(phy)
   nTip <- Ntip(phy)
   
   dec <- phy$edge[,2]
   tip.index <- match(1:nTip, dec)
   tip_times <- phy$edge.length[tip.index]
+
   TipList <- lapply(1:nTip, function(x) getTipStats(tip_times[x], y = Y[x], x = as.matrix(X[x,])))
   
   DescList <- vector("list", dim(phy$edge)[1])
@@ -60,26 +76,16 @@ getThreePoint <- function(phy, X, Y){
   return(res)
 }
 
-require(hisse)
-require(phylolm)
-phy = rtree(10)
-Y = rTrait(n=1,phy)
-p = rTrait(n=1,phy)
-X = cbind(1,p)
-
-getThreePoint(phy, X, Y)
-three.point.compute(phy, X, Y)
-
-
-# T1 <- getTipStats(t[2], Y[1], as.matrix(X[1,]))
-# T2 <- getTipStats(t[3], Y[2], as.matrix(X[2,]))
+# testing
 # 
-# DescList <- list(T1, T2)
+# require(hisse)
+# require(phylolm)
 # 
-# N1 <- getNodeStats(t[1], DescList)
-# T3 <- getTipStats(t[4], Y[3], as.matrix(X[3,]))
+# phy = sim.bdtree(b = 1, d = 0, stop = "taxa", n = 10)
+# Y = rTrait(n=1,phy)
+# p = rTrait(n=1,phy)
+# X = cbind(p)
 # 
-# DecList <- list(N1, T3)
-# getNodeStats(0, DecList)
-# 
+# getThreePoint(phy, X, Y)
+# three.point.compute(phy, X, Y)
 # 
