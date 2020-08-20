@@ -1,23 +1,4 @@
 
-
-## the safety dance 
-#
-# We can dance if we want to. 
-# check the phylogeny (class phylo, branch length properties, tip labels)
-#
-# We can leave your friends behind. 
-# check the data (species labels, correct format)
-# 
-# Cause' your friends don't dance,
-# check the user specified options (any mismatches, missing information)
-#
-# and if they don't dance, well they're
-# check the reasonabiliy of the dataset (10 species with 5 params?)
-#
-# no friends of mine.
-# give appropriate warnings or stop
-#
-
 # test data
 require(OUwie)
 require(phylolm)
@@ -31,19 +12,20 @@ nodelabels(pch=21, bg=select.reg)
 PhyloLMDat <- trait[,3]
 names(PhyloLMDat) <- trait[,1]
 
-OUwieRes <- OUwie(tree,trait,model=c("OUMV"),root.station=FALSE)
+# OUwieRes <- OUwie(tree,trait,model=c("OUM"),root.station=FALSE)
+# alpha=c(OUwieRes$solution[1,])
+# sigma.sq=c(OUwieRes$solution[2,])
+# theta=c(OUwieRes$theta[1,1], OUwieRes$theta[1,1])
+alpha=c(0.01, 0.01)
+sigma.sq=c(0.02, 0.02)
+theta=c(0, 0)
 
-alpha=c(OUwieRes$solution[1,])
-sigma.sq=c(OUwieRes$solution[2,])
-theta=c(OUwieRes$theta[1,1], OUwieRes$theta[1,1])
-
-OUwie.fixed(tree,trait,model=c("OUMVA"), simmap.tree=FALSE, scaleHeight=FALSE,
+OUwie.fixed(tree,trait,model=c("OUM"), simmap.tree=FALSE, scaleHeight=FALSE,
             clade=NULL, alpha=alpha,sigma.sq=sigma.sq,theta=theta)
-OU1d.loglik(trait=PhyloLMDat, phy=tree, model="OUfixedRoot", parameters=list(ancestral.state=OUwieRes$theta[1,1], alpha=OUwieRes$solution[1,1],sigma2=OUwieRes$solution[2,1], optimal.value=OUwieRes$theta[1,1]))
+OU1d.loglik(trait=PhyloLMDat, phy=tree, model="OUfixedRoot", parameters=list(ancestral.state=theta[1], alpha=alpha[1],sigma2=sigma.sq[1], optimal.value=theta[1]))
 
 ## define our variables
 # y = the dependent variable
-# the continuous trait given by the user (one value per tip, we don't DO multivariate you sick f**k)
 y = PhyloLMDat
 
 # X = the independent variable(s)

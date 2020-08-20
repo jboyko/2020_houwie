@@ -15,7 +15,7 @@ getPathToRoot <- function(phy, tip){
   return(path)
 }
 
-# transforms the phylogeny
+# transforms the phylogeny based on a set of paramaters and a simmap
 transformPhy <- function(phy, pars){
   # phy must be of class simmap
   nTip <- length(phy$tip.label)
@@ -63,6 +63,7 @@ transformPhy <- function(phy, pars){
   return(obj)
 }
 
+# calculate the predicted values at the tips
 getOUExpectation <- function(phy, pars){
   # requirements
   RootAge <- max(branching.times(phy))
@@ -98,7 +99,7 @@ getOUExpectation <- function(phy, pars){
 
 
 
-# run
+# run/test
 require(corHMM)
 require(phytools)
 data(primates)
@@ -188,16 +189,17 @@ PhyloLMDat <- trait[,3]
 names(PhyloLMDat) <- trait[,1]
 sig <- c(0.32,0.07,0.02)
 alp <- c(0.05,0.01,0.02)
-opt <- c(1, 0, 1)
+opt <- c(1, -3, 10)
 pars <- matrix(c(opt,sig,alp), 3, 3, dimnames = list(c(1,2,3), c("opt", "sig", "alp")))
 nTip <- length(simmap[[1]]$tip.label)
 
+OUwieFixed <- OUwie.fixed(simmap[[1]],trait,model=c("OUMVA"), simmap.tree=TRUE, scaleHeight=FALSE, clade=NULL, alpha=alp,sigma.sq=sig,theta=opt)
+
 tre1 <- transformPhy(simmap[[1]], pars)
-X <- getOUExpectation(transformPhy(phy, pars)$tree, pars)
+#X <- getOUExpectation(transformPhy(phy, pars)$tree, pars)
 #X <- getOUExpectation(simmap[[1]], pars)
+X <- colSums(t(OUwieFixed$regime.weights[-(1:3),1:3]) * opt)
 comp <- three.point.compute(tre1$tree, PhyloLMDat, X, tre1$diag)
 
-OUwie.fixed(simmap[[1]],trait,model=c("OUM"), simmap.tree=TRUE, scaleHeight=FALSE, clade=NULL, alpha=alp,sigma.sq=sig,theta=opt)$loglik
--as.numeric(Ntip(phy) * log(2 * pi) + comp$logd + comp$PP)/2
+OUwie.fixed(simmap[[1]],trait,model=c("OUMVA"), simmap.tree=TRUE, scaleHeight=FALSE, clade=NULL, alpha=alp,sigma.sq=sig,theta=opt)
 -as.numeric(Ntip(phy) * log(2 * pi) + comp$logd + (comp$PP - 2 * comp$QP + comp$QQ))/2
-
