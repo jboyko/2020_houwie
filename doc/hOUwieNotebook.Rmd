@@ -1,0 +1,47 @@
+---
+title: "hOUwie Notebook"
+output: html_notebook
+---
+
+
+* __Section 1: Replicating Revell (2013)__
+    * 1.1: Introduction
+    * 1.2: Methods
+    * 1.3: Results
+    * 1.4: Discussion
+
+### Section 1: Replicating Revell (2013)
+
+#### 1.1: Introduction
+
+> Here, I examine this practice. In particular, I show that evolutionary rates estimated this way (i.e., by using maximum likelihood [ML] to fit a multirate model on each stochastically mapped tree; and then averaging across trees) are systematically biased to be more similar to each other than are the underlying generating parameters. My analysis also reveals that this effect is dependent on the rate of evolution for the discrete trait. Specifically, if the rate of evolution for the discrete character is low then the difference between the true history and any stochastically mapped 1 history is generally small. This results in evolutionary rates for the continuous trait that are estimated with little bias. Conversely, if the rate of evolution for the discrete character is very high, then the true and hypothesized character histories are often extremely dissimilar, evolutionary rate estimates are biased to be more similar to each other than their underlying generating values, and we lose power to distinguish evolutionary rates on the tree.
+>
+> -- Revell (2013)
+
+![Results from simulation analysis. a) Mean estimated σ^2 for each value of q. Open circles represent estimation from the “true” (i.e., generating) character history; whereas open triangles represent the average of 100 stochastic maps. Error bars are standard deviations across simulations. The horizontal line represents the simulated value of σ^2. b) Same as (a), but for σ22. c) Same as (a) and (b), but for the ratio σ22/σ12. (2013)](/Users/jamesboyko/2020_hOUwie/doc/Fig2c-Revel2013.jpg)
+
+#### 1.2: Methods 
+
+Following Revell (2013), we simulated a single pure birth tree of 100 taxa and rescaled the maximum branching time to 1. We then simulated a single stochastic map of a binary character under an equal rates model with transition rates of 0.5, 1, 2, 4, and 8. Next, we simulated a continuous character where state 1 had a sigma^2 rate of 1 and state 2 had a sigma^2 of 10. 
+
+We fit the data using two versions of the hOUwie model, the true generating history, and using 100 stochastic maps generated from the discrete tip data. The two versions of the hOUwie model use the arithmetic mean the OU fits (hOUwieTru) or takes the maximum of the OU fits (hOUwieWt).
+
+The code to produce the simulations can be found in `20.12.04-Run_hOUwieVsStoch.R`. 
+
+#### 1.3: Results
+
+![hOUwie vs several stochastic maps](/Users/jamesboyko/2020_hOUwie/doc/hOUwieVsStoch.jpg)
+
+The code to produce the results can be found in `20.12.14-Analyze_hOUwieVsStoch.R`.
+
+#### 1.4: Discussion
+
+```{r}
+print(read.table(file = "MedianTablePercent.csv"))
+```
+Median percent difference for each model's ratio of sigma^2_2 / sigma^2_2, when the true ratio is 10. For example, a value of -2.09 for TrueMap/ q_0.5 means that the True Map estimate of the ratio was 2.09% smaller than the true simulating ratio (the TrueMap median ratio was found to be 9.791).
+
+>"The median estimate from stochastic is off by X% on average; houwie is off by 0.3X% on average. But more strikingly, for a given run, stochastic estimates can be very far apart, some with values over 5 times the true value. Houwie estimates show much less noise, being within Y of the true value"
+>
+> Brian O'Meara
+
