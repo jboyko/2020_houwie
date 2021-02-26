@@ -1,47 +1,94 @@
 ---
 title: "hOUwie Notebook"
+author: "James Boyko"
+og:
+  type: "article"
+  title: "opengraph title"
+  url: "optional opengraph url"
+  image: "optional opengraph image link"
+footer:
+  - content: '[link1](http://example.com/) • [link2](http://example.com/)<br/>'
+  - content: 'Copyright blah blah'
+date: "`r Sys.Date()`"
 output: html_notebook
 ---
+```{r, include=FALSE}
+source("~/2020_hOUwie/hOUwie.R")
+require(OUwie)
+require(corHMM)
+require(parallel)
+```
+
+## Section 1: Introducing hOUwie
+
+### 1.1: Motivation
+
+Many evolutionary questions involve addressing how rates of character evolution change through time either agnostically (Venditti et al. 2006; Harmon et al. 2010; Eastman et al. 2011) or dependent on a particular explanatory variable (O’Meara et al. 2006; May and Moore 2020). Typically, these questions follow a structure which posits that the rate of a continuous character is dependent on state of a discrete character. For example, it could be that the beak length of a Galapagos island finch is dependent on the presence or absence of a drought (Grant and Grant 2006), or that the genome size of a particular plant lineage depends on whether they are a short-lived herbaceous organism or a long-lived woody organism (Beaulieu et al. 2012). In these examples and many others, the evolution of discrete and continuous traits are not independent from each other and are therefore subject to the biases of existing methodology. hOUwie seeks to model the joint evolution of a continuous character with evolution of the discrete variable. In this way, we are able to pose questions that are more specific to the particular biology of the system and are able to provide users a means to apply their biological expertise in a statistically rigorous framework. 
+
+One of the problems with existing approaches for inferring the relationship between rates of evolutionary change and their underlying cause is systematic bias (Revell 2013; May and Moore 2020). In part, this bias exists because current approaches rely on the comparison of null models (models which suggests that there is no rate variation) to alternative models. This dichotomy is susceptible to a straw-man effect in which the influence of a given factor is inflated because it is being compared to an unrealistic and simple null model. To resolve this problem, we propose to develop a model which jointly estimates the rate of continuous character evolution and the evolution of the underlying cause. In addition, our model is able to address the straw-man effect by estimating the presence of hidden rate variation, i.e., variation that is not due to the proposed explanatory variable. 
+
+### 1.2 Goals
+The primary purpose of this document is to help organize my thoughts on how best to test the hOUwie model. Additionally, I will summarize my results here and provide some small amount of discussion. Our problem is to test that hOUwie has "good" statistical behavior. We can break that larger problem into two smaller problems: (1) the problem of parameter estimation, and (2) the problem of model selection. Problem (1) pertains to whether hOUwie is able to identify parameters and is asymptotically unbiased. Problem (2) pertains to whether hOUwie, when compared to other models, fits the data best when it is the true model and does not fit best when another model is the true model. Obviously, if we can't demonstrate that hOUwie identifies parameters correctly, there is no little in examining Problem (2). Additionally, the inclusion of hidden states adds utility and complexity. With hidden states we gain access to a type of null model, where rate variation in the continuous character can be independent of observed state and is instead dependent on the hidden state. Hidden states also allow for a more complicated model structure. We will discuss and test these dynamics in detail later. 
+
+## Section 2: The Problem of Parameter Estimation
+
+## 2.1 Model Evaluation Criteria
+
+### 2.1.1 Standard Regression 
+
+#### Slope and y-intercept
+The slope and y-intercept of the best-fit regression line can indicate how well simulated data match measured data. The slope indicates the relative relationship between simulated and measured values. The y-intercept indicates the presence of a lag or lead between model predictions and measured data, or that the data sets are not perfectly aligned. 
+
+#### Pearson’s correlation coefficient ($r$) and coefficient of determination ($R^2$)
+Pearsons's correlation coefficient ($r$) and coefficient of determination ($R^2$) describe the degree of colinearity between simulated and measured data. The correlation coefficient ranges from -1 to 1 and is an index of degree of linear relationship between the simulated and measured data. If $r=0$, no relationship exists, if $r=1$ or $r=-1$, a perfect positive or perfect negative linear relationship exists. $R^2$ ranges from 0 to 1 and describes the proportion of variation in measured data is explained by the model. Higher values indicate less error. Although these are commonly used, they tend to be sensitive to outliers.
+
+### 2.1.1 Dimensionless
+
+#### Index of agreement ($d$)
+The index of agreement ($d$) was developed by Willmott (1981) as a standard measure of the degree of model prediction error and varies between 0 and 1. A value of 1 indicates a perfect match between measured and predicted values, while 0 indicates no agreement. The index of agreement is a ratio of means square error and "potential error". The author defined potential error as the sum of the squared absolute values of the distances from the predicted values to the mean observed value and distances from the observed values to the mean observed value ($(|x_p| - |\bar x_o|)^2 + (|x_o| - |\bar x_o|)^2$).The index of agreement can detect additive and proportional differences in the observed and simulated means and variances; however, d is overly sensitive to extreme values due to the squared differences (Legates and McCabe, 1999).
+
+#### Nash-Suttcliffe efficiency (NSE)
+The Nash-Suttcliffe efficiency is a normalized statistic that determines the relative magnitude of the residual variance ("noise) compared to the measured data variance ("information"). NSE measures how well the plot of observed versus simulated data fits the 1:1 line. NSE is computed as shown:
+
+$NSE = 1 - \left[\frac{\sum_{i=1}^n(Y_i^{obs} - Y_i^{sim})^2}{\sum_{i=1}^n(Y_i^{obs} - Y^{mean})^2}\right]$
+
+where $Y_i^{obs}$ is the $i$th observation for the constituent being evaluated, $Y_i^{sim}$ is the $i$th simulated value for the constituent being evaluated, $Y^{mean}$ is the mean of observed data for the constituent being evaluated, and $n$ is the total number of observations.
+
+NSE ranges between $-\infty$ and 1.0 (1 inclusive), with NSE = 1 being the optimal value. Values between 0.0 and 1.0 are generally viewed as acceptable levels of performance, whereas values <0.0 indicates that the mean observed value is a better predictor than the simulated value, which indicates unacceptable performance.
+
+### 2.1.1 Error index
+
+#### MAE, MSE, and RMSE
+Several error indices are commonly used in model evaluation. These include mean absolute error (MAE), mean square error (MSE), and root mean square error (RMSE). These indices are valuable because they indicate error in the units (or squared units) of the constituent of interest, which aids in analysis of the results. RMSE, MAE, and MSE values of 0 indicate a perfect fit. Singh et al. (2004) state that RMSE and MAE values less than half the standard deviation of the measured data may be considered low and that either is appropriate for model evaluation.
+
+#### RMSE-observations standard deviation ratio (RSR)
+RMSE is one of the commonly used error index statistics. Although it is commonly accepted that the lower the RMSE the better the model performance, only Singh et al. (2004) have published a guideline to qualify what is considered a low RMSE based on the observations standard deviation. Based on the recommendation by Singh et al. (2004), a model evaluation statistic, named the RMSE-observations standard deviation ratio (RSR), was developed. RSR standardizes RMSE using the observations standard deviation, and it combines both an error index and the additional information recommended by Legates and McCabe (1999). RSR is calculated as the ratio of the RMSE and standard deviation of measured data, as shown:
+
+$RSR = \frac{RMSE}{STDEV_{obs}} = \frac{\sqrt{\sum_{i=1}^n(Y_i^{obs} - Y_i^{sim})^2}}{\sqrt{\sum_{i=1}^n(Y_i^{obs} - Y^{mean})^2}}$
+
+RSR incorporates the benefits of error index statistics and includes a scaling/normalization factor, so that the resulting statistic and reported values can apply to various constituents. RSR varies from the optimal value of 0, which indicates zero RMSE or residual variation and therefore perfect model simulation, to a large positive value. The lower RSR, the lower the RMSE, and the better the model simulation performance.
 
 
-* __Section 1: Replicating Revell (2013)__
-    * 1.1: Introduction
-    * 1.2: Methods
-    * 1.3: Results
-    * 1.4: Discussion
 
-### Section 1: Replicating Revell (2013)
-
-#### 1.1: Introduction
+### 2.2: Replicating Revell (2013)
 
 > Here, I examine this practice. In particular, I show that evolutionary rates estimated this way (i.e., by using maximum likelihood [ML] to fit a multirate model on each stochastically mapped tree; and then averaging across trees) are systematically biased to be more similar to each other than are the underlying generating parameters. My analysis also reveals that this effect is dependent on the rate of evolution for the discrete trait. Specifically, if the rate of evolution for the discrete character is low then the difference between the true history and any stochastically mapped 1 history is generally small. This results in evolutionary rates for the continuous trait that are estimated with little bias. Conversely, if the rate of evolution for the discrete character is very high, then the true and hypothesized character histories are often extremely dissimilar, evolutionary rate estimates are biased to be more similar to each other than their underlying generating values, and we lose power to distinguish evolutionary rates on the tree.
 >
 > -- Revell (2013)
 
-![Results from simulation analysis. a) Mean estimated σ^2 for each value of q. Open circles represent estimation from the “true” (i.e., generating) character history; whereas open triangles represent the average of 100 stochastic maps. Error bars are standard deviations across simulations. The horizontal line represents the simulated value of σ^2. b) Same as (a), but for σ22. c) Same as (a) and (b), but for the ratio σ22/σ12. (2013)](/Users/jamesboyko/2020_hOUwie/doc/Fig2c-Revel2013.jpg)
-
-#### 1.2: Methods 
-
 Following Revell (2013), we simulated a single pure birth tree of 100 taxa and rescaled the maximum branching time to 1. We then simulated a single stochastic map of a binary character under an equal rates model with transition rates of 0.5, 1, 2, 4, and 8. Next, we simulated a continuous character where state 1 had a sigma^2 rate of 1 and state 2 had a sigma^2 of 10. 
 
-We fit the data using two versions of the hOUwie model, the true generating history, and using 100 stochastic maps generated from the discrete tip data. The two versions of the hOUwie model use the arithmetic mean the OU fits (hOUwieTru) or takes the maximum of the OU fits (hOUwieWt).
-
 The code to produce the simulations can be found in `20.12.04-Run_hOUwieVsStoch.R`. 
-
-#### 1.3: Results
+The code to produce the results can be found in `20.12.14-Analyze_hOUwieVsStoch.R`.
 
 ![hOUwie vs several stochastic maps](/Users/jamesboyko/2020_hOUwie/doc/hOUwieVsStoch.jpg)
 
-The code to produce the results can be found in `20.12.14-Analyze_hOUwieVsStoch.R`.
+Median percent difference for each model's ratio of $\sigma^2_1$ / $\sigma^2_2$, when the true ratio is 10. For example, a value of -2.09 means that the estimate of the ratio was 2.09% smaller than the true simulating ratio.
 
-#### 1.4: Discussion
-
-```{r}
+```{r, echo=FALSE}
 print(read.table(file = "MedianTablePercent.csv"))
 ```
-Median percent difference for each model's ratio of sigma^2_2 / sigma^2_2, when the true ratio is 10. For example, a value of -2.09 for TrueMap/ q_0.5 means that the True Map estimate of the ratio was 2.09% smaller than the true simulating ratio (the TrueMap median ratio was found to be 9.791).
 
->"The median estimate from stochastic is off by X% on average; houwie is off by 0.3X% on average. But more strikingly, for a given run, stochastic estimates can be very far apart, some with values over 5 times the true value. Houwie estimates show much less noise, being within Y of the true value"
->
-> Brian O'Meara
+### 2.2: 
+
 

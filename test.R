@@ -24,7 +24,7 @@ dat <- full.data$data
 
 index.cor <- corHMM:::getFullMat(list(corHMM:::getStateMat4Dat(data[,c(1,2)], "ER")$rate.mat, corHMM:::getStateMat4Dat(data[,c(1,2)], "ER")$rate.mat), corHMM:::getStateMat4Dat(data[,c(1,2)], "ER")$rate.mat)
 # index.cor <- corHMM:::getStateMat4Dat(data[,c(1,2)], "ER")$rate.mat
-index.ou <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, dim(index.cor)[2])
+index.ou <- getOUParamStructure("OU1", "three.point", FALSE, FALSE, dim(index.cor)[2])
 
 test <- hOUwie(phy = phy, data = dat, rate.cat = 2, 
                index.cor = index.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,
