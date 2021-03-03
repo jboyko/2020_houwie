@@ -28,67 +28,262 @@ Many evolutionary questions involve addressing how rates of character evolution 
 One of the problems with existing approaches for inferring the relationship between rates of evolutionary change and their underlying cause is systematic bias (Revell 2013; May and Moore 2020). In part, this bias exists because current approaches rely on the comparison of null models (models which suggests that there is no rate variation) to alternative models. This dichotomy is susceptible to a straw-man effect in which the influence of a given factor is inflated because it is being compared to an unrealistic and simple null model. To resolve this problem, we propose to develop a model which jointly estimates the rate of continuous character evolution and the evolution of the underlying cause. In addition, our model is able to address the straw-man effect by estimating the presence of hidden rate variation, i.e., variation that is not due to the proposed explanatory variable. 
 
 ### 1.2 Goals
-The primary purpose of this document is to help organize my thoughts on how best to test the hOUwie model. Additionally, I will summarize my results here and provide some small amount of discussion. Our problem is to test that hOUwie has "good" statistical behavior. We can break that larger problem into two smaller problems: (1) the problem of parameter estimation, and (2) the problem of model selection. Problem (1) pertains to whether hOUwie is able to identify parameters and is asymptotically unbiased. Problem (2) pertains to whether hOUwie, when compared to other models, fits the data best when it is the true model and does not fit best when another model is the true model. Obviously, if we can't demonstrate that hOUwie identifies parameters correctly, there is no little in examining Problem (2). Additionally, the inclusion of hidden states adds utility and complexity. With hidden states we gain access to a type of null model, where rate variation in the continuous character can be independent of observed state and is instead dependent on the hidden state. Hidden states also allow for a more complicated model structure. We will discuss and test these dynamics in detail later. 
+Our goal is to identify the principal determinants of model-selection power and parameter-estimation accuracy in hOUwie. We will call these (1) the problem of parameter estimation, and (2) the problem of model selection. In the following, we first describe and explain the model. Next, we outline the design of our simulation study. We then present results regarding the determinants of model-selection power (probability of choosing the correct model) and parameter-estimation accuracy (expected error in estimated parameters). Finally, the inclusion of hidden states adds utility and complexity. With hidden states we gain access to a type of null model, where rate variation in the continuous character can be independent of observed state and is instead dependent on the hidden state. Hidden states also allow for a more complicated model structure. We will discuss and test these dynamics in detail. 
 
-## Section 2: The Problem of Parameter Estimation
+## Section 2: Evaluating hOUwie
 
-## 2.1 Model Evaluation Criteria
+### 2.1 The Model
 
-### 2.1.1 Standard Regression 
+#### The model of continuous character evolution
 
-#### Slope and y-intercept
-The slope and y-intercept of the best-fit regression line can indicate how well simulated data match measured data. The slope indicates the relative relationship between simulated and measured values. The y-intercept indicates the presence of a lag or lead between model predictions and measured data, or that the data sets are not perfectly aligned. 
+Our model is composed of two processes: one describes the evolution of a discrete character and the other the evolution of a continuous character. To model the evolution of our continuous character we have chosen to use an Ornstein-Uhlenbeck (OU) model (Hansen 1997; Butler and King 2004, Hansen et al. 2008, Beaulieu et al. 2012). This model combines the stochastic evolution of a trait through time with a deterministic component which models the tendency for a trait to evolve towards an adaptive optima. In this model, a trait ($X(t)$) is is pulled towards an optimum at a rate that is scaled by the parameter $\alpha$, while the optimum itself (which may change through time) is denoted by the parameter $\theta(t)$. $\theta(t)$ is piecewise constant on intervals and takes values in a finite set $\{\theta_i\}$. This represents the set of "selective regimes", "regimes", or Simpson's "adaptive zones" based on narrational preference. Additionally, random deviations are introduced by Gaussian white noise $dB(t)$, which is distributed as a normal random variable with mean zero and variance one. The magnitude of these deviations is scaled by the noise intensity $\sigma$. $\alpha$ has been interpreted as the strength of selection (Simpson 1953, Lande 1976, 1980) and $\sigma$ has been referred to as genetic drift (Lande 1976, Hansen 1997). This latter interpretation has been criticized on the grounds that stochasticity may arise from factors other than genetic drift. The OU process is an Itô difussion satisfying:
 
-#### Pearson’s correlation coefficient ($r$) and coefficient of determination ($R^2$)
-Pearsons's correlation coefficient ($r$) and coefficient of determination ($R^2$) describe the degree of colinearity between simulated and measured data. The correlation coefficient ranges from -1 to 1 and is an index of degree of linear relationship between the simulated and measured data. If $r=0$, no relationship exists, if $r=1$ or $r=-1$, a perfect positive or perfect negative linear relationship exists. $R^2$ ranges from 0 to 1 and describes the proportion of variation in measured data is explained by the model. Higher values indicate less error. Although these are commonly used, they tend to be sensitive to outliers.
+$$
+X(t) = \alpha(\theta(t) -X(t))+\sigma dB(t)
+$$
 
-### 2.1.1 Dimensionless
+#### The model of discrete character evolution
 
-#### Index of agreement ($d$)
-The index of agreement ($d$) was developed by Willmott (1981) as a standard measure of the degree of model prediction error and varies between 0 and 1. A value of 1 indicates a perfect match between measured and predicted values, while 0 indicates no agreement. The index of agreement is a ratio of means square error and "potential error". The author defined potential error as the sum of the squared absolute values of the distances from the predicted values to the mean observed value and distances from the observed values to the mean observed value ($(|x_p| - |\bar x_o|)^2 + (|x_o| - |\bar x_o|)^2$).The index of agreement can detect additive and proportional differences in the observed and simulated means and variances; however, d is overly sensitive to extreme values due to the squared differences (Legates and McCabe, 1999).
+Most previous phylogenetic comparative models of an OU process have assumed that the intervals and regimes are known, though the optimum trait values associated with each regime are not (but see, Revell 2013 and May and Moore 2020). This leaves no room for inference about the regimes themselves and how they change through time, nor the possibility that the evolution of the continuous character could influence change in the regimes or vice versa. To resolve this problem, we will model the evolution of these regimes as a discrete character. For this, we have assumed that regime change follows a hidden Markov model (Felsenstein and Churchill 1996; Yang 1994; Beaulieu et al. 2013). 
 
-#### Nash-Suttcliffe efficiency (NSE)
-The Nash-Suttcliffe efficiency is a normalized statistic that determines the relative magnitude of the residual variance ("noise) compared to the measured data variance ("information"). NSE measures how well the plot of observed versus simulated data fits the 1:1 line. NSE is computed as shown:
+Hidden Markov models have a hierarchical structure that can be broken down into two components: a "state-dependent process" and an unobserved "parameter process" (Zucchini, MacDonald, & Langrock, 2017). Under an HMM, observations are generated by a given state-dependent process, which in turn depends on the state of the parameter process. In other words, the observed data are the product of several processes occurring in different parts of a phylogeny and the parameter process is way of linking them. It is initially unknown what the parameter process corresponds to biologically, hence the moniker “hidden” state. Nevertheless, the information for detecting hidden states comes from the differences in how the observed states change. As long as the transitions between observed states of different lineages are more adequately described by several Markov processes rather than a single process, there will be information to detect hidden states (Boyko and Beaulieu 2020). In comparative biology, for characters that take on discrete states the standard "state-dependent process" is a continuous-time Markov chain with finite state-space (CTMC-FS). The observed states could be any discretized trait such as presence or absence of extrafloral nectaries (Marazzi et al., 2012), woody or herbaceous growth habit (Beaulieu et al., 2013), or diet state across all animals (Román-Palacios et al. 2019). However, a simple Markov process that assumes homogeneity through time and across taxa is often not adequate to capture the variation of real datasets (e.g. Beaulieu et al., 2013), and thus one way to use HMMs is to link multiple evolutionary models (such as a standar Mk) together. 
 
-$NSE = 1 - \left[\frac{\sum_{i=1}^n(Y_i^{obs} - Y_i^{sim})^2}{\sum_{i=1}^n(Y_i^{obs} - Y^{mean})^2}\right]$
+Under a standard Mk model, transitions between discrete states occurs at a particular rate $q_{ij}$, where a state changes from state $i$ to state $j$. These transition rates are often presented in the form of a matrix (transition rate matrix). This matrix describes the possible transitions between all $k$ states of the system. For example, an Mk model with $k=3$ states has the following form as it's most general form:
 
-where $Y_i^{obs}$ is the $i$th observation for the constituent being evaluated, $Y_i^{sim}$ is the $i$th simulated value for the constituent being evaluated, $Y^{mean}$ is the mean of observed data for the constituent being evaluated, and $n$ is the total number of observations.
+$$
+Q_{Mk} = \begin{bmatrix}
+- & q_{12} & q_{13} \\
+q_{21} & - & q_{23}\\
+q_{31} & q_{32} & - \\
+\end{bmatrix}
+\quad
+$$
+The $-$ on the diagonal is a quantity required to make each row sum to zero. The Mk modeling framework can be modified and expanded in several ways. These modifications can lead to hypotheses of, for example, ordered transitions (e.g. it may not be possible to directly go from $1 \rightarrow 3$, but instead requires $1 \rightarrow 2 \rightarrow 3$), or models of correlated evolution where the transition rate of character $X$ is dependent the state of character $Y$. Regardless of the state-dependent process, we can link these together in a way that allows for rate variation. For example, say rate matrix $Q_{ord}$ described the evolution of a particular as being ordered and $Q_{er}$ modeled the possibility that all transitions between the states of a particular character are equal. We can combine these different state-dependent structures in a hidden Markov model generally as a block matrix.
 
-NSE ranges between $-\infty$ and 1.0 (1 inclusive), with NSE = 1 being the optimal value. Values between 0.0 and 1.0 are generally viewed as acceptable levels of performance, whereas values <0.0 indicates that the mean observed value is a better predictor than the simulated value, which indicates unacceptable performance.
+$$
+Q_{hmm} = \begin{bmatrix}
+Q_{ord} & q_{Q_{ord}\rightarrow Q_{er}} \\
+q_{Q_{er}\rightarrow Q_{ord}} & Q_{er} \\
+\end{bmatrix}
+\quad
+$$
 
-### 2.1.1 Error index
+#### Combining discrete and continuous character evolution
 
-#### MAE, MSE, and RMSE
-Several error indices are commonly used in model evaluation. These include mean absolute error (MAE), mean square error (MSE), and root mean square error (RMSE). These indices are valuable because they indicate error in the units (or squared units) of the constituent of interest, which aids in analysis of the results. RMSE, MAE, and MSE values of 0 indicate a perfect fit. Singh et al. (2004) state that RMSE and MAE values less than half the standard deviation of the measured data may be considered low and that either is appropriate for model evaluation.
+Here we get to the main goal of this project, which is to design a framework for simultaneously optimizing a discrete character model while also fitting a continuous character model with OUwie. The idea behind this is that we assume a correlation between the two trait types, but we reconstruct the regimes first, then fit OUwie separately. However, this is not what we want, because rates of continuous character evolution may not be optimal without information from how the regimes evolved and regime change may not be optimal without information from how rates change. Here we use a hierarchical maximum likelihood approach using the stochastic mapping now implemented in `corHMM()`. The likelihood function is computed by summing over all possible maps.
 
-#### RMSE-observations standard deviation ratio (RSR)
-RMSE is one of the commonly used error index statistics. Although it is commonly accepted that the lower the RMSE the better the model performance, only Singh et al. (2004) have published a guideline to qualify what is considered a low RMSE based on the observations standard deviation. Based on the recommendation by Singh et al. (2004), a model evaluation statistic, named the RMSE-observations standard deviation ratio (RSR), was developed. RSR standardizes RMSE using the observations standard deviation, and it combines both an error index and the additional information recommended by Legates and McCabe (1999). RSR is calculated as the ratio of the RMSE and standard deviation of measured data, as shown:
+$$L(X,D|\Theta,\Phi) = P(D|\Phi)\sum_{z}{P(z|D,\Phi)g(X|\Theta, z)},$$
+where $P(D|\Phi)$ is the probability of observing the vector states, *D*, at the tips of a phylogeny given parameters $\Phi$, and $P(z|D,\Phi)$ provides the probability of a character map *z* given a vector of character state D and parameters $\Phi$ (note we use $\Phi$ to generically define any model that will estimate a character history). The mixture probability, $g(X|\Theta,z)$, is the BM or OU likelihood given a set of parameters $\Theta$ and character map *z*. 
 
-$RSR = \frac{RMSE}{STDEV_{obs}} = \frac{\sqrt{\sum_{i=1}^n(Y_i^{obs} - Y_i^{sim})^2}}{\sqrt{\sum_{i=1}^n(Y_i^{obs} - Y^{mean})^2}}$
+It is unclear how one would go about calculating $P(z|D,\Phi)$, especially with a larger tree and many character states. Instead, it is easier to sample a large number of realizations of the character transitions given *D* and $\Phi$. This is where the stochastic maps come in. The summation above would then be over a set of unique character maps that appear in the sample. The frequency of each unique map, $f_z$, would then be used as an estimate of $P(z|D,\Phi)$. If each character map is unique, then the summation is simple an average of likelihoods across the set of maps. This approach is costly from a computational perspective because for every new set of $\Phi$ proposed a new set of character maps would have to be generated and reevaluated. 
 
-RSR incorporates the benefits of error index statistics and includes a scaling/normalization factor, so that the resulting statistic and reported values can apply to various constituents. RSR varies from the optimal value of 0, which indicates zero RMSE or residual variation and therefore perfect model simulation, to a large positive value. The lower RSR, the lower the RMSE, and the better the model simulation performance.
+To start, it is unclear how many maps would suffice to get a good approximation of $P(z|D,\Phi)$. Here I sample parameters following a unit Latin hypercube. Additionally, following Cresller et al. (2016), $\Delta\theta$ is fixed to be one and the phylogeny is scaled to have a height of one. Below are the parameters estimated from our sampling design [0, 3] for all $q$, $\alpha$, and $\sigma^2$.
 
-
-
-### 2.2: Replicating Revell (2013)
-
-> Here, I examine this practice. In particular, I show that evolutionary rates estimated this way (i.e., by using maximum likelihood [ML] to fit a multirate model on each stochastically mapped tree; and then averaging across trees) are systematically biased to be more similar to each other than are the underlying generating parameters. My analysis also reveals that this effect is dependent on the rate of evolution for the discrete trait. Specifically, if the rate of evolution for the discrete character is low then the difference between the true history and any stochastically mapped 1 history is generally small. This results in evolutionary rates for the continuous trait that are estimated with little bias. Conversely, if the rate of evolution for the discrete character is very high, then the true and hypothesized character histories are often extremely dissimilar, evolutionary rate estimates are biased to be more similar to each other than their underlying generating values, and we lose power to distinguish evolutionary rates on the tree.
->
-> -- Revell (2013)
-
-Following Revell (2013), we simulated a single pure birth tree of 100 taxa and rescaled the maximum branching time to 1. We then simulated a single stochastic map of a binary character under an equal rates model with transition rates of 0.5, 1, 2, 4, and 8. Next, we simulated a continuous character where state 1 had a sigma^2 rate of 1 and state 2 had a sigma^2 of 10. 
-
-The code to produce the simulations can be found in `20.12.04-Run_hOUwieVsStoch.R`. 
-The code to produce the results can be found in `20.12.14-Analyze_hOUwieVsStoch.R`.
-
-![hOUwie vs several stochastic maps](/Users/jamesboyko/2020_hOUwie/doc/hOUwieVsStoch.jpg)
-
-Median percent difference for each model's ratio of $\sigma^2_1$ / $\sigma^2_2$, when the true ratio is 10. For example, a value of -2.09 means that the estimate of the ratio was 2.09% smaller than the true simulating ratio.
-
-```{r, echo=FALSE}
-print(read.table(file = "MedianTablePercent.csv"))
+```{r, echo = FALSE, fig.cap=paste("Your caption.")}
+set.seed(1985)
+X <- randomLHS(n = 250, k = 3)
+X <- X * 3 # https://r.789695.n4.nabble.com/R-Latin-hyper-cube-sampling-from-expand-grid-td816493.html
+colnames(X) <- c("p.mk", "alpha", "sig2")
+pairs(X) # plot of parameter sampling
 ```
 
-### 2.2: 
+We evaluate the likelihood of each combination of params given that hOUwie is evaluating with 500 simmaps.The code below is an example for evaluating 500 simmaps. This procedure was used for 10, 100, 500, and 1000 simmaps.
+
+```{r}
+# using a random number generator for which seeds apply to parallel computation
+RNGkind("L'Ecuyer-CMRG")
+# set.seed(1985) # testing
+# mclapply(1:2, FUN = function(i) sample(1:5))
+# mclapply(1:2, FUN = function(i) sample(1:5))
+
+nLikEval <- function(p.subset, nEval, nSimmaps){
+  p <- c(mk = NA, alpha = NA, sig2 = NA, opt1 = 1, opt2 = 2)
+  p[1] <- p.subset[1]
+  p[2] <- p.subset[2]
+  p[3] <- p.subset[3]
+  lliks <- sapply(1:nEval, function(x) hOUwie(phy = tree, data = trait, rate.cat = 1, model.cor = "ER", model.ou = "OUM", p = p, nSim = nSimmaps, quiet = TRUE)$loglik)
+  return(lliks)
+}
+
+n.par.combos <- 250 # 250 random parameter combinations
+n.evaluations <- 100 # 100 evaluations to each combination
+n.simmaps <- 500 # evaluate 500 simmaps per likelihood
+
+set.seed(1985)
+X <- randomLHS(n = n.par.combos, k = 3)
+X <- X * 3
+colnames(X) <- c("p.mk", "alpha", "sig2")
+pairs(X)
+par.set <- vector("list", dim(X)[1])
+for(i in 1:dim(X)[1]){
+  par.set[[i]] <- X[i,]
+}
+
+# data(tworegime)
+# tree$edge.length <- tree$edge.length/max(branching.times(tree))
+# set.seed(1985)
+# out <- mclapply(par.set, function(x) nLikEval(x, n.evaluations, n.simmaps), mc.cores = 40)
+```
 
 
+### 2.2 The Simulation Study
+
+The maximum number of parameters ($k$) for the most complex hOUwie model is going to depend on the number of observed discrete states and the number of desired hidden rate categories (for the global model, the OU portion of hOUwie will always be OUMVA and therefore the number of parameters will be determined by the number of regimes). 
+
+$$
+\\k_{hOUwie} = 3*k_{obs}*k_{hid} + k_{hmm}
+$$
+Where $k_{obs}$ is the number of observed states, $k_{hid}$ is the number of hidden rate categories, $k_{hmm} = k_{Mk}*k_{hid} + k_{hid}^2 - k_{hid}$ is the number of parameters in a hidden Markov model, and $k_{Mk} = k_{obs}^2 - k_{obs}$ is the number of parameters in an Mk model. For example, the global model if we had $k_{obs}=3$ and $k_{hid}=2$ would be:
+
+```{r, echo=FALSE}
+cat("The HMM rate matrix\n")
+rate.mat <- getFullMat(list(getRateCatMat(3), getRateCatMat(3)), getRateCatMat(2))
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("OUMVA", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+
+With such complexity possible for just 3 observed states and 2 hidden states we cannot reasonably explore all parameter space and all of the potential model structures nested within the global model. Instead, we will follow Beaulieu and O'Meara (2016) and split the set of models into two groups. Group one will evaluate the performance of hOUwie by simulating data under various scenarios and then estimating the fit and bias of inferred rates. Group two will evaluate hOUwie's character independent model which can detect rate variation that is not associated with the observed character. 
+
+We will fit hOUwie and two alternative models based on approaches an empiricist may take: (1) Maximize corHMM and OUwie separately (data analyzed completely separately). (2) Maximize corHMM, simulate $n_{map}$ simmaps based on corHMM's $\hat\theta_{MLE}$, fit OUwie to the maps, summarize OUwie. (3) Use hOUwie to jointly maximize OUwie and corHMM with $n_{map}$ iterations.
+
+We know from Cressler et al. 2015 the general parameter space that we should have power to detect support for OU models. 
+
+#### Group One
+
+An Mk BMS model (sensu Revell 2013).
+```{r, echo=FALSE}
+cat("The Mk rate matrix\n")
+rate.mat <- getRateCatMat(2)
+rate.mat <- equateStateMatPars(rate.mat, c(1,2))
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+An Mk OUM model 
+```{r, echo=FALSE}
+cat("The Mk rate matrix\n")
+rate.mat <- getRateCatMat(2)
+rate.mat <- equateStateMatPars(rate.mat, c(1,2))
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+An Mk OUMVA model 
+```{r, echo=FALSE}
+cat("The Mk rate matrix\n")
+rate.mat <- getRateCatMat(2)
+rate.mat <- equateStateMatPars(rate.mat, c(1,2))
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("OUMVA", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+An HMM BMS model
+```{r, echo=FALSE}
+cat("The HMM rate matrix\n")
+rate.mat <- getRateCatMat(2)
+rate.mat <- equateStateMatPars(rate.mat, c(1,2))
+rate.mat <- getFullMat(list(rate.mat, rate.mat), rate.mat)
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+An HMM OUM model
+```{r, echo=FALSE}
+cat("The HMM rate matrix\n")
+rate.mat <- getRateCatMat(2)
+rate.mat <- equateStateMatPars(rate.mat, c(1,2))
+rate.mat <- getFullMat(list(rate.mat, rate.mat), rate.mat)
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+An HMM OUMVA model 
+```{r, echo=FALSE}
+cat("The HMM rate matrix\n")
+rate.mat <- getRateCatMat(2)
+rate.mat <- equateStateMatPars(rate.mat, c(1,2))
+rate.mat <- getFullMat(list(rate.mat, rate.mat), rate.mat)
+print(rate.mat)
+cat("\nThe OU index matrix\n")
+ou.mat <- getOUParamStructure("OUMVA", "three.point", FALSE, FALSE, dim(rate.mat)[1])
+print(ou.mat)
+cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
+```
+
+A weakness of this set of models is that most of our complexity comes from the OU process (more free parameters). Boyko and Beaulieu (2020) demonstrated that the power for inferring an HMM comes predominantly from the difference between state-dependent processes. One interesting part of hOUwie is that it gives an additional axis to distinguish between state-dependent processes. Standard HMMs distinguish between state-dependent processes based on differences in how observed states change (eg. rate class A changes quickly between woody and herbacious while rate class B changes slowly). With hOUwie, we add information about how the continuous trait changes in distinguishing between the state-dependent processes. This point forms the basis of our null model, but more about that later.
+
+
+
+#### Group Two
+
+Here we outline our questions and how we will address the statistical behavior of hOUwie. Some questions we have already alluded to, such as how many simmaps are necessary for a good approximation of $P(z|D,\Phi)$? However, we have yet to outline the general approach and more question-specific methods that will utilize. 
+
+
+
+### 2.3 The Problem of Parameter Estimation
+
+### 2.4 The Problem of Model Selection
+
+
+## Section 3: Discussing hOUwie
+
+Key interpretations will be presented here.
+
+> Typically, the selection of models is not an end in itself but is rather an aid to reasoning about evolutionary mechanisms and drivers. In such a context, one bears in mind that the larger the number of models entertained, the less reliable are the inferences obtained. This is a problem that the use of information criteria only incompletely ameliorates (Boettiger et al. 2012; Ho and Ané 2014). For this reason, inferences are often clearest when the hypotheses are laid out a priori. 
+
+This is exasperated in a model like hOUwie where the potential models that can be analyzed is so large.
+
+> Regardless of the ultimate goal, however, greater flexibility and realism in models comes at the cost of more mathematical complexity, more parameters to estimate, and more models to compare. In effect, as parameter space dimension increases, the information contained in data becomes more dilute, the precision with which parameters can be estimated diminishes, and the risk of overfitting grows (Ho and Ané 2014).
+
+Can we get support for an HMM when the only difference is in the continuous process?
+
+Where some models preform well (low rates NonCensured and hOUwie preform well) would hOUwieNull throw change the behavior? Could we see biases in the params?
+
+If a continuous character has rate variation that is separate from the observed character will hOUwie provide a false positive? Does a null model fix this problem?
+
+> The foregoing observations have implications for more parameter-rich methods based on generalizations of the OUCH class in which parameters are allowed to vary across the tree (O’Meara et al. 2006; Beaulieu et al. 2012). Our study shows that the information contained in the data are already markedly limited when these parameters are constant. Increasing the number of parameters can only further dilute information, leading to even greater uncertainty in estimates. 
+
+Can estimating the regimes help with this or are we going too far?
+
+Addressing the curse of dimensionality.
+
+Can we improve the predictive power of our model by making it more complex? This will come at the cost of inferential accuracy. 
+
+Can we quantify the amount of information a discrete character contains about the continuous variable?
+
+Models to compare:
+```{r}
+
+```
+
+
+```{r, echo=FALSE}
+index.BMS <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, 2)
+index.OUM <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, 2)
+index.OUMVA <- getOUParamStructure("OUMVA", "three.point", FALSE, FALSE, 2)
+rownames(index.BMS) <- rownames(index.OUM) <- rownames(index.OUMVA) <- 
+cat("2-state BMS model.\n")
+print(index.BMS)
+cat("2-state OUM model.\n")
+print(index.BMS)
+cat("2-state OUMVA model.\n")
+print(index.BMS)
+```
+
+Model evaluation
+Power Analysis.
+PBIAS?
+MSE?

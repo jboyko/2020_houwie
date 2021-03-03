@@ -41,8 +41,24 @@ hOUwie <- function(phy, data, rate.cat,
   if(is.null(model.cor) & is.null(index.cor)){
     stop("No model for discrete evolution has been specified. Please select either a default model with the model.cor argument or specify an index matrix with index.cor.", call. = FALSE)
   }
+  
   if(is.null(model.ou) & is.null(index.ou)){
     stop("No model for continuous evolution has been specified. Please select either a default model with the model.ou argument or specify an index matrix with index.ou.", call. = FALSE)
+  }
+  
+  if(!is.null(index.cor) & !is.null(index.ou)){
+    if(dim(index.cor)[2] > dim(index.ou)[2]){
+      stop("Not all of your discrete states have OU parameters associated with them. Please check that your discrete index matrix (index.cor) matches your continuous index matrix (index.ou).")
+    }
+    if(dim(index.ou)[2] > dim(index.cor)[2]){
+      stop("You have specified more OU parameters than there are states in the discrete process. Please check that your discrete index matrix (index.cor) matches your continuous index matrix (index.ou).")
+    }
+  }
+  if(!is.null(phy$node.label)){
+    if(!quiet){
+      cat("Your phylogeny had node labels, these have been removed.\n")
+    }
+    phy$node.label <- NULL
   }
   
   algorithm="three.point"
@@ -57,6 +73,7 @@ hOUwie <- function(phy, data, rate.cat,
   #scale the tree to a root height of 1
   # phy$edge.length <- phy$edge.length/max(branching.times(phy))
   # a temporary corhmm model to set the rates up
+  null.cor <- FALSE
   if(is.null(model.cor)){
     model.cor <- "ER"
     null.cor <- TRUE
@@ -98,16 +115,18 @@ hOUwie <- function(phy, data, rate.cat,
   # organized as c(trans.rt, alpha, sigma.sq, theta)
   # evaluate likelihood
   if(!is.null(p)){
-    cat("Calculating likelihood from a set of fixed parameters", "\n")
+    if(!quiet){
+      cat("Calculating likelihood from a set of fixed parameters", "\n")
+      print(p)
+    }
     out<-NULL
     est.pars<-log(p)
+    out$solution <- log(p)
     out$objective <- hOUwie.dev(est.pars, 
                                 phy=phy, rate.cat=rate.cat,
                                 data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, 
                                 data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,
                                 nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted)
-    loglik <- -out$objective
-    est.pars <- exp(est.pars)
   }else{
     cat("This feature is not yet finzalized\n")
     out<-NULL
@@ -168,7 +187,8 @@ hOUwie <- function(phy, data, rate.cat,
     root.station=root.station, 
     get.root.theta=get.root.theta, 
     mserr = mserr, 
-    lb.ou=lb.ou, ub.ou=ub.ou,
+    lb.ou=lb.ou, 
+    ub.ou=ub.ou,
     p=p, 
     ip=ip, 
     nSim=nSim, 
@@ -220,13 +240,18 @@ hOUwie.dev <- function(p, phy, rate.cat,
     # get the likelihoods of the simmaps
     OU.loglik <- max(unlist(OU.loglik))
     # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
-    cat("\rpars =", round(p, 5), "lik =", -(OU.loglik + Mk.loglik), "                ")
+    # cat("\rpars =", round(p, 5), "lik =", -(OU.loglik + Mk.loglik), "                ")
     return(-(OU.loglik + Mk.loglik))
   }else{
-    # comp <- max(unlist(OU.loglik))
-    OU.loglik <- log(mean(exp(unlist(OU.loglik))))
-    # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
-    cat("\rpars =", round(p, 5), "& lik =", (OU.loglik + Mk.loglik), "                ")
+    # algebraic trick to prevent overflow and underflow while preserving as many accurate leading digits in the result as possible. The leading digits are preserved by pulling the maximum outside. The arithmetic is robust becuase subtracting the maximum on the inside makes sure that only negative numbers or zero are ever exponentiated, so there can be no overflow on those calculations. If there is underflow, we know the leading digits have already been returned as part of the max term on the outside.
+    OU.loglik <- unlist(OU.loglik)
+    OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik))))
+    # example
+    # tmp <- c(-100, -200, -300, -100, -250)
+    # max(tmp) + log(sum(exp(tmp - max(tmp))))
+    # log(sum(exp(tmp)))
+    # 
+    # cat("\rpars =", round(p, 5), "& lik =", (OU.loglik + Mk.loglik), "                ")
     return(-(OU.loglik + Mk.loglik))
   }
 }
@@ -347,8 +372,8 @@ getOUParamStructure <- function(model, algorithm, root.station, get.root.theta, 
   }
   if (model == "OUMVA") {
     np <- k*2
-    index <- matrix(TRUE,2,k)
-    index.mat[index] <- 1:(k*2)
+    index.mat[1,1:k] <- 1:k
+    index.mat[2,1:k] <- (k+1):(k*2)
     if(algorithm == "three.point"){
       max.par.so.far <- max(index.mat)
       index.mat <- rbind(index.mat, (max.par.so.far + 1):(max.par.so.far + k))
@@ -479,7 +504,8 @@ OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FA
     TIPS <- transformed.tree$tree$edge[,2] <= length(transformed.tree$tree$tip.label)
     transformed.tree$tree$edge.length[TIPS] <- transformed.tree$tree$edge.length[TIPS] + (data[,3]^2/transformed.tree$diag/transformed.tree$diag)
   }
-  try(comp <- phylolm:::three.point.compute(transformed.tree$tree, x, expected.vals, transformed.tree$diag), silent=TRUE)
+  comp <- NA
+  try(comp <- phylolm::three.point.compute(transformed.tree$tree, x, expected.vals, transformed.tree$diag), silent=TRUE)
   if(is.na(comp[1])){
     return(10000000)
   }else{
@@ -551,4 +577,67 @@ print.houwie <- function(x, ...){
   cat("\nDon't forget: your parameters have units!")
 }
 
+# fits a model based on the best corhmm model, simmaps, ouwie
+fitNonCensored <- function(phy, data, rate.cat, 
+                   model.cor, root.p="yang", lb.cor=1e-5, ub.cor=10,
+                   model.ou, root.station=FALSE, get.root.theta=FALSE, mserr = "none",
+                   nSim=1000, nCores=1, quiet=FALSE){
+  #Ensures that weird root state probabilities that do not sum to 1 are input:
+  algorithm="three.point"
+  # organize the data into the corHMM data and the OUwie data
+  hOUwie.dat <- organizeHOUwieDat(data, mserr)
+  nObs <- length(hOUwie.dat$ObservedTraits)
+  # a way to speed up the three.point function
+  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
+  Tmax <- max(branching.times(phy))
+  
+  cor.fit <- corHMM(phy = phy, data = hOUwie.dat$data.cor, rate.cat = rate.cat, model = model.cor, node.states = "none", root.p = root.p, lower.bound = lb.cor, upper.bound = ub.cor)
+  
+  maps <- makeSimmap(tree = phy, data = hOUwie.dat$data.cor, model = cor.fit$solution, rate.cat = rate.cat, root.p = root.p, nSim = nSim)
+  
+  ou.fits <- mclapply(maps, function(x) singleRun(dat = hOUwie.dat$data.ou, simmap = x, model = model.ou, mserr = mserr), mc.cores = nCores)
+  mean.ou.solution <- Reduce("+", lapply(ou.fits, function(x) x$solution))/nSim
+  
+  loglik <- Reduce("+", lapply(ou.fits, function(x) x$loglik))/nSim + cor.fit$loglik
+  param.count <- max(ou.fits[[1]]$index.mat, na.rm = TRUE) + max(cor.fit$index.mat, na.rm = TRUE)
+  nb.tip <- length(phy$tip.label)
+  
+  obj <- list(
+    loglik = loglik,
+    AIC = -2*loglik + 2*param.count,
+    AICc = -2*loglik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
+    BIC = -2*loglik + log(nb.tip) * param.count,
+    param.count = param.count,
+    solution.cor = cor.fit$solution,
+    solution.ou = mean.ou.solution,
+    phy = phy, 
+    data = data, 
+    hOUwie.dat = hOUwie.dat,
+    rate.cat = rate.cat, 
+    model.cor=model.cor, 
+    root.p=root.p, 
+    lb.cor=lb.cor, 
+    ub.cor=ub.cor,
+    model.ou=model.ou, 
+    root.station=root.station, 
+    get.root.theta=get.root.theta, 
+    mserr = mserr, 
+    nSim=nSim, 
+    nCores=nCores)
+  class(obj) <- "houwie"
+  return(obj)
+}
 
+organizeDat <- function(dat, simmap){
+  mapping <- unlist(lapply(simmap$maps, function(x) names(x[length(x)])))
+  nTip <- length(simmap$tip.label)
+  TipStates <- mapping[match(match(dat$sp, simmap$tip.label), simmap$edge[,2])]
+  dat$reg <- TipStates
+  return(dat)
+}
+
+singleRun <- function(dat, simmap, model, mserr){
+  data <- organizeDat(dat, simmap)
+  out <- try(OUwie(simmap, data, model, simmap.tree = TRUE, algorithm = "three.point", scaleHeight = FALSE, mserr = mserr, quiet = TRUE))
+  return(out)
+}
