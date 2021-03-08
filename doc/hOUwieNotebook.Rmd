@@ -1,16 +1,18 @@
 ---
 title: "hOUwie Notebook"
 author: "James Boyko"
-og:
-  type: "article"
-  title: "opengraph title"
-  url: "optional opengraph url"
-  image: "optional opengraph image link"
-footer:
-  - content: '[link1](http://example.com/) • [link2](http://example.com/)<br/>'
-  - content: 'Copyright blah blah'
 date: "`r Sys.Date()`"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
+og:
+  type: article
+  title: opengraph title
+  url: optional opengraph url
+  image: optional opengraph image link
+footer:
+- content: '[link1](http://example.com/) • [link2](http://example.com/)<br/>'
+- content: Copyright blah blah
 ---
 ```{r, include=FALSE}
 source("~/2020_hOUwie/hOUwie.R")
@@ -77,62 +79,43 @@ where $P(D|\Phi)$ is the probability of observing the vector states, *D*, at the
 
 It is unclear how one would go about calculating $P(z|D,\Phi)$, especially with a larger tree and many character states. Instead, it is easier to sample a large number of realizations of the character transitions given *D* and $\Phi$. This is where the stochastic maps come in. The summation above would then be over a set of unique character maps that appear in the sample. The frequency of each unique map, $f_z$, would then be used as an estimate of $P(z|D,\Phi)$. If each character map is unique, then the summation is simple an average of likelihoods across the set of maps. This approach is costly from a computational perspective because for every new set of $\Phi$ proposed a new set of character maps would have to be generated and reevaluated. 
 
-To start, it is unclear how many maps would suffice to get a good approximation of $P(z|D,\Phi)$. Here I sample parameters following a unit Latin hypercube. Additionally, following Cresller et al. (2016), $\Delta\theta$ is fixed to be one and the phylogeny is scaled to have a height of one. Below are the parameters estimated from our sampling design [0, 3] for all $q$, $\alpha$, and $\sigma^2$.
+To start, it is unclear how many maps would suffice to get a good approximation of $P(z|D,\Phi)$. To test this I simulated a birth-death tree (b=1, d=0.5) of 250 tips and scaled tree height to 1. I then simulated a discrete dataset and simmap following the an equal-rates Mk model at rates of $q=0.25, q=1, q=4$. An OUM-type OU model was simulated with $\alpha=0.5, \sigma^2=0.5, \Delta\theta=1$. The true parameter values were then refit 500 times for each Mk rate value to get a sense of how many simmaps is necessary before the same set of parameters produce the same likelihood. 
 
-```{r, echo = FALSE, fig.cap=paste("Your caption.")}
-set.seed(1985)
-X <- randomLHS(n = 250, k = 3)
-X <- X * 3 # https://r.789695.n4.nabble.com/R-Latin-hyper-cube-sampling-from-expand-grid-td816493.html
-colnames(X) <- c("p.mk", "alpha", "sig2")
-pairs(X) # plot of parameter sampling
-```
+```{r, echo=FALSE, cache=TRUE}
+Rsaves <- dir("~/2020_hOUwie/likConverge/", full.names = TRUE)
+rates <- unique(unlist(lapply(strsplit(Rsaves, "-"), function(x) x[3])))
+maps <- sort(unique(unlist(lapply(strsplit(Rsaves, "-"), function(x) x[2]))))[c(3,2,5,1,4)]
 
-We evaluate the likelihood of each combination of params given that hOUwie is evaluating with 500 simmaps.The code below is an example for evaluating 500 simmaps. This procedure was used for 10, 100, 500, and 1000 simmaps.
 
-```{r}
-# using a random number generator for which seeds apply to parallel computation
-RNGkind("L'Ecuyer-CMRG")
-# set.seed(1985) # testing
-# mclapply(1:2, FUN = function(i) sample(1:5))
-# mclapply(1:2, FUN = function(i) sample(1:5))
-
-nLikEval <- function(p.subset, nEval, nSimmaps){
-  p <- c(mk = NA, alpha = NA, sig2 = NA, opt1 = 1, opt2 = 2)
-  p[1] <- p.subset[1]
-  p[2] <- p.subset[2]
-  p[3] <- p.subset[3]
-  lliks <- sapply(1:nEval, function(x) hOUwie(phy = tree, data = trait, rate.cat = 1, model.cor = "ER", model.ou = "OUM", p = p, nSim = nSimmaps, quiet = TRUE)$loglik)
-  return(lliks)
+i = j = 1
+fin <- c()
+par(mfrow=c(1,3))
+for(i in 1:length(rates)){
+  ToLoad <- Rsaves[grep(rates[i], Rsaves)]
+  dat <- NA
+  for(j in 1:length(maps)){
+    load(ToLoad[grep(maps[j], ToLoad)])
+    # dat <- cbind(dat, unlist(lapply(out, function(x) x$loglik)))
+    dat <- cbind(dat, unlist(out))
+  }
+  dat <- dat[,-1]
+  colnames(dat) <- gsub("simmaps", "", maps)
+  fin <- rbind(fin, dat)
+  boxplot(dat, main = rates[i], xlab = "no. of simmaps", ylab = "llik")
 }
-
-n.par.combos <- 250 # 250 random parameter combinations
-n.evaluations <- 100 # 100 evaluations to each combination
-n.simmaps <- 500 # evaluate 500 simmaps per likelihood
-
-set.seed(1985)
-X <- randomLHS(n = n.par.combos, k = 3)
-X <- X * 3
-colnames(X) <- c("p.mk", "alpha", "sig2")
-pairs(X)
-par.set <- vector("list", dim(X)[1])
-for(i in 1:dim(X)[1]){
-  par.set[[i]] <- X[i,]
-}
-
-# data(tworegime)
-# tree$edge.length <- tree$edge.length/max(branching.times(tree))
-# set.seed(1985)
-# out <- mclapply(par.set, function(x) nLikEval(x, n.evaluations, n.simmaps), mc.cores = 40)
 ```
-
+So far as I know there are not any guidelines for what the variance of a non-deterministic MLE should be. However, 100 simmaps seems to reduce the variance of the estimate enough to be considered a sufficient estimate of $\hat\theta$. There is the potential to take a hybrid estimation approach utilizing the computation faster 10 simmaps to locate a global optimum and 100 simmaps (or more) to find the local optimum. Any advantages this approach could have would be dependent on the "sharpness" likelihood surface and thus require us to examine the likelihood surface across many datasets.
 
 ### 2.2 The Simulation Study
+
+#### 2.2.1 A brief aside discussing the parameters of the hOUwie model
 
 The maximum number of parameters ($k$) for the most complex hOUwie model is going to depend on the number of observed discrete states and the number of desired hidden rate categories (for the global model, the OU portion of hOUwie will always be OUMVA and therefore the number of parameters will be determined by the number of regimes). 
 
 $$
 \\k_{hOUwie} = 3*k_{obs}*k_{hid} + k_{hmm}
 $$
+
 Where $k_{obs}$ is the number of observed states, $k_{hid}$ is the number of hidden rate categories, $k_{hmm} = k_{Mk}*k_{hid} + k_{hid}^2 - k_{hid}$ is the number of parameters in a hidden Markov model, and $k_{Mk} = k_{obs}^2 - k_{obs}$ is the number of parameters in an Mk model. For example, the global model if we had $k_{obs}=3$ and $k_{hid}=2$ would be:
 
 ```{r, echo=FALSE}
@@ -147,13 +130,11 @@ cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params
 
 With such complexity possible for just 3 observed states and 2 hidden states we cannot reasonably explore all parameter space and all of the potential model structures nested within the global model. Instead, we will follow Beaulieu and O'Meara (2016) and split the set of models into two groups. Group one will evaluate the performance of hOUwie by simulating data under various scenarios and then estimating the fit and bias of inferred rates. Group two will evaluate hOUwie's character independent model which can detect rate variation that is not associated with the observed character. 
 
-We will fit hOUwie and two alternative models based on approaches an empiricist may take: (1) Maximize corHMM and OUwie separately (data analyzed completely separately). (2) Maximize corHMM, simulate $n_{map}$ simmaps based on corHMM's $\hat\theta_{MLE}$, fit OUwie to the maps, summarize OUwie. (3) Use hOUwie to jointly maximize OUwie and corHMM with $n_{map}$ iterations.
+#### 2.2.2.2 Group One
 
-We know from Cressler et al. 2015 the general parameter space that we should have power to detect support for OU models. 
+We will fit hOUwie and two alternative models based on approaches an empiricist may take: (1) TwoStep - maximize corHMM and OUwie separately (data analyzed completely separately). (2) NonCensored - maximize corHMM, simulate $n_{map}$ simmaps based on corHMM's $\hat\theta$, fit OUwie to the maps, summarize OUwie. (3) hOUwie - jointly maximize OUwie and corHMM with $n_{map}$ iterations.
 
-#### Group One
-
-An Mk BMS model (sensu Revell 2013).
+##### An Mk BMS model (sensu Revell 2013).
 ```{r, echo=FALSE}
 cat("The Mk rate matrix\n")
 rate.mat <- getRateCatMat(2)
@@ -164,6 +145,127 @@ ou.mat <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, dim(rate.mat)[
 print(ou.mat)
 cat("\n", max(rate.mat, na.rm = TRUE) + max(ou.mat, na.rm = TRUE), "total params.\n")
 ```
+
+This model framework was used by Revell (2013) to demonstrate that using stochastic maps to estimate variable rate $\sigma_i^2$ (where $i$ is a regime specific rate parameter) was biased. Specifically, he found that the regime specific $\sigma^2$ were biased to be more similar towards one another than the true simulating values. I replicated this study simulating 500 datasets per single phylogeny ($b=1, d=0.5, nTip=100, H=1$). The simulations followed Revell (2013) where $\sigma_1^2 = 1$ and $\sigma_2^2 = 10$. We evaluated only the higher Mk rates $q=1, q=2, q=4, q=8$ since Revell (2013) found no bias at lower rates.
+
+```{r, echo=FALSE, cache=TRUE, fig.width=8, fig.height=6}
+organizeSimulators <- function(simulators){
+  k.cor <- max(simulators$index.cor, na.rm = TRUE) - 1 # number of corhmm params
+  k.ou <- max(simulators$index.ou, na.rm = TRUE) - 1 # number of ouwie params
+  p.mk <- simulators$pars[1:k.cor]
+  p.ou <- simulators$pars[(k.cor+1):length(simulators$pars)]
+  simulators$index.cor[simulators$index.cor == 0] <- NA
+  simulators$index.cor[is.na(simulators$index.cor)] <- max(simulators$index.cor, na.rm = TRUE) + 1
+  Q <- matrix(0, dim(simulators$index.cor)[1], dim(simulators$index.cor)[1])
+  Q[] <- c(p.mk, 0)[simulators$index.cor]
+  diag(Q) <- -rowSums(Q)
+  Rate.mat <- matrix(1, 3, dim(simulators$index.cor)[2])
+  simulators$index.ou[is.na(simulators$index.ou)] <- max(simulators$index.ou, na.rm = TRUE) + 1
+  Rate.mat[] <- c(p.ou, 1e-10)[simulators$index.ou]
+  rownames(Rate.mat) <- c("alpha", "sigma.sq", "theta")
+  return(list(pars.cor = Q,
+              pars.ou = Rate.mat))
+}
+sub.folders <- dir("~/2020_hOUwie/ModelTesting/ER_BMS", full.names = TRUE)
+MSE.tables <- Bias.tables <- Var.tables <- vector("list", length(sub.folders))
+par(mfrow=c(2,2))
+for(i in 1:length(sub.folders)){
+  Rsaves <- dir(sub.folders[i], full.names = TRUE)
+  big.obj <- list()
+  for(j in 1:length(Rsaves)){
+    load(Rsaves[j])
+    big.obj[[j]] <- obj
+  }
+  truepars <- organizeSimulators(obj$data.houwie)
+  
+  ## sigma squared ratio
+  sig2.TwoStep <- do.call(rbind, lapply(big.obj, function(x) x$TwoStepFit$solution.ou[2,]))
+  sig2.NonCens <- do.call(rbind, lapply(big.obj, function(x) x$NonCensFit$solution.ou[2,]))
+  sig2.hOUwie <- do.call(rbind, lapply(big.obj, function(x) x$hOUwieFit$solution.ou[2,]))
+  sig2.TruMap <- do.call(rbind, lapply(big.obj, function(x) x$TruMapFit$solution[2,]))
+  
+  sig2.ratio.table <- data.frame(TwoStep=sig2.TwoStep[,2]/sig2.TwoStep[,1],
+                                 NonCens=sig2.NonCens[,2]/sig2.NonCens[,1],
+                                 hOUwie=sig2.hOUwie[,2]/sig2.hOUwie[,1],
+                                 TrueMap=sig2.TruMap[,2]/sig2.TruMap[,1])
+  sig2.ratio.table <- sig2.ratio.table[!apply(sig2.ratio.table, 1, function(x) any(x > 100)),]
+  
+  sig2.resid.table <- data.frame(TwoStepSig1=sig2.TwoStep[,1] - truepars$pars.ou[2,1],
+                                 TwoStepSig2=sig2.TwoStep[,2] - truepars$pars.ou[2,2],
+                                 NonCensSig1=sig2.NonCens[,1] - truepars$pars.ou[2,1],
+                                 NonCensSig2=sig2.NonCens[,2] - truepars$pars.ou[2,2],
+                                 hOUwieSig1=sig2.hOUwie[,1] - truepars$pars.ou[2,1],
+                                 hOUwieSig2=sig2.hOUwie[,2] - truepars$pars.ou[2,2],
+                                 TrueMapSig1=sig2.TruMap[,1] - truepars$pars.ou[2,1],
+                                 TrueMapSig2=sig2.TruMap[,2] - truepars$pars.ou[2,2])
+  
+  
+  ## mean squared error (MSE)
+  ## E(thet_hat - theta)^2
+  MSE.tables[[i]] <- data.frame(
+    MSE.Sig1 = c(mean((sig2.TwoStep[,1] - truepars$pars.ou[2,1])^2),
+                mean((sig2.NonCens[,1] - truepars$pars.ou[2,1])^2),
+                mean((sig2.hOUwie[,1] - truepars$pars.ou[2,1])^2),
+                mean((sig2.TruMap[,1] - truepars$pars.ou[2,1])^2)),
+    MSE.Sig2 = c(mean((sig2.TwoStep[,2] - truepars$pars.ou[2,2])^2),
+                mean((sig2.NonCens[,2] - truepars$pars.ou[2,2])^2),
+                mean((sig2.hOUwie[,2] - truepars$pars.ou[2,2])^2),
+                mean((sig2.TruMap[,2] - truepars$pars.ou[2,2])^2)),
+    row.names = c("TwoStep", "NoneCens", "hOUwie", "TrueMap")
+  )
+  
+  ## calculate the bias
+  ## E(theta_hat) - theta
+  ## E(theta_hat - theta) (i.e. the expectation of the error)
+  Bias.tables[[i]] <- data.frame(
+    B.Sig1 = c(mean(sig2.TwoStep[,1]) - truepars$pars.ou[2,1],
+                mean(sig2.NonCens[,1]) - truepars$pars.ou[2,1],
+                mean(sig2.hOUwie[,1]) - truepars$pars.ou[2,1],
+                mean(sig2.TruMap[,1]) - truepars$pars.ou[2,1]),
+    B.Sig2 = c(mean(sig2.TwoStep[,2]) - truepars$pars.ou[2,2],
+                mean(sig2.NonCens[,2]) - truepars$pars.ou[2,2],
+                mean(sig2.hOUwie[,2]) - truepars$pars.ou[2,2],
+                mean(sig2.TruMap[,2]) - truepars$pars.ou[2,2]),
+    row.names = c("TwoStep", "NoneCens", "hOUwie", "TrueMap")
+  )
+  
+  ## calculate the variance 
+  Var.tables[[i]] <- data.frame(
+    Var.Sig1 = c(var(sig2.TwoStep[,1]),
+                var(sig2.NonCens[,1]),
+                var(sig2.hOUwie[,1]),
+                var(sig2.TruMap[,1])),
+    Var.Sig2 = c(var(sig2.TwoStep[,2]),
+                var(sig2.NonCens[,2]),
+                var(sig2.hOUwie[,2]),
+                var(sig2.TruMap[,2])),
+    row.names = c("TwoStep", "NoneCens", "hOUwie", "TrueMap")
+  )
+  
+  boxplot(sig2.ratio.table,
+          ylab = expression(paste(sigma [2] ^2 / sigma [1] ^2 )),
+          xlab = "Model used to estimate 500 datasets",
+          ylim = c(0, 40),
+          main = paste("q =", truepars$pars.cor[1,2]))
+  abline(h = truepars$pars.ou[2,2]/truepars$pars.ou[2,1], col = "red")
+}
+```
+Matching what had been found previously, at lower transition rates $\sigma_i^2$ is estimated well, but at higher rates there is bias underestimating the ratio of $\hat\sigma_1^2/\hat\sigma_2^2$ for most methods. This is true of hOUwie also, but it is less severe. 
+
+Furthermore, we can get exact measures of the variance, $Var(\hat\theta)$, bias, $E(\hat\theta) -\theta$, and mean squared error, $MSE(\hat\theta) =E(\hat\theta -\theta)^2 = Var(\hat\theta)+B^2$. An unbiased estimator (an important quality for any point estimator) is one which bias goes to zero as more data is given. In general, if two estimators are both unbiased, it is better to choose the one with the lowest mean squared error. Below I present this information for each Mk rate in table form.
+
+```{r, echo=FALSE}
+ErrTable <- rbind(
+  cbind(rate=1, cbind(MSE.tables[[1]], Bias.tables[[1]], Var.tables[[1]])),
+  cbind(rate=2, cbind(MSE.tables[[2]], Bias.tables[[2]], Var.tables[[2]])),
+  cbind(rate=4, cbind(MSE.tables[[3]], Bias.tables[[3]], Var.tables[[3]])),
+  cbind(rate=8, cbind(MSE.tables[[4]], Bias.tables[[4]], Var.tables[[4]]))
+)
+print(round(ErrTable, 3))
+```
+
+Although hOUwie does not always have lower MSEs than the alternative models, it significantly improves the bias for all models and rates and MSE differences are caused by increased $Var(\hat\theta)$ for hOUwie than other models. This is likely due to hOUwie estimating more parameters for any given iteration than our alternative models. 
+
 An Mk OUM model 
 ```{r, echo=FALSE}
 cat("The Mk rate matrix\n")
@@ -264,10 +366,9 @@ Can we improve the predictive power of our model by making it more complex? This
 
 Can we quantify the amount of information a discrete character contains about the continuous variable?
 
-Models to compare:
-```{r}
+Can we recover the lack of phylogenetic signal (as alpha goes to infinity) with the inclusion of the underlying discrete process that alpha is linked to? Does this create biases in other models that hOUwie resolves? High alpha associated with a Markov model means that the phylogenetic signal is determined by the Markov model itself (retention index as a possible way to determine signal - although actually used to measure homoplasy).
 
-```
+hOUwie with missing data. Can we generate predictions of missing data with hOUwie? The model only has continuous variable or model only has discrete variable, predict the other.
 
 
 ```{r, echo=FALSE}
@@ -287,3 +388,24 @@ Model evaluation
 Power Analysis.
 PBIAS?
 MSE?
+
+
+## May and Moore 2020
+We begin by developing a stochastic process that explicitly models the joint evolution of the discrete and continuous characters; this stochastic process can accommodate one or more continuous characters evolving under a state-dependent multivariate Brownian motion process. 
+
+We then develop an inference model that accommodates variation in the background rate of continuous-character evolution (i.e., rate variation across lineages that is independent of the discrete character under consideration).
+
+We show by simulation that the method is able to reliably infer the state-dependent rates of continuous-character evolution, and that ignoring background-rate variation leads to an inflated false-positive rate. 
+
+They simulate there model as follows: a discrete trait evolves under a continuous-time Markov process, changing from state 0 to state 1 with rate q01, and from state 1 to state 0 with rate q10. The continuous character evolves under a state-dependent Brownian motion process, where the diffusion rate, $s^2_i$ , measures the rate of continuous-character evolution when the discrete character is in state i (i.e., $s^2_1$ > $s^2_0$ indicates that the continuous character evolves faster in discrete state 1 than in discrete state 0). In a small time interval of duration $\Delta t$, where the discrete character begins in state $i$, the continuous character changes by a normally distributed random variable with mean 0 and variance $s^2_i \Delta t$, and the discrete character changes state with probability $q_{ij} \Delta t$.
+
+The transition-probability density specifies the probability that the process ends in some state, ($x_t,y_t$), given an initial state ($x_0,y_0$), after a certain amount of time, $T$, has elapsed. The resulting frequency histogram of end states provides a Monte Carlo approximation of the transition-probability density for a branch of duration $T$.
+(Could be a cool visualization tool to examine how our hOUwie sims change stuff.)
+
+We model the joint evolution of a discrete binary character, $X$, and a set of $c$ continuous characters, $Y$, as a stochastic process. The discrete trait has two possible values, which we arbitrarily label 0 and 1; $x ∈ (0,1)$. (There model allows for any number of continuous traits, ours does one. Our model allows for any number of discrete states and characters, theres only does one binary discrete character.)
+
+We assume that the discrete character evolves under a continuous-time Markov process, and that the continuous characters evolve under a multivariate Brownian motion process with rates that depend on the state of the binary character. These model components collectively describe how the set of characters, (x,y), evolve together over a single branch; we detail the evolutionary dynamics of this process over an entire tree when we describe the likelihood function.
+
+
+
+

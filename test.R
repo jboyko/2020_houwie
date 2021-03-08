@@ -53,12 +53,28 @@ p = c(1.5, 1, 1, 3, 4)
 test <- hOUwie(phy = phy, data = data, rate.cat = 1, 
                index.cor = index.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,
                index.ou = index.ou, root.station=FALSE, get.root.theta=FALSE, lb.ou=c(1e-5,1e-5,1e-1), ub.ou=c(2, 10, 10),
-               nSim = 10, weighted = FALSE, opts = list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10", "ftol_rel"=.Machine$double.eps^0.5), p = p)
+               nSim = 100, weighted = FALSE, opts = list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10", "ftol_rel"=.Machine$double.eps^0.5), p = p)
 
 test2 <- fitNonCensored(phy = phy, data = data, rate.cat = 1, 
                model.cor = model.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,
                model.ou = model.ou, root.station=FALSE, get.root.theta=FALSE, nSim = 10)
 
+
+
+system.time(hOUwie(phy = phy, data = data, rate.cat = 1, 
+       index.cor = index.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,
+       index.ou = index.ou, root.station=FALSE, get.root.theta=FALSE, lb.ou=c(1e-5,1e-5,1e-1), ub.ou=c(2, 10, 10),
+       nSim = 10, weighted = FALSE, opts = list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10", "ftol_rel"=.Machine$double.eps^0.5), p = p))
+
+system.time(hOUwie(phy = phy, data = data, rate.cat = 1, 
+                   index.cor = index.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,
+                   index.ou = index.ou, root.station=FALSE, get.root.theta=FALSE, lb.ou=c(1e-5,1e-5,1e-1), ub.ou=c(2, 10, 10),
+                   nSim = 100, weighted = FALSE, opts = list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10", "ftol_rel"=.Machine$double.eps^0.5), p = p))
+
+system.time(hOUwie(phy = phy, data = data, rate.cat = 1, 
+                   index.cor = index.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,
+                   index.ou = index.ou, root.station=FALSE, get.root.theta=FALSE, lb.ou=c(1e-5,1e-5,1e-1), ub.ou=c(2, 10, 10),
+                   nSim = 1000, weighted = FALSE, opts = list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10", "ftol_rel"=.Machine$double.eps^0.5), p = p))
 
 test
 test2
