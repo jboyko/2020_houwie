@@ -174,6 +174,9 @@ abline(h = truepars$pars.ou[3,1], col = "red")
 sub.folders <- dir("~/2020_hOUwie/ModelTesting/ER_OUM", full.names = TRUE)
 MSE.tables <- Bias.tables <- Var.tables <- vector("list", length(sub.folders))
 
+par(mfrow=c(2,2))
+for(i in 1:4){
+  
 Rsaves <- dir(sub.folders[i], full.names = TRUE)
 big.obj <- list()
 for(j in 1:length(Rsaves)){
@@ -253,3 +256,4 @@ boxplot(theta.ratio.table,
         main = paste("q =", truepars$pars.cor[1,2]))
 abline(h = truepars$pars.ou[3,2]/truepars$pars.ou[3,1], col = "red")
 
+}

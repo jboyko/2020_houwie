@@ -406,6 +406,31 @@ We model the joint evolution of a discrete binary character, $X$, and a set of $
 
 We assume that the discrete character evolves under a continuous-time Markov process, and that the continuous characters evolve under a multivariate Brownian motion process with rates that depend on the state of the binary character. These model components collectively describe how the set of characters, (x,y), evolve together over a single branch; we detail the evolutionary dynamics of this process over an entire tree when we describe the likelihood function.
 
+The complete history of the discrete trait on branch $l$ — which we represent as $\kappa_l$ — specifies the state of the character at the beginning and end of the branch, and also the times of any state changes along the branch. 
+
+While the process is in a particular discrete state, we assume the continuous characters evolve under a multivariate Brownian motion model. We allow the background rate of evolution to vary among lineages in the phylogeny by letting each branch have its own rate parameter, $\beta^2_l$ (we call this "background-rate variation"). While in discrete state $i$, the background rate is multiplied by the state-specific relative rate, $\zeta^2_i$. We also allow the relative rate of evolution to vary among the continuous characters. The vector $\sigma^2$ contains these relative rates; $\sigma^2_i$ is the relative rate at which continuous character $i$ evolves. The evolutionary correlations between characters are contained in the $c×c$ symmetric correlation matrix, $R$, where $[R]_{ij} = \rho_{ij}$ specifies the correlation between characters $i$ and $j$.
+
+
+We assume that the relative rates of change between characters, $\sigma^2$, and the evolutionary correlations between characters, $R$, are independent of the discrete state; in other words, we assume that the state of the discrete trait affects only the overall rate of continuous-character evolution, but not the nature of the evolutionary process (as represented by $\sigma^2$ and $R$). We combine the relative rates among characters and the correlation matrix to form the overall evolutionary variance-covariance matrix $\Sigma$:
+
+$$
+\Sigma = \begin{bmatrix}
+\sigma^2_1 & \sigma_1\sigma_2\rho_{12} & ... & \sigma_1\sigma_c\rho_{1c} \\
+\sigma_1\sigma_2\rho_{12} & \sigma^2_2 & ... & \sigma_2\sigma_c\rho_{2c}\\
+... & ... & ... & ... \\
+\sigma_c\sigma_1\rho_{1c} & \sigma_c\sigma_2\rho_{2c} & ... & \sigma^2_c \\
+\end{bmatrix}
+\quad
+$$
+(They have an estimate of the rate of continuous trait evolution that is independent of the discrete character $\sigma^2_i$ and one that is dependent of the discrete character $\zeta_i^2$. Both terms are indexed by $i$, but it seems $\zeta^2_i$ is indexed by the state of the discrete character and $\sigma^2_i$ is indexed by the particular continuous character (they are doing multivariate continuous characters)).
+
+We simplify likelihood calculations by including the vector of character histories, $\kappa$, where $\kappa_l$ is the discrete-character history along branch $l$ (including the state at the beginning and end of the branch), as variables in the model. In effect, we are "augmenting" the discrete-character data observed at the tips of the tree with unobserved discrete-character histories over the entire tree; this technique is referred to as data augmentation
+
+$$
+P(\mathcal {X, Y, \kappa} | \Psi, \theta) = P(\mathcal{X, \kappa}| \Psi, \theta)P(\mathcal{Y}|\kappa, \Psi, \theta)
+$$
+
+(They calculate the probability of a given simmap, not just assume an equal value for all)
 
 
 

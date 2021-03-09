@@ -128,11 +128,39 @@ nmaps <- 100
 
 # for server
 pars <- c(1, 2, 0.5, 5, 10)
-mclapply(1:500, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
 pars <- c(2, 2, 0.5, 5, 10)
-mclapply(1:500, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
 pars <- c(4, 2, 0.5, 5, 10)
-mclapply(1:500, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
 pars <- c(8, 2, 0.5, 5, 10)
-mclapply(1:500, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUM", pars, nmaps, x), mc.cores = 15)
+
+
+
+
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+## ER OUMV
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+nTip <- 100
+phy <- sim.bdtree(b = 1, d = 0.5, stop = "taxa", n = nTip) # this will be scaled to H=1
+phy <- drop.extinct(phy)
+phy$edge.length <- phy$edge.length/max(branching.times(phy))
+
+index.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))
+index.ou <- getOUParamStructure("OUMV", "three.point", TRUE, TRUE, dim(index.cor)[1])
+pars <- c(1, 2, 0.5, 0.5, 5, 10)
+nmaps <- 100
+
+# test <- SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, 1)
+
+# for server
+pars <- c(1, 2, 0.5, 0.5, 5, 10)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
+pars <- c(1, 2, 0.5, 1, 5, 10)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
+pars <- c(1, 2, 0.5, 2, 5, 10)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
+pars <- c(1, 2, 0.5, 5, 5, 10)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
 
