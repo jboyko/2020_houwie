@@ -1,3 +1,69 @@
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
+getBigObj <- function(sub.folder){
+  Rsaves <- dir(sub.folder, full.names = TRUE)
+  big.obj <- list()
+  for(j in 1:length(Rsaves)){
+    load(Rsaves[j])
+    big.obj[[j]] <- obj
+  }
+  return(big.obj)
+}
+
+getTrueParsVector <- function(truepars, index.ou){
+  if(any(index.ou[1,] > index.ou[2,])){
+    index.ou[1,][index.ou[1,] > index.ou[2,]] <- 0
+  }
+  pars.count <- c(alpha=0, sigma=0, theta=0)
+  out.vec <- c()
+  for(i in 1:max(index.ou, na.rm = TRUE)){
+    index_i <- index.ou == i
+    name.par <- rownames(index_i)[apply(index_i, 1, any)]
+    pars.count[apply(index_i, 1, any)] <- pars.count[apply(index_i, 1, any)] + 1
+    name.par <- paste(name.par, pars.count[apply(index_i, 1, any)], sep = "_")
+    vec_i <- truepars$pars.ou[index_i][1]
+    names(vec_i) <- name.par
+    out.vec <- c(out.vec, vec_i)
+  }
+  return(out.vec)
+}
+
+getParTable <- function(index.ou, big.obj){
+  # determine how many of each parameter we have
+  if(any(index.ou[1,] > index.ou[2,])){
+    index.ou[1,][index.ou[1,] > index.ou[2,]] <- 0
+  }
+  pars.count <- c(alpha=0, sigma=0, theta=0)
+  table <- c()
+  for(i in 1:max(index.ou, na.rm = TRUE)){
+    index_i <- index.ou == i
+    name.par <- rownames(index_i)[apply(index_i, 1, any)]
+    pars.count[apply(index_i, 1, any)] <- pars.count[apply(index_i, 1, any)] + 1
+    name.par <- paste(name.par, pars.count[apply(index_i, 1, any)], sep = "_")
+    table_i <- rbind(
+      data.frame(par = name.par, model = "TwoStepFit", 
+                 value = unlist(lapply(big.obj, function(x) 
+                   x$TwoStepFit$solution.ou[index_i][1]))),
+      data.frame(par = name.par, model = "NonCensFit", 
+                 value = unlist(lapply(big.obj, function(x) 
+                   x$NonCensFit$solution.ou[index_i][1]))),
+      data.frame(par = name.par, model = "hOUwieFit", 
+                 value = unlist(lapply(big.obj, function(x) 
+                   x$hOUwieFit$solution.ou[index_i][1]))),
+      data.frame(par = name.par, model = "TruMapFit", 
+                 value = unlist(lapply(big.obj, function(x) 
+                   x$TruMapFit$solution[index_i][1])))
+    )
+    table <- rbind(table, table_i)
+  }
+  return(table)
+}
+
 organizeSimulators <- function(simulators){
   k.cor <- max(simulators$index.cor, na.rm = TRUE) - 1 # number of corhmm params
   k.ou <- max(simulators$index.ou, na.rm = TRUE) - 1 # number of ouwie params
@@ -46,6 +112,89 @@ source("~/2020_hOUwie/hOUwie.R")
 require(OUwie)
 require(corHMM)
 require(parallel)
+require(ggplot2)
+require(gridExtra)
+
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+## All models
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
+
+# sub.folders <- dir("~/2020_hOUwie/ModelTesting/ER_BMS", full.names = TRUE)
+
+sub.folders <- dir("~/2020_hOUwie/ModelTesting/ER_OUM", full.names = TRUE)
+
+# sub.folders <- dir("~/2020_hOUwie/ModelTesting/ER_OUMV", full.names = TRUE)
+
+sub.folder <- sub.folders[1]
+count <- 1
+p.resids <- p.RMSE <- list()
+for(sub.folder in sub.folders){
+  big.obj <- getBigObj(sub.folder)
+  truepars <- organizeSimulators(big.obj[[1]]$data.houwie)
+  index.ou <- big.obj[[1]]$data.houwie$index.ou
+  table.resids <- table.pars <- getParTable(index.ou, big.obj)
+  sim.pars <- getTrueParsVector(truepars, index.ou)
+  
+  for(j in 1:length(sim.pars)){
+    table.resids[names(sim.pars)[j] == table.resids[,1], 3] <- table.resids[names(sim.pars)[j] == table.resids[,1], 3] - sim.pars[j]
+  }
+  table.resids$model <- factor(table.resids$model, levels = c("TwoStepFit", "NonCensFit", "hOUwieFit", "TruMapFit"))
+  RMSE <- aggregate(table.resids$value, by=list(table.resids$model, table.resids$par), function(x) sqrt(mean(x^2)))
+  SE <- aggregate(table.resids$value, by=list(table.resids$model, table.resids$par), function(x) sd(x)/length(x))
+  RMSE.table <- data.frame(Model = RMSE[,1], Param = RMSE[,2], Value = RMSE[,3], SE = SE[,3])
+  
+  Model <- paste(big.obj[[1]]$hOUwieFit$model.cor, big.obj[[1]]$hOUwieFit$model.ou, sep="+")
+  Model <- paste("Model:", Model)
+  Pars <- paste(sim.pars, collapse = ", ")
+  Pars <- paste("Generating Pars:", Pars)
+  Rate <- truepars$pars.cor[2,1]
+  Rate <- paste("Mk Rate:", Rate)
+  
+  pd <- position_dodge(0.1) # move them .05 to the left and right
+
+  # p.RMSE[[count]] <- 
+    ggplot(RMSE.table, aes(x=Param, y=Value, colour=Model)) +
+    geom_errorbar(aes(ymin=Value-SE, ymax=Value+SE), width=.1) + 
+      ylim(-10,10) +
+    geom_point()
+  
+  
+  # resid graph
+  p.resids[[count]] <- ggplot(table.resids, aes(x=par, y=value, fill=model)) + 
+    theme_linedraw() +
+    labs(x = "Parameter", y = "RMSE", title = Model, subtitle = Pars, caption = Rate) + 
+    theme(legend.position="bottom") +
+    ylim(-10,10) +
+    scale_fill_brewer() +
+    geom_boxplot()
+  
+  count <- count + 1
+}
+
+legend <- g_legend(p.resids[[1]])
+
+grid.arrange(arrangeGrob(p.resids[[1]] + theme(legend.position="none"),
+                         p.resids[[2]] + theme(legend.position="none") + labs(title = ""),
+                         p.resids[[3]] + theme(legend.position="none") + labs(title = ""),
+                         p.resids[[4]] + theme(legend.position="none") + labs(title = ""),
+                         nrow=2),
+             legend, nrow=2, heights=c(10, 1))
+
+
+grid.arrange(p[[1]], p[[2]], p[[3]], p[[4]])
+
+
+
+MSE.table # mean squared resids
+Bias.table # mean resids
+Var.table # var of params
+
+
+
+
+
+
+
 
 
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
@@ -198,14 +347,14 @@ theta.ratio.table <- data.frame(TwoStep=theta.TwoStep[,2]/theta.TwoStep[,1],
 
 theta.ratio.table <- theta.ratio.table[!apply(theta.ratio.table, 1, function(x) any(x > 100)),]
 
-theta.resid.table <- data.frame(TwoStepTheta1=theta.TwoStep[,1] - truepars$pars.ou[2,1],
-                                TwoStepTheta2=theta.TwoStep[,2] - truepars$pars.ou[2,2],
-                                NonCensTheta1=theta.NonCens[,1] - truepars$pars.ou[2,1],
-                                NonCensTheta2=theta.NonCens[,2] - truepars$pars.ou[2,2],
-                                hOUwieTheta1=theta.hOUwie[,1] - truepars$pars.ou[2,1],
-                                hOUwieTheta2=theta.hOUwie[,2] - truepars$pars.ou[2,2],
-                                TrueMapTheta1=theta.TruMap[,1] - truepars$pars.ou[2,1],
-                                TrueMapTheta2=theta.TruMap[,2] - truepars$pars.ou[2,2])
+theta.resid.table <- data.frame(TwoStepTheta1=theta.TwoStep[,1] - truepars$pars.ou[3,1],
+                                TwoStepTheta2=theta.TwoStep[,2] - truepars$pars.ou[3,2],
+                                NonCensTheta1=theta.NonCens[,1] - truepars$pars.ou[3,1],
+                                NonCensTheta2=theta.NonCens[,2] - truepars$pars.ou[3,2],
+                                hOUwieTheta1=theta.hOUwie[,1] - truepars$pars.ou[3,1],
+                                hOUwieTheta2=theta.hOUwie[,2] - truepars$pars.ou[3,2],
+                                TrueMapTheta1=theta.TruMap[,1] - truepars$pars.ou[3,1],
+                                TrueMapTheta2=theta.TruMap[,2] - truepars$pars.ou[3,2])
 
 ## mean squared error (MSE)
 ## E(thet_hat - theta)^2
@@ -225,14 +374,14 @@ MSE.tables[[i]] <- data.frame(
 ## E(theta_hat) - theta
 ## E(theta_hat - theta) (i.e. the expectation of the error)
 Bias.tables[[i]] <- data.frame(
-  B.Theta1 = c(mean(theta.TwoStep[,1]) - truepars$pars.ou[2,1],
-               mean(theta.NonCens[,1]) - truepars$pars.ou[2,1],
-               mean(theta.hOUwie[,1]) - truepars$pars.ou[2,1],
-               mean(theta.TruMap[,1]) - truepars$pars.ou[2,1]),
-  B.Theta2 = c(mean(theta.TwoStep[,2]) - truepars$pars.ou[2,2],
-               mean(theta.NonCens[,2]) - truepars$pars.ou[2,2],
-               mean(theta.hOUwie[,2]) - truepars$pars.ou[2,2],
-               mean(theta.TruMap[,2]) - truepars$pars.ou[2,2]),
+  B.Theta1 = c(mean(theta.TwoStep[,1]) - truepars$pars.ou[3,1],
+               mean(theta.NonCens[,1]) - truepars$pars.ou[3,1],
+               mean(theta.hOUwie[,1]) - truepars$pars.ou[3,1],
+               mean(theta.TruMap[,1]) - truepars$pars.ou[3,1]),
+  B.Theta2 = c(mean(theta.TwoStep[,2]) - truepars$pars.ou[3,2],
+               mean(theta.NonCens[,2]) - truepars$pars.ou[3,2],
+               mean(theta.hOUwie[,2]) - truepars$pars.ou[3,2],
+               mean(theta.TruMap[,2]) - truepars$pars.ou[3,2]),
   row.names = c("TwoStep", "NoneCens", "hOUwie", "TrueMap")
 )
 
@@ -257,3 +406,10 @@ boxplot(theta.ratio.table,
 abline(h = truepars$pars.ou[3,2]/truepars$pars.ou[3,1], col = "red")
 
 }
+
+MSE.tables
+
+
+
+
+

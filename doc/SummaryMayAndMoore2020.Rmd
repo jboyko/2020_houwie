@@ -1,0 +1,51 @@
+---
+title: "May and Moore Summary"
+author: "James D. Boyko"
+date: "09/03/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+# May and Moore 2020
+
+
+## Overview
+May and Moore (2020) developed a program called MuSSCRat for inferring the impact of a discrete trait on rates of continuous-character evolution. Their stochastic process models the joint evolution of the discrete and continuous characters. Unlike hOUwie, their stochastic process can accommodate one or more continuous characters evolving under a state-dependent multivariate Brownian motion process. Their model also can accommodate variation in the background rate of continuous-character evolution (i.e., rate variation across lineages that is independent of the discrete character under consideration). However, they find that lineage specific background rates are unidentifiable and recommend the use of priors as a way around this problem.
+
+## Model Components
+
+MuSSCRat model's the joint evolution of a discrete binary character, $\mathcal X$, and a set of $c$ continuous characters, $\mathcal Y$, as a stochastic process. The discrete trait has two possible values, $x \in (0,1)$. The discrete character evolves under a continuous-time Markov process, and the continuous characters evolve under a multivariate Brownian motion process with rates that depend on the state of the binary character. Additionally, they allow the background rate of evolution to vary among lineages in the phylogeny by letting each branch have its own rate parameter, $\beta^2_l$ ("background-rate variation"). While in discrete state $i$, the background rate is multiplied by the state-specific relative rate, $\zeta^2_i$. When all $\beta^2_l$ are the same the model will collapse to a "strict molecular clock model" ($\beta^2_l=\mu$, where $\mu$ is the mean of their log-normal prior). 
+
+They accommodate rate variation in multiple continuous characters by varying the relative rate of evolution according to the vector $\sigma^2$; $\sigma^2_i$ is the relative rate at which continuous character $i$ evolves (this is a separate continuous rate variable from the state-specific scalar $\zeta^2_i$). The evolutionary correlations between characters are contained in the $c \times c$ symmetric correlation matrix, $R$, where $[R]_{ij} = \rho_{ij}$ specifies the correlation between characters $i$ and $j$. These relative rates are independent of the discrete state. Instead, the discrete trait affects only the overall rate of continuous-character evolution.
+
+## Forward Simulation
+
+They simulate there model as follows: a discrete trait evolves under a continuous-time Markov process, changing from state 0 to state 1 with rate $q_{01}$, and from state 1 to state 0 with rate $q_{10}$. The continuous character evolves under a state-dependent Brownian motion process, where the diffusion rate, $s^2_i$ , measures the rate of continuous-character evolution when the discrete character is in state $i$. In a small time interval of duration $\Delta t$, where the discrete character begins in state $i$, the continuous character changes by a normally distributed random variable with mean 0 and variance $s^2_i \Delta t$, and the discrete character changes state with probability $q_{ij} \Delta t$. 
+
+## Likelihood
+
+Similar to hOUwie's evaluation of the joint likelihood, MuSSCRat uses a likelihood calculation that includes a vector of character histories, $\kappa$, where $\kappa_l$ is the discrete-character history along branch $l$ as variables in the model. They refer to this technique as data augmentation and suggest that they are "augmenting" the discrete-character data observed at the tips of the tree with unobserved discrete-character histories over the entire tree. The likelihood formula is given by:
+
+$$
+P(\mathcal {X, Y, \kappa} | \Psi, \theta) = P(\mathcal{X, \kappa}| \Psi, \theta)P(\mathcal{Y}|\kappa, \Psi, \theta)
+$$
+
+$P(\mathcal{Y}|\kappa, \Psi, \theta)$ is the likelihood of the multivariate Brownian motion process given a vector of character histories, $\kappa$, phylogeny $\Psi$, and set of parameters $\theta$. $P(\mathcal{X, \kappa}| \Psi, \theta)$ is the probability of a particular character history.  
+
+Once the priors on their parameters are defined, they do not solve the joint posterior probability density. Instead, they approximate the joint posterior probability density using MCMC. Their MCMC procedure includes proposals that change the discrete-character history. When a new character history, $\kappa'$, is proposed, it is accepted with probability:
+$$
+A = min \left[
+1, 
+\frac{P(\mathcal{X, \kappa'}|\theta)}{P(\mathcal{X, \kappa}|\theta)} \times
+\frac{P(\mathcal{Y, \kappa'}|\theta)}{P(\mathcal{Y, \kappa}|\theta)} \times
+\frac{f(\kappa')}{f(\kappa)}
+\right],
+$$
+where $f(\kappa)$ is the distribution from which the new character history is drawn. Finally, they note that the probabilities of the discrete characters, $P(\mathcal{X, \kappa}|\theta)$, and continuous characters, $P(\mathcal{Y, \kappa}|\theta)$, both contribute to the probability that the proposed discrete-character history is accepted. This means that the continuous characters are able to influence the discrete-character histories and they are therefore correctly modeling the joint distribution of the discrete and continuous characters.
+
+## TL;DR
+
+Besides the use of Mk and BM modeling frameworks, hOUwie and MuSSCRat are primarily similar in that they both use proposed character histories to infer the joint distribution of discrete and continuous characters. However, they differ slightly in how they treat these stochastic maps. MuSSCRat evaluates a simmap according to it's probability under the Mk model parameters, whereas hOUwie assumes we can treat their probability as equal given enough sampling. The two programs are also similar in that there are ways to accommodate background rate variation. Here however, the differences are more substantial. MuSSCRat's background rate model allows each branch have its own rate parameter, $\beta^2_l$ ("background-rate variation"). Unsurprisingly, this leads to unidentifiable model parameters. In hOUwie, we are able to accommodate background-rate variation through the use of hidden processes which allow continuous rates to vary according to non-observed states. It remains to be seen whether hOUwie's version of background rate variation is identifiable, but given recent work, so long as the state-dependent processes differ substantially enough there should be information to detect variation. Finally, the extent of different models allowed in each software differ. Both models allow for a single binary discrete character and a single continuous character. However, MuSSCRat only allows for state-dependent rate variation, whereas hOUwie has open to it all the Ornstein-Uhlenbeck models. Furthermore, while MuSSCRat allows for multiple continuous characters, hOUwie allows for multiple discrete characters and greater complexity in the models of discrete character evolution.
+

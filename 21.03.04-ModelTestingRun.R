@@ -160,7 +160,7 @@ mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "
 pars <- c(1, 2, 0.5, 1, 5, 10)
 mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
 pars <- c(1, 2, 0.5, 2, 5, 10)
-mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 10)
 pars <- c(1, 2, 0.5, 5, 5, 10)
-mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 15)
+mclapply(1:100, function(x) SingleModelTestRun(phy, index.cor, index.ou, "ER", "OUMV", pars, nmaps, x), mc.cores = 10)
 
