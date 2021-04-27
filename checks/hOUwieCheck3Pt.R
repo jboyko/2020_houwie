@@ -6,7 +6,7 @@ simulateData <- function(phy, q, alpha, sigma.sq, quiet=FALSE){
   root.p = c(0,0) # we will sample the root with equal probability of either state
   root.p[sample(c(1,2), 1, prob =c(0.5, 0.5))] <- 1
   
-  theta = c(4, 5) # following Cresler et al. (2015) we set delta theta to be 1 (tempor at 2)
+  theta = c(5, 10) # following Cresler et al. (2015) we set delta theta to be 1 (tempor at 2)
   theta0 = rnorm(1, theta[which(root.p == 1)], sqrt(sigma.sq[which(root.p == 1)]/2*alpha[which(root.p == 1)])) # following Cresler et al. (2015) we sample the root theta from the stationary distribution matchiing the root state
   full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
   obs.no.trans <- sum(unlist(lapply(full.data$simmap[[1]]$maps, function(x) length(x) - 1)))
@@ -34,7 +34,7 @@ require(parallel)
 require(lhs)
 
 # simulate data
-nTip <- 250
+nTip <- 100
 q <- 0.25 # the expected number of markov transitions in terms of br proportion
 alpha <- c(1,1) 
 sigma.sq <- c(0.5,0.5) 
@@ -69,6 +69,8 @@ for(i in 1:n.par.combos){
 }
 
 debug(OUwie.basic)
+
+hOUwie(phy = phy, data = data.houwie, rate.cat = 1, model.cor = "ER", model.ou = "OUM", p = c(1, 8, 1, 5, 10), nSim = n.simmaps, quiet = FALSE)
 
 # test <- hOUwie(phy = phy, data = data.houwie, rate.cat = 1, 
 #                index.cor = index.cor, root.p="yang", lb.cor=1e-5, ub.cor=1,

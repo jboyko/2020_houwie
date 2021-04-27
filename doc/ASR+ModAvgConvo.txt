@@ -1,0 +1,448 @@
+
+
+James Boyko  7:42 PM
+I'm about to start the ASR function for hOUwie (regimes only) since they're important for model averaging at the tips
+7:43
+Do we all agree that the best way to do this is to fix a node at a given state, make a bunch of simmaps with that node fixed at that state, and get the hOUwie likelihood, then repeat for all states?
+
+Brian O'Meara  8:56 PM
+so, marginal? That seems not ideal for use at the tips
+
+James Boyko:somethingsomething:  8:57 PM
+ya
+8:57
+and hmm..
+8:57
+i'm not sure i follow why marginal would make more or less sense for internal nodes vs tips
+
+Brian O'Meara  9:12 PM
+so we want the asr to average at tips. So the tips are using info from multiple nodes for this. So marginal for the nodes that are then used jointly…?
+
+Jeremy Beaulieu  9:13 PM
+<A new fighter has entered the game>
+9:14
+Let's back up a bit
+9:14
+@jboyko when you are doing simmaps with hidden states how are tip states treated? (edited) 
+
+James Boyko:somethingsomething:  9:14 PM
+they're sampled 50/50 i think
+
+Jeremy Beaulieu  9:15 PM
+Oh, really? Even if the model expects 80% in A and 20% in B for observed state 1, for example?
+
+James Boyko:somethingsomething:  9:16 PM
+During model fitting, ya
+
+Brian O'Meara  9:16 PM
+<an old fighter steps back to watch the bloodbath from a safe distance>
+
+James Boyko:somethingsomething:  9:16 PM
+Oh, okay
+
+Jeremy Beaulieu  9:16 PM
+That doesn't seem right
+
+James Boyko:somethingsomething:  9:16 PM
+No it depends on the model
+
+Jeremy Beaulieu  9:17 PM
+That's the right answer
+
+James Boyko:somethingsomething:  9:17 PM
+Since the probability we sample from is based on the model
+
+Jeremy Beaulieu  9:17 PM
+Brian, you can step forward
+9:17
+No blood will be spilled on this night
+
+James Boyko:somethingsomething:  9:17 PM
+I'm learning to bend the knee
+
+Jeremy Beaulieu  9:18 PM
+Couldn't we just summarize a set of maps taken from the MLE? (edited) 
+
+James Boyko:somethingsomething:  9:19 PM
+Ya, I was thinking about that too
+
+Jeremy Beaulieu  9:19 PM
+Old fighter, what do you think of this?
+9:19
+So, you'd have to take the MLE object and then resample the maps
+
+James Boyko:somethingsomething:  9:28 PM
+Well, one way to make sure is to do the brute force marginal and compare it to the simmap approach
+
+Brian O'Meara  9:29 PM
+It feels like we’re working very hard to not be bayesian
+
+Jeremy Beaulieu  9:29 PM
+Indeed
+
+Brian O'Meara  9:29 PM
+maybe… too hard?
+
+Jeremy Beaulieu  9:29 PM
+Just don't think about it
+
+Brian O'Meara  9:30 PM
+I mean, a set of maps from the MLE makes sense to me
+9:30
+but it’s still a point estimate
+
+Jeremy Beaulieu  9:30 PM
+Right, that is true
+
+Brian O'Meara  9:33 PM
+some of the adaptive sampling stuff (quasi-greedy grid search) could be a way to do all this jointly
+
+Jeremy Beaulieu  9:34 PM
+:bae:
+:bae:
+1
+
+
+Brian O'Meara  9:37 PM
+ok, looking at this another way: this is just like the BEST (sigh) model for gene tree species tree
+9:38
+P(ST | data) = P(gene tree | species tree ) * P (data | gene tree) * P(gene tree) * P(species tree) / summation across all  space
+9:38
+and the likelihood form for that drops the priors
+9:39
+and people do species tree gene tree stuff for likelihood
+9:39
+where the gene tree is a chunky param like how simmaps are
+
+Jeremy Beaulieu  9:39 PM
+Right
+
+Brian O'Meara  9:39 PM
+so, maybe just do what they do?
+
+Jeremy Beaulieu  9:39 PM
+which is what I was suggesting, no?
+
+Brian O'Meara  9:39 PM
+looking up what they do is left as an exercise for the student
+
+Jeremy Beaulieu  9:40 PM
+Indeed
+
+James Boyko:somethingsomething:  9:40 PM
+lol
+
+Brian O'Meara  9:40 PM
+but yeah: do they take the single best gene tree species tree combo or keep the sum across the gene trees?
+
+Brian O'Meara  9:46 PM
+and James, are you model averaging across just different simmaps or between, say, a houwie model with discrete model A and OUMVA vs a houwie model with discrete model B and BMS?
+
+James Boyko:somethingsomething:  9:48 PM
+I was planning on doing the second one
+9:50
+Hmm
+
+Brian O'Meara  9:51 PM
+stupid review for me: with houwie, the likelhood of the model is the single best simmap + ou likelihood sum?
+
+James Boyko:somethingsomething:  9:51 PM
+it's the corhmm fit + the mean ou likelihood (after generating many simmaps based on the Q matrix that went into corhmm)
+
+Brian O'Meara  9:54 PM
+so why do you need the tips for model averaging? Can’t you just average the params across models?
+
+James Boyko:somethingsomething:  9:55 PM
+My reasoning was that there is no good way to know whether rate class A in model_1 is the same as rate class in A in model_2
+
+Brian O'Meara  9:56 PM
+ah
+
+James Boyko:somethingsomething:  9:56 PM
+But if we can get the parameters associated with tips for any given model, we should be okay?
+9:57
+so, maybe the marginal is what we want..
+
+Brian O'Meara  9:57 PM
+the fact that this keeps coming up in this space is worrying me
+:point_up_2:
+1
+
+9:58
+the tip thing helps but not perfectly — what if one tip is 50:50 in one model
+
+Jeremy Beaulieu  9:59 PM
+That's why in hisse we average within the model first based on marginal
+
+James Boyko:somethingsomething:  10:00 PM
+within the model?
+10:01
+oh, like move it all to obseverd state space?
+
+Jeremy Beaulieu  10:01 PM
+We fit a HiSSE model. Tip A is 80% 1A and 20% 1B. We first take a weighted average of the rates here. Then we model average across models
+10:01
+Maybe I'm missing what you all are talking about (edited) 
+
+James Boyko:somethingsomething:  10:01 PM
+I follow
+10:01
+I think
+10:01
+That's what I was hoping to do with hOUwie
+10:02
+But obviously we'd need a marginal to do that
+
+Jeremy Beaulieu  10:03 PM
+Right, and so if summary of the simmaps at the tips is an approximation of the marginal, then it should be the same basic procedure -- but obviously, there may be bigger issues here doing it that way
+
+James Boyko:somethingsomething:  10:03 PM
+right right
+
+Jeremy Beaulieu  10:03 PM
+also, if I am being dumb, please say so -- I am trying to edit an undergrad thesis and talk here (though I'd much rather talk to you all)
+
+Brian O'Meara  10:05 PM
+so with hisse, all we care about really is the div rates
+10:05
+not really transitions
+
+Jeremy Beaulieu  10:05 PM
+Right. And here, I would think we only care about theta, sigma, and alpha
+
+Brian O'Meara  10:05 PM
+not the discrete process?
+10:06
+I only gain woodiness?
+
+James Boyko:somethingsomething:  10:06 PM
+argh, that's true
+
+Jeremy Beaulieu  10:06 PM
+Yeah, I suppose that matters too
+10:06
+I am having deja vu
+10:06
+I feel like we argued this at the beginning
+
+Brian O'Meara  10:06 PM
+idk. James, you’re the one with the memory in all this. I hope.
+
+Jeremy Beaulieu  10:07 PM
+Lol
+
+James Boyko:somethingsomething:  10:07 PM
+i'm the worst
+
+Jeremy Beaulieu  10:07 PM
+We're a bunch
+
+James Boyko:somethingsomething:  10:07 PM
+i couldn't remember where i published my only paper
+
+Jeremy Beaulieu  10:07 PM
+Well, I suppose with teh added information from the continuous traits, anc recons might be better
+
+Brian O'Meara  10:07 PM
+There’s probably a brilliant fourth collaborator we’ve forgotten
+:joy:
+1
+
+
+Jeremy Beaulieu  10:08 PM
+But we know the observed states
+10:08
+Right? We know tips are either woody or herb.
+
+Brian O'Meara  10:08 PM
+true
+10:08
+but for corhmm, hidden trans rates matter
+10:08
+and we care about them
+10:08
+is it a precursor model or not
+
+Jeremy Beaulieu  10:09 PM
+They do, but they anchor the sigma, theta, and alpha estimates
+10:10
+I mean with HiSSE, we don't care about A or B
+10:10
+We care about the rates
+
+Brian O'Meara  10:10 PM
+alright, concrete time: I have one model with 0A, 0B. Another with 0A, 0B, 0C
+10:10
+and I have sigma_0A… etc.
+10:11
+and now I want to average sigma_0A_model1 with sigma_0?_model2
+10:11
+I can’t assume ? == A
+
+Jeremy Beaulieu  10:11 PM
+No, no
+10:11
+We want average tips
+
+Brian O'Meara  10:11 PM
+sigma_tip1_model1?
+
+Jeremy Beaulieu  10:12 PM
+I thought this whole convo. started about getting marginal at tips
+
+Brian O'Meara  10:12 PM
+right… in order to get model averages
+
+Jeremy Beaulieu  10:12 PM
+But yeah, if you want to average the model pars, we're SOL (s**t out of luck)
+10:14
+@jboyko You're the skipper on this ship
+10:14
+What do you want people to get out of this model? (edited) 
+
+James Boyko:somethingsomething:  10:14 PM
+i do want them to get the discrete process too
+
+Jeremy Beaulieu  10:14 PM
+I am a second year grad student, I have some data and I've heard hOUwie is cool. What can I do with it? (edited) 
+
+James Boyko:somethingsomething:  10:15 PM
+i want them to learn something about their regime and the dynamics of their continuous trait. but if we are forced to pick one, we can say the regimes are a nuisance parameter and just model average for ou params
+10:16
+the ou params are probably of greater interest
+10:16
+but model averaging in the way hisse does probably is not going to fly
+10:16
+like when i ran my anole dataset. i constructed the model with body size and sympatry or allopaty
+10:17
+i find that when i include a hidden state where theta is allowed to differ in sympatry, there is support for two divergent sizes
+10:17
+if we brought that all back to a single observed state (even though it's an ou param) we're losing out on the truth that there are divergent optima in sympatry (edited) 
+10:19
+but if we model average internally based on the marginal and with a focus on the tips, that still comes out?
+10:19
+so i'd be happy
+
+Jeremy Beaulieu  10:20 PM
+You say the regimes are a nuisance parameter, what would be your justification? (edited) 
+
+James Boyko:somethingsomething:  10:21 PM
+i don't think they are, but if i had to give a reason it would be that we aren't interested in the discrete trait
+10:21
+that's the only justification i can think of
+
+Jeremy Beaulieu  10:21 PM
+One could be that anc recon is bad
+
+Brian O'Meara  10:22 PM
+so, I think things can only evolve carnivory (discrete trait) when they get big
+10:22
+so my continuous (size) drives discrete (carnivore)
+
+Jeremy Beaulieu  10:22 PM
+OUwie doesn't work that way though
+
+Brian O'Meara  10:23 PM
+but I don’t think that that’s the only thing that drives either (edited) 
+
+Jeremy Beaulieu  10:23 PM
+Continuous ~ discrete
+
+Brian O'Meara  10:23 PM
+houwie does
+
+Jeremy Beaulieu  10:23 PM
+I guess that's true, in an indirect way. I concede
+10:24
+James. Contemplate this on the Tree of Woe (edited) 
+
+James Boyko:somethingsomething:  10:24 PM
+i think size would be nuisance parameter in that example
+10:25
+i just figured most use cases in houwie would be focussed on discrete causing continuous
+
+Brian O'Meara  10:25 PM
+not completely, but yeah, more nuisance-y. That’s why I brought it up
+
+James Boyko:somethingsomething:  10:25 PM
+mhmm
+10:25
+alright, time for bayesian causal modeling in houwie
+
+Brian O'Meara  10:25 PM
+so, summarizing the ou params at tips is easy
+10:25
+right?
+
+James Boyko:somethingsomething:  10:25 PM
+ya
+
+Brian O'Meara  10:26 PM
+ok
+
+Jeremy Beaulieu  10:26 PM
+Yes
+
+Brian O'Meara  10:26 PM
+so for discrete params, one thing I’ve been playing with in corhmm is wait times
+10:26
+we don’t care about 0A->1A vs 0B -> 1B
+10:26
+we care about how soon does my tip in 0* go to 1*
+
+James Boyko:somethingsomething:  10:26 PM
+oh, wow ya
+
+Brian O'Meara  10:27 PM
+and that one can average across the hidden states at a tip
+10:27
+and compare between models
+
+Jeremy Beaulieu  10:27 PM
+Oh snap
+10:27
+True
+
+James Boyko:somethingsomething:  10:28 PM
+could we take the summary even further and as how long do we stay in 0* (if we had more than two states)
+10:28
+(that may have been what you were implying)
+
+Brian O'Meara  10:28 PM
+that, but you do still have the 0* -> 1*, 0*->2* etc. rates
+
+Jeremy Beaulieu  10:28 PM
+Yeah. I was reading something today (I forget what) and they wrote the rate was 3.2 or something. 3.2 what? And is that high? Or is low? I don;t know
+
+Brian O'Meara  10:28 PM
+but could sum them to get the residence time
+
+Jeremy Beaulieu  10:29 PM
+We did this in Zanne, perhaps why I block it from my mind
+10:29
+But this is good and nice way for people to contextualize this stuff better
+
+
+
+
+
+
+Brian O'Meara  10:29 PM
+Yeah — been playing with the Solti project on this
+
+James Boyko:somethingsomething:  10:29 PM
+it does work nicely with some of the ouwie params (ie halflife)
+
+Jeremy Beaulieu  10:30 PM
+@jboyko please take snapshots of this conversation
+10:30
+We will forget in a week (as in Brian and I for sure)
+
+
+Message houwie_dev
+
+
+
+
+
+
