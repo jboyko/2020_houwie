@@ -306,6 +306,14 @@ hOUwie.dev <- function(p, phy, rate.cat, organizedData,type="joint",
   diag(Q) <- -rowSums(Q)
   # fit the ancestral state reconstruction
   # simulate a set of simmaps
+  if(type == "pupko"){
+    index.cor <- rate
+    index.cor[index.cor == max(index.cor)] <- 0
+    nTip <- length(phy$tip.label)
+    JointRecon <- hOUwieRecon.dev(log(p), phy=phy, organizedData=organizedData, rate.cat=rate.cat, index.cor=index.cor, index.ou=index.ou, all.roots = all.roots, sample.recons = sample.recons, shift.point=shift.point, return.lik = TRUE)
+    cat("LnLik:", JointRecon, "pars:", p, "\n")
+    return(-JointRecon)
+  }
   if(type == "joint"){
     index.cor <- rate
     index.cor[index.cor == max(index.cor)] <- 0
@@ -318,7 +326,7 @@ hOUwie.dev <- function(p, phy, rate.cat, organizedData,type="joint",
       for(ReconIndex in 1:length(JointReconOnly)){
         tip.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][1:nTip], 1] 
         node.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][(nTip+1):max(phy$edge[,1])], 1]
-        map[[ReconIndex]] <- getJointMapFromNode(phy, tip.states, node.states, shift.point)
+        map[[ReconIndex]] <- getJointMapFromNode(phy, tip.states, node.states, 0)
       }
       OU.loglik <- lapply(map, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr))
     }else{
@@ -331,7 +339,7 @@ hOUwie.dev <- function(p, phy, rate.cat, organizedData,type="joint",
           return(1e10)
         }
         #cat("Root state:", node.states[1], "Root index:", JointRecon$Recon[1], "\n")
-        map <- getJointMapFromNode(phy, tip.states, node.states, 0.5)
+        map <- getJointMapFromNode(phy, tip.states, node.states, 0)
         OU.loglik <- OUwie.basic(map, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr)
       }else{
         JointRecon <- hOUwieRecon.dev(log(p), phy=phy, organizedData=organizedData, rate.cat=rate.cat, index.cor=index.cor, index.ou=index.ou, all.roots = all.roots, sample.recons = sample.recons, shift.point=shift.point)
@@ -341,7 +349,7 @@ hOUwie.dev <- function(p, phy, rate.cat, organizedData,type="joint",
         for(ReconIndex in 1:length(JointReconOnly)){
           tip.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][1:nTip], 1] 
           node.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][(nTip+1):max(phy$edge[,1])], 1]
-          map[[ReconIndex]] <- getJointMapFromNode(phy, tip.states, node.states, 0.01)
+          map[[ReconIndex]] <- getJointMapFromNode(phy, tip.states, node.states, 0)
         }
         OU.loglik <- lapply(map, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr))
         # # addig in a root prior
@@ -592,7 +600,7 @@ hOUwieRecon <- function(hOUwie.model=NULL, phy=NULL, data=NULL, rate.cat=NULL, n
 }
 
 # the joint reconstruction for a continuous and discrete variable
-hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou, all.roots=FALSE, sample.recons=FALSE, nSamples=100, shift.point=0.5){
+hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou, return.lik=FALSE, all.roots=FALSE, sample.recons=FALSE, nSamples=100, shift.point=0){
   # organizing the parameters
   p <- exp(p)
   # define which params are for the HMM
@@ -631,16 +639,17 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
     focal_data <- dat[match(phy$tip.label[tip_index], organizedData$hOUwieData[,1]),]
     time_edge <- phy$edge.length[focal_edge_index]
     edge_Mk <- matrix(0, length(unique(AllCombos[,1])), length(unique(AllCombos[,1])), dimnames = list(unique(AllCombos[,1]), unique(AllCombos[,1])))
-    for(Mk_index in 1:nStates){
-      state <- unique(AllCombos[,1])[Mk_index]
-      Mk_vec <- rep(0, nStates)
-      Mk_vec[state] <- 1
-      edge_Mk[Mk_index,] <- log(c(expm(Q * time_edge) %*% Mk_vec))
-    }
+    # for(Mk_index in 1:nStates){
+    #   state <- unique(AllCombos[,1])[Mk_index]
+    #   Mk_vec <- rep(0, nStates)
+    #   Mk_vec[state] <- 1
+    #   edge_Mk[Mk_index,] <- log(c(expm(Q * time_edge) %*% Mk_vec))
+    # }
+    # P_mat <- log((expm(Q * time_edge)))
     for(i in 1:nCombos){
       for(j in 1:rate.cat){
         obsState <- ObsStateMatrix[dat[tip_index,2],j]
-        value_i <- which(AllCombos[,1] == obsState & AllCombos[,2] == focal_data$valueBin) # the observed bin
+        value_i <- which(AllCombos[,1] == obsState & AllCombos[,2] == focal_data$valueBin) # the observed all combo
         # calculate the Pij(ty) for each possible starting state i
         # start with the Mk likelihood
         state_i <- AllCombos[i,1]
@@ -650,12 +659,17 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
         }else{
           init_i <- AllCombos[i,2]
         }
-        Mk_llik <- edge_Mk[state_i,obsState] # P_ij for the Mk process. the probability that we transition from i to j over time_edge is just the probability of being state_j
+        if(state_i == obsState){
+          Mk_llik <- log(1 - (1 - exp(time_edge * Q[obsState,obsState])))
+        }else{
+          Mk_llik <- log(Q[state_i,obsState]) + log(1 - (1 - exp(time_edge * Q[obsState,obsState])))
+        } # P_ij for the Mk process. the probability that we transition at time 0 from i to j then remain in branch j for the entire branch length. the probability of a transtion of time 0 is dexp(0, rate), which is just rate.
         # next calculate the OU likelihood
-        OU_llik <- dOU(dat[tip_index,3], init_i, time_edge, alpha[state_i], theta[state_i], sigma.sq[state_i], TRUE)
+        OU_llik <- dOU(dat[tip_index,3], init_i, time_edge, alpha[obsState], theta[obsState], sqrt(sigma.sq[obsState]), TRUE)
         
         L_z[i,value_i,focal_edge_index] <- Mk_llik + OU_llik
         # L_z[i,value_i,focal_edge_index] <- OU_llik
+        # L_z[,,focal_edge_index]
       }
       C_z[i,which.max(L_z[i,,focal_edge_index]),focal_edge_index] <- 1
     }
@@ -668,12 +682,13 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
     RootAsAnc <- phy$edge[focal_anc_index,1] == nTip+1
     # time is based on the parent to focal length. dec values calculated already
     time_edge <- phy$edge.length[focal_anc_index]
-    for(Mk_index in 1:nStates){
-      state <- unique(AllCombos[,1])[Mk_index]
-      Mk_vec <- rep(0, nStates)
-      Mk_vec[state] <- 1
-      edge_Mk[Mk_index,] <- log(c(expm(Q * time_edge) %*% Mk_vec))
-    }
+    # for(Mk_index in 1:nStates){
+    #   state <- unique(AllCombos[,1])[Mk_index]
+    #   Mk_vec <- rep(0, nStates)
+    #   Mk_vec[state] <- 1
+    #   edge_Mk[Mk_index,] <- log(c(expm(Q * time_edge) %*% Mk_vec))
+    # }
+    # P_mat <- log((expm(Q * time_edge)))
     # i indexes the parental state, j indexes the descendants 
     for(i in 1:nCombos){
       # Mk prereqs for the parent j
@@ -684,13 +699,19 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
       }else{
         init_i <- AllCombos[i,2]
       }
-      Mk_vec_i <- edge_Mk[state_i,] 
+      # Mk_vec_i <- edge_Mk[state_i,] 
       # the probability that we end up in state j at node z with the parent as state i. 
       for(j in 1:nCombos){
         # given the parental node defines the distribution, we evaluate over the possible k ending values
         state_j <- AllCombos[j,1]
-        Mk_llik <- Mk_vec_i[state_j] # P_ij for the Mk process. the probability that we transition from i to j over time_edge is just the probability of being state_j
-        OU_llik <- dOU(AllCombos[j,2], init_i, time_edge, alpha[state_i], theta[state_i], sigma.sq[state_i], TRUE) # P_ij for the OU process. we observe the particular j bin, we start in the i bin, and the OU parameters are defined by the i bin's state
+        # Mk_llik <- Mk_vec_i[state_j] # P_ij for the Mk process. the probability that we transition from i to j over time_edge is just the probability of being state_j
+        if(state_i == state_j){
+          Mk_llik <- log(1 - (1 - exp(time_edge * Q[state_j,state_j])))
+        }else{
+          Mk_llik <- log(Q[state_i,state_j]) + log(1 - (1 - exp(time_edge * Q[state_j,state_j])))
+        } # P_ij for the Mk process. the probability that we transition at time 0 from i to j then remain in branch j for the entire branch length. the probability of a transtion of time 0 is dexp(0, rate), which is just rate.
+        # next calculate the OU likelihood
+        OU_llik <- dOU(AllCombos[j,2], init_i, time_edge, alpha[state_j], theta[state_j], sigma.sq[state_j], TRUE) # P_ij for the OU process. we observe the particular j bin, we start in the i bin, and the OU parameters are defined by the i bin's state
         # L_z[i,j,focal_anc_index] <- OU_llik + sum(apply(L_z[j,,focal_dec_index], 2, max))
         L_z[i,j,focal_anc_index] <- Mk_llik + OU_llik + sum(apply(L_z[j,,focal_dec_index], 2, max)) # L_z(i) is the maximum of row j. in pupko he doesn't hold all of the values only keeping the maximum. this would be achieved by collapsing the collumns of L_z and only keeping the max
       }
@@ -707,6 +728,10 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
     #L_root[k] <- log(P_k) + sum(apply(L_z[k,,focal_dec_index], 2, max))
     L_root[k] <- sum(apply(L_z[k,,focal_dec_index], 2, max))
   }
+  if(return.lik == TRUE){
+    return(max(L_root))
+  }
+  # for possible ways to reconstruct...
   if(sample.recons){
     AllRootsRecons <- vector("list", nSamples + 1)
     AllRootsRecons[[nSamples + 1]] <- L_root

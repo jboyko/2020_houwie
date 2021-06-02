@@ -43,7 +43,7 @@ data[data[,2]==4,2] <- 2
 dataa <- data.houwie
 BM1a <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BM1")
 OU1a <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OU1")
-OUMa <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM")
+OUMa <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", type = "pupko")
 BMSa <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BMS")
 CIDOUMa <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CID.ou)
 CIDBMSa <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CIDBMS.ou)
@@ -120,10 +120,10 @@ data[data[,2]==4,2] <- 2
 datad <- data.houwie
 BM1d <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BM1", all.roots = TRUE)
 OU1d <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OU1", all.roots = TRUE)
-OUMd <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", all.roots = TRUE)
-BMSd <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BMS", all.roots = TRUE)
-CIDOUMd <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CID.ou, all.roots = TRUE)
-CIDBMSd <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CIDBMS.ou, all.roots = TRUE)
+OUMd <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", type = "joint", all.roots = TRUE)
+BMSd <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BMS", type = "joint", all.roots = TRUE)
+CIDOUMd <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CID.ou, type = "joint", all.roots = TRUE)
+CIDBMSd <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CIDBMS.ou, type = "joint", all.roots = TRUE)
 # OUM SIM
 getModelTable(list("BM" = BM1d, "OU1" = OU1d, "OUM" = OUMd, "BMS" = BMSd, "CIDOUM" = CIDOUMd, "CIDBMS" = CIDBMSd))
 
@@ -131,6 +131,21 @@ getModelTable(list("BM" = BM1d, "OU1" = OU1d, "OUM" = OUMd, "BMS" = BMSd, "CIDOU
 
 # AR <- hOUwieRecon(CIDOUMd)
 # BR <- hOUwieRecon(OUMd)
+debug(hOUwieRecon.dev)
+pA = c(0.307842, 1.907731, 2.320655, 0.655545, 6.618652)
+OUMPupA <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", type = "pupko", p = pA)
+OUMJntA <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", type = "joint", p = pA)
+pB = c(13.53353, 0.1327821, 1.441436, 0.2521498, 8.863342)
+OUMPupB <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", type = "pupko", p = pB)
+OUMJntB <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", type = "joint", p = pB)
+
+print(pA)
+print(c("PureJoint" = OUMPupA$loglik, "ReconMap" = OUMJntA$loglik))
+print(pB)
+print(c("PureJoint" = OUMPupB$loglik, "ReconMap" = OUMJntB$loglik))
+
+
+CIDBMSd <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = CID.cor, index.ou = CIDBMS.ou, type = "pupko", p = c(4.050993, 0.0006931472, 8.679413, 9.702098))
 
 # LnLik: -57.44525 pars: 0.4910104 4.782075 5.017083 3.103897 8.167658 TRUE
 # LnLik: -57.39112 pars: 0.4910325 4.782075 5.015803 3.103897 8.167658 TRUE

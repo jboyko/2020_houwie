@@ -492,7 +492,8 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
         # start with the Mk likelihood
         state_i <- AllCombos[i,1]
         if(RootAsAnc){
-          init_i <- theta[state_i]
+          # init_i <- theta[state_i]
+          init_i <- AllCombos[i,2]
         }else{
           init_i <- AllCombos[i,2]
         }
@@ -523,7 +524,8 @@ hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou
       # Mk prereqs for the parent j
       state_i <- AllCombos[i,1]
       if(RootAsAnc){
-        init_i <- theta[state_i]
+        # init_i <- theta[state_i]
+        init_i <- AllCombos[i,2]
       }else{
         init_i <- AllCombos[i,2]
       }
