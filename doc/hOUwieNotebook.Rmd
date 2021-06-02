@@ -344,7 +344,6 @@ A weakness of these simulations is that most of our complexity comes from the OU
 
 These models are currently running on the server. The set of models being run are chosen to answer some basic questions about hOUwie that I think an empiricist would like to see answered:
 
-
 1) Can we detect hidden states when they're present?
 From previous work we know that we can detect hidden states when there are differences in the state dependent process with discrete, but what when the differences are entirely due to the OU process? E.g. The rate of limb length evolution is greater on an island than it is on the mainland, but we don't expect that transitions between mainland and island will differ by lineage. 
 

@@ -1,0 +1,53 @@
+---
+title: "hOUwie Notebook - Model Selection"
+author: "James Boyko"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+og:
+  type: article
+  title: opengraph title
+  url: optional opengraph url
+  image: optional opengraph image link
+footer:
+- content: '[link1](http://example.com/) • [link2](http://example.com/)<br/>'
+- content: Copyright blah blah
+---
+```{r, include=FALSE}
+require(corHMM)
+source("~/2020_hOUwie/hOUwie.R")
+source("~/2020_hOUwie/Utils.R")
+require(OUwie)
+require(corHMM)
+require(parallel)
+require(ggplot2)
+require(gridExtra)
+```
+
+#### 2.2.2 Model Selection
+
+These models are currently running on the server. The set of models being run are chosen to answer some basic questions about hOUwie that I think an empiricist would like to see answered:
+
+1) Can we detect hidden states when they're present?
+From previous work we know that we can detect hidden states when there are differences in the state dependent process with discrete, but what when the differences are entirely due to the OU process? E.g. The rate of limb length evolution is greater on an island than it is on the mainland, but we don't expect that transitions between mainland and island will differ by lineage. 
+
+2) Can we avoid detecting hidden states when they're absent?
+There are often problems in PCMs where overly complex models are selected. One of the advantages of hOUwie is that it explicitly models the process of regimes and is time-heterogeneous. This may assist in avoiding the large-p-small-n problem, but we should make sure it doesn't always select overly complex models. 
+
+3) Can we detect character dependence when it's present?
+A common question when using hOUwie could be does my focal trait associate with my ecological variable? In this case we should be able to recover character dependence. 
+
+4) Can we avoid detecting character dependence when it's absent?
+If there is no association between the OU parameters and the discrete regimes we should not find evidence for an association. This is potential problem reminiscent of the SSE controversy where name length was correlated with diversification rates. Fortunately, hOUwie allows for the construction of character independent models.
+
+5) How does hOUwie perform when the model is outside the original set?
+In an empirical situation, the true model is outside the set of comprehensible models and is therefore unlikely to be in the set of our biologically informed models. However, with model averaging and tip averaging maybe there are certain aspects of this true models we can begin to understand. Here we will simulate an incredibly complex model (that will not be included within our analysis set) on a tree that is 100 times the size of the tree we will be pruned down for analysis. When we go to fit our set of models maybe we will see that we partially captured the dynamics of this complex model.
+
+
+
+
+
+
+

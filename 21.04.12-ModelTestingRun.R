@@ -10,9 +10,15 @@ require(parallel)
 ####### ####### ####### ####### ####### ####### ####### ####### ####### 
 # models to fit 
 ####### ####### ####### ####### ####### ####### ####### ####### ####### 
+# CD BM1
+fit.CDBM1.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))
+fit.CDBM1.ou <- getOUParamStructure("BM1", "three.point", FALSE, FALSE, dim(fit.CDBM1.cor)[1])
 # CD BMS
 fit.CDBMS.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))
 fit.CDBMS.ou <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, dim(fit.CDBMS.cor)[1])
+# CD OU1
+fit.CDOU1.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))
+fit.CDOU1.ou <- getOUParamStructure("OU1", "three.point", FALSE, FALSE, dim(fit.CDOU1.cor)[1])
 # CD OUM
 fit.CDOUM.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))
 fit.CDOUM.ou <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(fit.CDOUM.cor)[1])
@@ -43,20 +49,25 @@ fit.HYBOUM.ou <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(fit
 ####### ####### ####### ####### ####### ####### ####### ####### ####### 
 # simulate under one and fit under all others
 ####### ####### ####### ####### ####### ####### ####### ####### ####### 
-index.cor <- list(fit.CDBMS.cor, fit.CDOUM.cor, fit.CIDBMS.cor, fit.CIDOUM.cor, fit.HYBBMS.cor, fit.HYBOUM.cor)
-index.ou <- list(fit.CDBMS.ou, fit.CDOUM.ou, fit.CIDBMS.ou, fit.CIDOUM.ou, fit.HYBBMS.ou, fit.HYBOUM.ou)
-rate.cats <- c(1,1,2,2,2,2)
-pars.list <- list(CDBMS = c(1, 1, 10, 10),  # mk, sigma1, sigma2, theta
-                  CDOUM = c(1, 1, 2, 5, 10),  # mk, alpha, sigma, theta1, theta2
+index.cor <- list(fit.CDBM1.cor, fit.CDBMS.cor, fit.CDOU1.cor, fit.CDOUM.cor, 
+                  fit.CIDBMS.cor, fit.CIDOUM.cor, fit.HYBBMS.cor, fit.HYBOUM.cor)
+index.ou <- list(fit.CDBM1.ou, fit.CDBMS.ou, fit.CDOU1.ou, fit.CDOUM.ou, 
+                 fit.CIDBMS.ou, fit.CIDOUM.ou, fit.HYBBMS.ou, fit.HYBOUM.ou)
+rate.cats <- c(CDBM1=1,CDBMS=1,CDOU1=1,CDOUM=1,
+               CIDBMS=2,CIDOUM=2,HYBBMS=2,HYBOUM=2)
+pars.list <- list(CDBM1 = c(1, 5, 10),
+                  CDBMS = c(1, 1, 10, 10),  # mk, sigma1, sigma2, theta
+                  CDOU1 = c(1, 10, 5, 10),
+                  CDOUM = c(1, 10, 5, 5, 10),  # mk, alpha, sigma, theta1, theta2
                   CIDBMS = c(1, 1, 10, 10), # mk, sigma1, sigma2, theta
-                  CIDOUM = c(1, 1, 2, 5, 10),  # mk, alpha, sigma, theta1, theta2
+                  CIDOUM = c(1, 10, 5, 5, 10),  # mk, alpha, sigma, theta1, theta2
                   HYBBMS = c(1, 0.1, 1, 5, 10, 10), # mk, sigma1, sigma2, sigma3, sigma4, theta
-                  HYBOUM = c(1, 1, 2, 5, 10, 15, 20)) # mk, alpha, sigma, theta1, theta2, theta3, theta4
+                  HYBOUM = c(1, 10, 5, 15, 10, 5, 20)) # mk, alpha, sigma, theta1, theta2, theta3, theta4
 
 # prelims
-n.iter <- 1
-nmaps <- 10
-ncores <- 1
+n.iter <- 84
+nmaps <- 100
+ncores <- 84
 nTip <- 100
 phy <- sim.bdtree(b = 1, d = 0.5, stop = "taxa", n = nTip) 
 phy <- drop.extinct(phy)
@@ -124,9 +135,7 @@ mclapply(1:n.iter, function(x) ModelSetRun(phy, pars, model.name, sim.index.cor,
 index.cor <- list(fit.CDBMS.cor, fit.CDOUM.cor, fit.CIDBMS.cor, fit.CIDOUM.cor, fit.HYBBMS.cor, fit.HYBOUM.cor)
 index.ou <- list(fit.CDBMS.ou, fit.CDOUM.ou, fit.CIDBMS.ou, fit.CIDOUM.ou, fit.HYBBMS.ou, fit.HYBOUM.ou)
 rate.cats <- c(1,1,2,2,2,2)
-pars.list <- list(CIDOUM = c(1, 4, 4, 5, 20),  # mk, alpha, sigma, theta1, theta2
-                  HYBOUM = c(1, 4, 4, 5, 20, 35, 50)) # mk, alpha, sigma, theta1, theta2, theta3, theta4
-
+pars.list <- list(CIDOUM = c(2, 1, 0.1, 5, 20))  # mk, alpha, sigma, theta1, theta2
 sim.index.cor.all <- index.cor[c(4,6)]
 sim.index.ou.all <- index.ou[c(4,6)]
 sim.rate.cats <- c(2,2)
@@ -147,11 +156,6 @@ for(i in 1:length(sim.index.cor.all)){
   sim.rate.cat <- sim.rate.cats[i]
   mclapply(1:n.iter, function(x) ModelSetRun(phy, pars, model.name, sim.index.cor, sim.index.ou, sim.rate.cat, index.cor, index.ou, rate.cats, nmaps, x), mc.cores = ncores)
 }
-
-
-
-
-
 
 
 singleSummary <- function(Rsave){

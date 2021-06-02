@@ -24,10 +24,10 @@
 #'@param nCores number of parallel cores
 #'@param weighted a logicial indicating whether to take the average OU likelihood over all simmaps (FALSE) or just take the maximum likelihood
 #'@param quiet a logical indicating whether to output user messages
-hOUwie <- function(phy, data, rate.cat, nSim=1000,
+hOUwie <- function(phy, data, rate.cat, nBins=10, collapse=TRUE,type="joint",
                    model.cor=NULL, index.cor=NULL, root.p="yang", lb.cor=NULL, ub.cor=NULL,
-                   model.ou=NULL, index.ou=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, 
-                   p=NULL, ip=NULL, opts=NULL, nCores=1, weighted=FALSE, quiet=FALSE, parsimony=FALSE){
+                   model.ou=NULL, index.ou=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, order.test=TRUE, nSim=1000, 
+                   p=NULL, ip=NULL, opts=NULL, nCores=1, weighted=FALSE, quiet=FALSE, parsimony=FALSE, split.LnLiks=TRUE, all.roots=FALSE, sample.recons=FALSE, shift.point=0.5){
   # check that tips and data match
   # check for invariance of tip states and not that non-invariance isn't just ambiguity
   if(is.null(model.cor) & is.null(index.cor)){
@@ -99,6 +99,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
   # organize the data into the corHMM data and the OUwie data
   # TO DO: add a way to shift negative continuous variables to positive then shift back
   hOUwie.dat <- organizeHOUwieDat(data, mserr)
+  organizedData <- getHOUwieCombosAndData(data, rate.cat, collapse, nBins)
   nObs <- length(hOUwie.dat$ObservedTraits)
   #reorder phy
   phy <- reorder(phy, "pruningwise")
@@ -120,9 +121,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
   }
   
   # this allows for custom rate matricies!
-  order.test <- TRUE
   if(!is.null(index.cor)){
-    order.test <- FALSE
     index.cor[index.cor == 0] <- NA
     rate <- index.cor
     model.set.final$np <- max(rate, na.rm=TRUE)
@@ -140,7 +139,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     ## need to do anything to the ouwie matrix?
     ###############################
   }
-
+  
   # default MLE search options
   if(is.null(opts)){
     opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.5)
@@ -153,13 +152,23 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
       cat("Calculating likelihood from a set of fixed parameters", "\n")
       print(p)
     }
+    if(max(index.ou, na.rm = TRUE) + max(model.set.final$index.matrix, na.rm = TRUE) != length(p)){
+      message <- paste0("The number of parameters does not match the number required by the model structure. You have supplied ", length(p), ", but the model structure requires ", max(index.ou, na.rm = TRUE) + max(model.set.final$index.matrix, na.rm = TRUE), ".")
+      stop(message, call. = FALSE)
+      
+    }
     out<-NULL
     est.pars<-log(p)
     out$solution <- log(p)
-    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony)
+    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,organizedData=organizedData, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony,type=type, split.LnLiks=FALSE, all.roots=all.roots, sample.recons=sample.recons, shift.point=shift.point)
   }else{
     if(!quiet){
-      cat("Starting a search of parameters with", nSim, "simmaps...\n")
+      if(type == "simmap"){
+        cat("Starting a search of parameters with", nSim, "simmaps...\n")
+      }
+      if(type == "joint"){
+        cat("Starting a search of parameters with joint character reconstructions...\n")
+      }
     }
     out<-NULL
     # check for user input initial parameters 
@@ -186,13 +195,20 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
                   rep(ub.ou[1], length(unique(na.omit(index.ou[1,])))), 
                   rep(ub.ou[2], length(unique(na.omit(index.ou[2,])))), 
                   rep(ub.ou[3], length(unique(na.omit(index.ou[3,]))))))
-    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony)
-    if(!quiet){
-      cat("Finished.\n")
-    }
+    cat("Loglik:\n")
+    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat, organizedData=organizedData, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, type=type, split.LnLiks=FALSE, all.roots=all.roots, sample.recons=sample.recons, shift.point=shift.point)
   }
   # preparing output
   # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
+  if(split.LnLiks == TRUE){
+    p <- out$solution
+    SplitLiks <- hOUwie.dev(p, phy=phy, rate.cat=rate.cat,organizedData=organizedData, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony,type=type, split.LnLiks=TRUE, all.roots=all.roots, sample.recons=sample.recons, shift.point=shift.point)
+  }else{
+    SplitLiks <- NULL
+  }
+  if(!quiet){
+    cat("\nFinished.\n")
+  }
   if(null.cor){
     model.cor <- NULL
   }
@@ -209,6 +225,8 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
   names(hOUwie.dat$ObservedTraits) <- 1:length(hOUwie.dat$ObservedTraits)
   obj <- list(
     loglik = -out$objective,
+    OULnLik = SplitLiks[1], 
+    MkLnLik = SplitLiks[2],
     AIC = 2*out$objective + 2*param.count,
     AICc = 2*out$objective+ 2*param.count*(param.count/(nb.tip-param.count-1)),
     BIC = 2*out$objective + log(nb.tip) * param.count,
@@ -232,24 +250,26 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     mserr = mserr, 
     lb.ou=lb.ou, 
     ub.ou=ub.ou,
-    p=p, 
+    p = exp(out$solution),
     ip=ip, 
     nSim=nSim, 
+    nBins=nBins,
+    collapse=collapse,
     opts=opts, 
     nCores=nCores, 
     weighted=weighted, 
     quiet=quiet
-    )
+  )
   class(obj) <- "houwie"
   return(obj)
 }
 
 # for a single set of parameters, evaluate the hOUwie likelihood
-hOUwie.dev <- function(p, phy, rate.cat, 
+hOUwie.dev <- function(p, phy, rate.cat, organizedData,type="joint",
                        data.cor, liks, Q, rate, root.p,
                        data.ou, index.ou, algorithm, mserr,
                        nSim, nCores, tip.paths=NULL, weighted = FALSE, order.test=TRUE,parsimony=FALSE,
-                       fix.node=NULL, fix.state=NULL){
+                       split.LnLiks=FALSE,fix.node=NULL, fix.state=NULL, all.roots=FALSE, sample.recons=FALSE, shift.point=0.5){
   # params are given in log form
   p <- exp(p)
   # define which params are for the HMM
@@ -266,6 +286,18 @@ hOUwie.dev <- function(p, phy, rate.cat,
   if(algorithm == "invert"){
     theta = NULL
   }
+  # if there are more than one rate categories we test the order to help consistency
+  if(rate.cat > 1 & order.test){
+    # for each state and for each parameter ensure that parameter values for A > B > C etc..
+    order.check.vec <- vector("logical", organizedData$nStates/rate.cat)
+    for(i in 1:(organizedData$nStates/rate.cat)){
+      Rate.mat_i <- Rate.mat[,grep(i, names(organizedData$namedStates))]
+      order.check.vec[i] <- check.order(Rate.mat_i)
+    }
+    if(!all(order.check.vec)){
+      return(1e10)
+    }
+  }
   # fit the corHMM model. if rate.cat > 1, then ensure the order of the state mats is fast to slow.
   # returns negative loglikelihood (hence sign change)
   Mk.loglik <- -corHMM:::dev.corhmm(log(p.mk), phy, liks, Q, rate, root.p, rate.cat, order.test, FALSE)
@@ -274,15 +306,63 @@ hOUwie.dev <- function(p, phy, rate.cat,
   diag(Q) <- -rowSums(Q)
   # fit the ancestral state reconstruction
   # simulate a set of simmaps
-  simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
-  # fit the OU models to the simmaps
-  # returns log likelihood
-  OU.loglik <- mclapply(simmap, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr), mc.cores = nCores)
+  if(type == "joint"){
+    index.cor <- rate
+    index.cor[index.cor == max(index.cor)] <- 0
+    nTip <- length(phy$tip.label)
+    if(sample.recons){
+      JointRecon <- hOUwieRecon.dev(log(p), phy=phy, organizedData=organizedData, rate.cat=rate.cat, index.cor=index.cor, index.ou=index.ou, all.roots = all.roots, sample.recons = sample.recons, shift.point=shift.point)
+      JointLiks <- JointRecon[[length(JointRecon)]]
+      JointReconOnly <- JointRecon[-length(JointRecon)]
+      map <- vector("list", length(JointReconOnly))
+      for(ReconIndex in 1:length(JointReconOnly)){
+        tip.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][1:nTip], 1] 
+        node.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][(nTip+1):max(phy$edge[,1])], 1]
+        map[[ReconIndex]] <- getJointMapFromNode(phy, tip.states, node.states, shift.point)
+      }
+      OU.loglik <- lapply(map, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr))
+    }else{
+      if(!all.roots){
+        JointRecon <- hOUwieRecon.dev(log(p), phy=phy, organizedData=organizedData, rate.cat=rate.cat, index.cor=index.cor, index.ou=index.ou, all.roots = all.roots, sample.recons = sample.recons, shift.point=shift.point)
+        tip.states <- organizedData$AllCombos[JointRecon$Recon[1:nTip], 1] 
+        node.states <- organizedData$AllCombos[JointRecon$Recon[(nTip+1):max(phy$edge[,1])], 1]
+        # if not all hidden states are present there is no need for a hidden states model
+        if(!all(organizedData$namedStates %in% tip.states)){
+          return(1e10)
+        }
+        #cat("Root state:", node.states[1], "Root index:", JointRecon$Recon[1], "\n")
+        map <- getJointMapFromNode(phy, tip.states, node.states, 0.5)
+        OU.loglik <- OUwie.basic(map, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr)
+      }else{
+        JointRecon <- hOUwieRecon.dev(log(p), phy=phy, organizedData=organizedData, rate.cat=rate.cat, index.cor=index.cor, index.ou=index.ou, all.roots = all.roots, sample.recons = sample.recons, shift.point=shift.point)
+        JointLiks <- JointRecon[[length(JointRecon)]]
+        JointReconOnly <- JointRecon[-length(JointRecon)]
+        map <- vector("list", length(JointReconOnly))
+        for(ReconIndex in 1:length(JointReconOnly)){
+          tip.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][1:nTip], 1] 
+          node.states <- organizedData$AllCombos[JointReconOnly[[ReconIndex]][(nTip+1):max(phy$edge[,1])], 1]
+          map[[ReconIndex]] <- getJointMapFromNode(phy, tip.states, node.states, 0.01)
+        }
+        OU.loglik <- lapply(map, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr))
+        # # addig in a root prior
+        # ScaledJointLiks <- (JointLiks - max(JointLiks))
+        # ScaledJointLiks <- exp(ScaledJointLiks)/sum(exp(ScaledJointLiks))
+        # OU.loglik <- unlist(OU.loglik) + log(ScaledJointLiks)
+      }
+    }
+  }
+  if(type == "simmap"){
+    simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
+    # fit the OU models to the simmaps
+    # returns log likelihood
+    OU.loglik <- mclapply(simmap, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr), mc.cores = nCores)
+  }
+  
   # to show that OUwie.basic is identical to OUwie.fixed
   # OUwie.basic(simmap[[1]], data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr)
   # OUwie.fixed(simmap[[1]], data.ou, model = "OUM", simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="invert", tip.paths=tip.paths, mserr=mserr)
   # OUwie.fixed(simmap[[1]], data.ou, model = "OUM", simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths)
-
+  
   if(weighted == TRUE){
     # get the likelihoods of the simmaps
     OU.loglik <- max(unlist(OU.loglik))
@@ -290,15 +370,414 @@ hOUwie.dev <- function(p, phy, rate.cat,
     return(-(OU.loglik + Mk.loglik))
   }else{
     # algebraic trick to prevent overflow and underflow while preserving as many accurate leading digits in the result as possible. The leading digits are preserved by pulling the maximum outside. The arithmetic is robust because subtracting the maximum on the inside makes sure that only negative numbers or zero are ever exponentiated, so there can be no overflow on those calculations. If there is underflow, we know the leading digits have already been returned as part of the max term on the outside. subtract log nsim for avg.
-    OU.loglik <- unlist(OU.loglik)
-    OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
+    OU.loglik <- unlist(OU.loglik) 
+    OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(length(OU.loglik))
     # example
     # tmp <- c(-100, -200, -300, -100, -250)
     # max(tmp) + log(sum(exp(tmp - max(tmp)))) - log(length(tmp))
     # log(mean(exp(tmp)))
     # 
-    return(-(OU.loglik + Mk.loglik))
+    llik <- OU.loglik + Mk.loglik
+    # cat("Mk:", Mk.loglik, "OU:", OU.loglik, "\n")
+    cat("LnLik:", llik, "Mk:", Mk.loglik, "OU:", OU.loglik, "pars:", p, "\n")
+    # cat("\r", llik)
+    if(split.LnLiks == FALSE){
+      return(-llik)
+    }else{
+      return(c(OULnLik = OU.loglik, MkLnLik = Mk.loglik))
+    }
   }
+}
+
+# checks the order of matrix left to right
+check.order <- function(mat, decreasing = FALSE){
+  order.vec <- vector("logical", dim(mat)[1])
+  for(i in 1:dim(mat)[1]){
+    order.vec[i] <- identical(mat[i,], sort(mat[i,], decreasing = decreasing))
+  }
+  return(all(order.vec))
+}
+
+
+# organize data for the joint reconstruction
+getHOUwieCombosAndData <- function(data, rate.cat, collapse, nBins){
+  # organize the data
+  nCol <- dim(data)[2]
+  # process the corHMM data to combine 
+  discrete.data <- corHMM:::corProcessData(data[c(1:(nCol-1))], collapse = collapse)
+  hOUwie.dat <- cbind(discrete.data$corData, x = data[dim(data)[2]])
+  # the number of discrete states
+  # the number of discrete bins of the continuous trait findInterval is another possibility
+  bin_index <- cut(hOUwie.dat[,3], nBins, labels = FALSE)
+  bin <- cut(hOUwie.dat[,3], nBins)
+  namesBin <- levels(bin)
+  valueBin <- unlist(lapply(strsplit(namesBin, ","), function(x) mean(as.numeric(gsub("\\(|\\]", "", x)))))
+  boundBin <- do.call(rbind, lapply(strsplit(namesBin, ","), function(x) c(as.numeric(gsub("\\(|\\]", "", x)))))
+  hOUwie.dat <- cbind(hOUwie.dat, bin = bin, valueBin = valueBin[bin_index], lowerBin = boundBin[bin_index,1], upperBin = boundBin[bin_index,2])
+  # find all possible state combinations once the bins and states have been defined
+  nStates <- as.numeric(max(discrete.data$corData[,2])) * rate.cat
+  AllCombos <- expand.grid(list(State = 1:nStates, Bin = valueBin))
+  # nCombos <- dim(AllCombos)[1]
+  nObs <- nStates/rate.cat
+  ObsStateMatrix <- matrix(1:nStates, nObs, rate.cat, dimnames = list(1:nObs, LETTERS[1:rate.cat]))
+  namedStates <- 1:nStates
+  names(namedStates) <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
+  FullDat <- list(nStates = nStates,
+                  nObs = nObs, 
+                  PossibleTraits = discrete.data$PossibleTraits,
+                  ObservedTraits = discrete.data$ObservedTraits,
+                  namedStates = namedStates,
+                  ObsStateMatrix = ObsStateMatrix,
+                  discreteData = discrete.data$corData,
+                  hOUwieData = hOUwie.dat,
+                  AllCombos = AllCombos)
+  return(FullDat)
+}
+
+## takes a node based reconstruction and returns a map (identical to a map from simmap)
+getJointMapFromNode <- function(phy, tipstates, nodestates, shift.point){
+  Map <- vector("list", dim(phy$edge)[1])
+  Data <- c(tipstates, nodestates)
+  NodeStates <- cbind(Data[phy$edge[,1]], Data[phy$edge[,2]])
+  for(i in 1:dim(phy$edge)[1]){
+    from <- as.character(NodeStates[i,1])
+    to <- as.character(NodeStates[i,2])
+    if(from == to){
+      tmp <- phy$edge.length[i]
+      names(tmp) <- from
+      Map[[i]] <- tmp
+    }else{
+      shift.time <- shift.point * phy$edge.length[i]
+      tmp <- c(phy$edge.length[i] - shift.time, shift.time)
+      names(tmp) <- c(from, to)
+      Map[[i]] <- tmp
+    }
+  }
+  mapped.edge <- corHMM:::convertSubHistoryToEdge(phy, Map)
+  phy$maps <- Map
+  phy$mapped.edge <- mapped.edge
+  attr(phy, "map.order") <- "right-to-left"
+  if (!inherits(phy, "simmap")) 
+    class(phy) <- c("simmap", setdiff(class(phy), "simmap"))
+  return(phy)
+}
+
+# joint recon warapper funciton 
+hOUwieRecon <- function(hOUwie.model=NULL, phy=NULL, data=NULL, rate.cat=NULL, nSim=1000, nBins=10, collapse=TRUE,type="joint",model.cor=NULL, index.cor=NULL, root.p="yang", lb.cor=NULL, ub.cor=NULL, model.ou=NULL, index.ou=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, order.test=TRUE, p=NULL, ip=NULL, opts=NULL, nCores=1, weighted=FALSE, quiet=FALSE, parsimony=FALSE, split.LnLiks=TRUE){
+  # check that tips and data match
+  # check for invariance of tip states and not that non-invariance isn't just ambiguity
+  if(!is.null(hOUwie.model)){
+    if(class(hOUwie.model) != "houwie"){
+      stop("hOUwie model has been given, but is not of class hOUwie. Either give a model that has been fit which is of class hOUwie or the necessary prerequisites for a state reconstruction.", call. = FALSE)
+    }
+    phy <- hOUwie.model$phy
+    data <- hOUwie.model$data
+    rate.cat <- hOUwie.model$rate.cat
+    nBins <- hOUwie.model$nBins
+    collapse <- hOUwie.model$collapse
+    model.cor <- hOUwie.model$model.cor
+    index.cor <- hOUwie.model$index.cor
+    root.p <- hOUwie.model$root.p
+    model.ou <- hOUwie.model$model.ou
+    index.ou <- hOUwie.model$index.ou
+    root.station <- hOUwie.model$root.station
+    get.root.theta <- hOUwie.model$get.root.theta
+    mserr <- hOUwie.model$mserr
+    p <- hOUwie.model$p
+  }else{
+    if(is.null(model.cor) & is.null(index.cor)){
+      stop("No model for discrete evolution has been specified. Please select either a default model with the model.cor argument or specify an index matrix with index.cor.", call. = FALSE)
+    }
+    
+    if(is.null(model.ou) & is.null(index.ou)){
+      stop("No model for continuous evolution has been specified. Please select either a default model with the model.ou argument or specify an index matrix with index.ou.", call. = FALSE)
+    }
+    
+    if(!is.null(index.cor) & !is.null(index.ou)){
+      if(dim(index.cor)[2] > dim(index.ou)[2]){
+        stop("Not all of your discrete states have OU parameters associated with them. Please check that your discrete index matrix (index.cor) matches your continuous index matrix (index.ou).")
+      }
+      if(dim(index.ou)[2] > dim(index.cor)[2]){
+        stop("You have specified more OU parameters than there are states in the discrete process. Please check that your discrete index matrix (index.cor) matches your continuous index matrix (index.ou).")
+      }
+    }
+    if(!is.null(phy$node.label)){
+      if(!quiet){
+        cat("Your phylogeny had node labels, these have been removed.\n")
+      }
+      phy$node.label <- NULL
+    }
+  }
+  
+  Tmax <- max(branching.times(phy))
+  if(mserr == "none"){
+    nDiscrete <- dim(data)[2] - 2
+  }else{
+    nDiscrete <- dim(data)[2] - 3
+  }
+  
+  #Ensures that weird root state probabilities that do not sum to 1 are input:
+  if(!is.null(root.p)){
+    if(!is.character(root.p)){
+      root.p <- root.p/sum(root.p)
+    }
+  }
+  
+  
+  algorithm="three.point"
+  # organize the data into the corHMM data and the OUwie data
+  # TO DO: add a way to shift negative continuous variables to positive then shift back
+  hOUwie.dat <- organizeHOUwieDat(data, mserr)
+  organizedData <- getHOUwieCombosAndData(data, rate.cat, collapse, nBins)
+  nObs <- length(hOUwie.dat$ObservedTraits)
+  #reorder phy
+  phy <- reorder(phy, "pruningwise")
+  # a way to speed up the three.point function
+  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
+  
+  #scale the tree to a root height of 1
+  # phy$edge.length <- phy$edge.length/max(branching.times(phy))
+  # a temporary corhmm model to set the rates up
+  null.cor <- FALSE
+  if(is.null(model.cor)){
+    model.cor <- "ER"
+    null.cor <- TRUE
+  }
+  model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
+  # get the appropriate OU model structure
+  if(is.null(index.ou)){
+    index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
+  }
+  
+  # this allows for custom rate matricies!
+  if(!is.null(index.cor)){
+    index.cor[index.cor == 0] <- NA
+    rate <- index.cor
+    model.set.final$np <- max(rate, na.rm=TRUE)
+    rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
+    model.set.final$rate <- rate
+    model.set.final$index.matrix <- index.cor
+    model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
+    ## for precursor type models ##
+    col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
+    row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
+    drop.states <- col.sums[which(col.sums == row.sums)]
+    if(length(drop.states > 0)){
+      model.set.final$liks[,drop.states] <- 0
+    }
+    ## need to do anything to the ouwie matrix?
+    ###############################
+  }
+  # default MLE search options
+  # p is organized into 2 groups with the first set being corHMM and the second set being OUwie
+  # organized as c(trans.rt, alpha, sigma.sq, theta)
+  # evaluate likelihood
+  index.cor <- model.set.final$rate
+  index.cor[index.cor == max(index.cor)] <- 0
+  JointRecon <- hOUwieRecon.dev(log(p), phy=phy, organizedData=organizedData, rate.cat=rate.cat, index.cor=index.cor, index.ou=index.ou)
+  nTip <- length(phy$tip.label)
+  tip.states <- organizedData$AllCombos[JointRecon$Recon[1:nTip], ] 
+  rownames(tip.states) <- 1:nTip
+  node.states <- organizedData$AllCombos[JointRecon$Recon[(nTip+1):max(phy$edge[,1])], ]
+  rownames(node.states) <- (nTip+1):max(phy$edge[,1])
+  # preparing output
+  # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
+  if(rate.cat > 1){
+    StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
+  }else{
+    StateNames <- paste("(", rep(1:nObs, rate.cat), ")", sep = "")
+  }
+  obj <- list(TipStates = data.frame(TipState=tip.states[,1], TipStateName=StateNames[tip.states[,1]], Bin=tip.states[,2]),
+              NodeStates = data.frame(NodeState=node.states[,1], NodeStateName=StateNames[node.states[,1]], Bin=node.states[,2]))
+  return(obj)
+}
+
+# the joint reconstruction for a continuous and discrete variable
+hOUwieRecon.dev <- function(p, phy, organizedData, rate.cat, index.cor, index.ou, all.roots=FALSE, sample.recons=FALSE, nSamples=100, shift.point=0.5){
+  # organizing the parameters
+  p <- exp(p)
+  # define which params are for the HMM
+  k <- max(index.cor)
+  p.mk <- p[1:k]
+  Q <- index.cor
+  Q[Q!=0] <- p.mk[index.cor]
+  diag(Q) <- -rowSums(Q)
+  # set the OU params
+  p.ou <- p[(k+1):length(p)] 
+  Rate.mat <- matrix(1, 3, organizedData$nStates)
+  index.ou[is.na(index.ou)] <- max(index.ou, na.rm = TRUE) + 1
+  Rate.mat[] <- c(p.ou, 1e-10)[index.ou]
+  alpha = Rate.mat[1,]
+  sigma.sq = Rate.mat[2,]
+  theta = Rate.mat[3,]
+  
+  nTip <- length(phy$tip.label)
+  # the pupko et al algorithms the calculation of two quantities L and C
+  # L can be stored in an array since its dimension will be the same for every node 
+  # each entry in the L array contains the joint likelihood of a particular parental transition
+  # there will be nState by nBin potential combinations of states, therefore each entry in L will be nBin by nState
+  nCombos <- dim(organizedData$AllCombos)[1]
+  nStates <- organizedData$nStates
+  AllCombos <- organizedData$AllCombos
+  ObsStateMatrix <- organizedData$ObsStateMatrix
+  dat <- organizedData$hOUwieData
+  L_z <- array(data=-Inf, dim = c(nCombos, nCombos, dim(phy$edge)[1]))
+  # each evaluation of a particular L_z(i) will have a best joint likelihood and that will be defined in C_z
+  C_z <- array(data=0, dim = c(nCombos, nCombos, dim(phy$edge)[1]))
+  
+  # step 1 of pupko: initialize the tips
+  for(tip_index in 1:nTip){
+    focal_edge_index <- match(tip_index, phy$edge[,2])
+    RootAsAnc <- phy$edge[focal_edge_index,1] == nTip+1
+    focal_data <- dat[match(phy$tip.label[tip_index], organizedData$hOUwieData[,1]),]
+    time_edge <- phy$edge.length[focal_edge_index]
+    edge_Mk <- matrix(0, length(unique(AllCombos[,1])), length(unique(AllCombos[,1])), dimnames = list(unique(AllCombos[,1]), unique(AllCombos[,1])))
+    for(Mk_index in 1:nStates){
+      state <- unique(AllCombos[,1])[Mk_index]
+      Mk_vec <- rep(0, nStates)
+      Mk_vec[state] <- 1
+      edge_Mk[Mk_index,] <- log(c(expm(Q * time_edge) %*% Mk_vec))
+    }
+    for(i in 1:nCombos){
+      for(j in 1:rate.cat){
+        obsState <- ObsStateMatrix[dat[tip_index,2],j]
+        value_i <- which(AllCombos[,1] == obsState & AllCombos[,2] == focal_data$valueBin) # the observed bin
+        # calculate the Pij(ty) for each possible starting state i
+        # start with the Mk likelihood
+        state_i <- AllCombos[i,1]
+        if(RootAsAnc){
+          # init_i <- theta[state_i]
+          init_i <- AllCombos[i,2]
+        }else{
+          init_i <- AllCombos[i,2]
+        }
+        Mk_llik <- edge_Mk[state_i,obsState] # P_ij for the Mk process. the probability that we transition from i to j over time_edge is just the probability of being state_j
+        # next calculate the OU likelihood
+        OU_llik <- dOU(dat[tip_index,3], init_i, time_edge, alpha[state_i], theta[state_i], sigma.sq[state_i], TRUE)
+        
+        L_z[i,value_i,focal_edge_index] <- Mk_llik + OU_llik
+        # L_z[i,value_i,focal_edge_index] <- OU_llik
+      }
+      C_z[i,which.max(L_z[i,,focal_edge_index]),focal_edge_index] <- 1
+    }
+  }
+  # step 2 of pupko: calculations for the internal nodes, excluding the root
+  pruningwise.index <- unique(phy$edge[reorder(phy, "pruningwise", index.only = TRUE), 1])
+  for(node_index in pruningwise.index[-length(pruningwise.index)]){
+    focal_anc_index <- which(phy$edge[,2] %in% node_index)
+    focal_dec_index <- which(phy$edge[,1] %in% node_index)
+    RootAsAnc <- phy$edge[focal_anc_index,1] == nTip+1
+    # time is based on the parent to focal length. dec values calculated already
+    time_edge <- phy$edge.length[focal_anc_index]
+    for(Mk_index in 1:nStates){
+      state <- unique(AllCombos[,1])[Mk_index]
+      Mk_vec <- rep(0, nStates)
+      Mk_vec[state] <- 1
+      edge_Mk[Mk_index,] <- log(c(expm(Q * time_edge) %*% Mk_vec))
+    }
+    # i indexes the parental state, j indexes the descendants 
+    for(i in 1:nCombos){
+      # Mk prereqs for the parent j
+      state_i <- AllCombos[i,1]
+      if(RootAsAnc){
+        # init_i <- theta[state_i]
+        init_i <- AllCombos[i,2]
+      }else{
+        init_i <- AllCombos[i,2]
+      }
+      Mk_vec_i <- edge_Mk[state_i,] 
+      # the probability that we end up in state j at node z with the parent as state i. 
+      for(j in 1:nCombos){
+        # given the parental node defines the distribution, we evaluate over the possible k ending values
+        state_j <- AllCombos[j,1]
+        Mk_llik <- Mk_vec_i[state_j] # P_ij for the Mk process. the probability that we transition from i to j over time_edge is just the probability of being state_j
+        OU_llik <- dOU(AllCombos[j,2], init_i, time_edge, alpha[state_i], theta[state_i], sigma.sq[state_i], TRUE) # P_ij for the OU process. we observe the particular j bin, we start in the i bin, and the OU parameters are defined by the i bin's state
+        # L_z[i,j,focal_anc_index] <- OU_llik + sum(apply(L_z[j,,focal_dec_index], 2, max))
+        L_z[i,j,focal_anc_index] <- Mk_llik + OU_llik + sum(apply(L_z[j,,focal_dec_index], 2, max)) # L_z(i) is the maximum of row j. in pupko he doesn't hold all of the values only keeping the maximum. this would be achieved by collapsing the collumns of L_z and only keeping the max
+      }
+      # the C_z(i) is the maximum of the ith row
+      C_z[i,which.max(L_z[i,,focal_anc_index]),focal_anc_index] <- 1
+    }
+  }
+  # step 4 of pupko: evaluate the root
+  focal_dec_index <- which(phy$edge[,1] %in% (nTip+1))
+  C_root <- L_root <- vector("numeric", nCombos)
+  for(k in 1:nCombos){
+    state_k <- AllCombos[k,1]
+    #P_k <- root.p[state_k]
+    #L_root[k] <- log(P_k) + sum(apply(L_z[k,,focal_dec_index], 2, max))
+    L_root[k] <- sum(apply(L_z[k,,focal_dec_index], 2, max))
+  }
+  if(sample.recons){
+    AllRootsRecons <- vector("list", nSamples + 1)
+    AllRootsRecons[[nSamples + 1]] <- L_root
+    for(i in 1:nSamples){
+      C_root <- vector("numeric", nCombos)
+      PRoot_i <- getProbFromLliks(L_root)
+      C_root[sample(1:length(PRoot_i), 1, prob = PRoot_i)] <- 1
+      JointComboRecon <- vector("numeric", max(phy$edge))
+      names(JointComboRecon) <- 1:max(phy$edge)
+      JointComboRecon[nTip+1] <- which(C_root == 1)
+      # step 5 of pupko: assign joint recon to nodes
+      preorder.index <- reorder(phy, "pruningwise")$edge[,2]
+      preorder.index <- preorder.index[length(preorder.index):1]
+      for(node_index in preorder.index){
+        focal_anc_index <- which(phy$edge[,2] %in% node_index)
+        focal_parent <- phy$edge[focal_anc_index,1]
+        # C_z_i <- C_z[JointComboRecon[focal_parent],,focal_anc_index] # denote by i the reconstructed ancestor at y
+        L_z_i <- L_z[JointComboRecon[focal_parent],,focal_anc_index]
+        P_z_i <- getProbFromLliks(L_z_i)
+        JointComboRecon[node_index] <- sample(1:length(P_z_i), 1, prob = P_z_i)
+      }
+      AllRootsRecons[[i]] <- JointComboRecon
+    }
+    return(AllRootsRecons)
+  }else{
+    if(all.roots){
+      AllRootsRecons <- vector("list", length(L_root) + 1)
+      AllRootsRecons[[length(L_root) + 1]] <- L_root
+      for(i in 1:length(L_root)){
+        C_root <- vector("numeric", nCombos)
+        C_root[i] <- 1
+        JointComboRecon <- vector("numeric", max(phy$edge))
+        names(JointComboRecon) <- 1:max(phy$edge)
+        JointComboRecon[nTip+1] <- which(C_root == 1)
+        # step 5 of pupko: assign joint recon to nodes
+        preorder.index <- reorder(phy, "pruningwise")$edge[,2]
+        preorder.index <- preorder.index[length(preorder.index):1]
+        for(node_index in preorder.index){
+          focal_anc_index <- which(phy$edge[,2] %in% node_index)
+          focal_parent <- phy$edge[focal_anc_index,1]
+          C_z_i <- C_z[JointComboRecon[focal_parent],,focal_anc_index] # denote by i the reconstructed ancestor at y
+          JointComboRecon[node_index] <- which(C_z_i == 1)
+        }
+        AllRootsRecons[[i]] <- JointComboRecon
+      }
+      return(AllRootsRecons)
+    }else{
+      C_root[which.max(L_root)] <- 1
+      JointComboRecon <- vector("numeric", max(phy$edge))
+      names(JointComboRecon) <- 1:max(phy$edge)
+      JointComboRecon[nTip+1] <- which(C_root == 1)
+      
+      # step 5 of pupko: assign joint recon to nodes
+      preorder.index <- reorder(phy, "pruningwise")$edge[,2]
+      preorder.index <- preorder.index[length(preorder.index):1]
+      for(node_index in preorder.index){
+        focal_anc_index <- which(phy$edge[,2] %in% node_index)
+        focal_parent <- phy$edge[focal_anc_index,1]
+        C_z_i <- C_z[JointComboRecon[focal_parent],,focal_anc_index] # denote by i the reconstructed ancestor at y
+        JointComboRecon[node_index] <- which(C_z_i == 1)
+      }
+      llik <- max(L_root)
+      return(list(LnLik = llik, Recon = JointComboRecon))
+    }
+  }
+}
+
+getProbFromLliks <- function(lliks){
+  P <- exp(lliks - max(lliks))/sum(exp(lliks - max(lliks)))
+  return(P)
 }
 
 # hOUwie's input data will be similar to OUwie, with the exception that there can be more than a single trait being evaluated thus it's defined as column 1 is species name, the last column is the continuous trait and anything in between are discrete characters (can also account for mserr if second last columns are continuous)
@@ -486,14 +965,15 @@ OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FA
   #Values to be used throughout
   n <- max(phy$edge[,1])
   ntips <- length(phy$tip.label)
-
+  
   # setup values when simmap (always simmap for hOUwie)
   k <- length(colnames(phy$mapped.edge))
   tot.states <- factor(colnames(phy$mapped.edge))
   tip.states <- factor(data[,1])
   data[,1] <- as.numeric(tip.states)
   #Obtains the state at the root
-  root.state <- which(colnames(phy$mapped.edge)==names(phy$maps[[1]][1]))
+  root.edge.index <- which(phy$edge[,1] == ntips+1)
+  root.state <- which(colnames(phy$mapped.edge)==names(phy$maps[[root.edge.index[2]]][1]))
   ##Begins the construction of the edges matrix -- similar to the ouch format##
   edges <- cbind(c(1:(n-1)),phy$edge,OUwie:::MakeAgeTable(phy, root.age=root.age))
   if(scaleHeight == TRUE){
@@ -505,7 +985,7 @@ OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FA
   edges <- edges[sort.list(edges[,3]),]
   #Resort the edge matrix so that it looks like the original matrix order
   edges <- edges[sort.list(edges[,1]),]
-
+  
   if(algorithm == "three.point"){
     x <- data[,2]
     names(x) <- rownames(data)
@@ -632,9 +1112,9 @@ print.houwie <- function(x, ...){
 
 # fits a model based on the best corhmm model, simmaps, ouwie
 fitNonCensored <- function(phy, data, rate.cat, 
-                   model.cor, root.p="yang", lb.cor=1e-5, ub.cor=10,
-                   model.ou, root.station=FALSE, get.root.theta=FALSE, mserr = "none", ub.ou=NULL, 
-                   nSim=1000, nCores=1, quiet=FALSE, ip=NULL){
+                           model.cor, root.p="yang", lb.cor=1e-5, ub.cor=10,
+                           model.ou, root.station=FALSE, get.root.theta=FALSE, mserr = "none", ub.ou=NULL, 
+                           nSim=1000, nCores=1, quiet=FALSE, ip=NULL){
   # a single attempt to fit an OU model to a simmap where the data is organized to have simmap tips
   singleRun <- function(dat, simmap, model, mserr, ub.ou, ip){
     data <- organizeDat(dat, simmap)
@@ -694,7 +1174,7 @@ fitTwoStep <- function(phy, data, rate.cat,
   hOUwie.dat <- organizeHOUwieDat(data, mserr)
   nObs <- length(hOUwie.dat$ObservedTraits)
   # a way to speed up the three.point function
-
+  
   cor.fit <- corHMM(phy = phy, data = hOUwie.dat$data.cor, rate.cat = rate.cat, model = model.cor, node.states = "none", root.p = root.p, lower.bound = lb.cor, upper.bound = ub.cor, ip = ip[1])
   
   node.states <- apply(ace(hOUwie.dat$data.ou[,2], phy, type = "discrete")$lik.anc, 1, function(x) which(round(x) == 1))
@@ -774,12 +1254,12 @@ PruneRedundantModels <- function(..., precision=1e-5) {
   }
   ## Check if elements of the list are houwie
   mod.class <- sapply(models, function(x) inherits(x, what = "houwie"))
-
+  
   if(!all(mod.class)){
     ## Strange! Break.
     stop( "list of models need to be only hOUwie fits.", .call=FALSE)
   }
-
+  
   mod.nparameters <- simplify2array(lapply(models, "[[", "param.count"))
   index <- order(mod.nparameters, decreasing=FALSE)
   models <- models[index]
@@ -803,93 +1283,93 @@ PruneRedundantModels <- function(..., precision=1e-5) {
 }
 
 ## wrapper function that will evaluate some number of nodes via simmaps or marginal 
-hOUwieRecon <- function(nodes="all", type="marginal", nMap=50, nCores=1, houwie.obj){
-  phy <- houwie.obj$phy
-  data <- houwie.obj$data
-  mserr <- houwie.obj$mserr
-  rate.cat <- houwie.obj$rate.cat
-  model.cor <- houwie.obj$model.cor
-  index.cor <- houwie.obj$index.cor
-  model.ou <- houwie.obj$model.ou
-  index.ou <- houwie.obj$index.ou
-  solution.cor <- houwie.obj$solution.cor
-  solution.ou <- houwie.obj$solution.ou
-  root.p <- houwie.obj$root.p
-  root.station <- houwie.obj$root.station
-  get.root.theta <- houwie.obj$get.root.theta
-  weighted <- houwie.obj$weighted
-  
-  if(is.character(nodes)){
-    if(nodes == "all"){
-      nodes.to.eval <- 1:max(phy$edge)
-    }
-    if(nodes == "external"){
-      nodes.to.eval <- 1:length(phy$tip.label)
-    }
-    if(nodes == "internal"){
-      nodes.to.eval <- (length(phy$tip.label)+1):max(phy$edge)
-    }
-  }
-  if(is.numeric(nodes)){
-    nodes.to.eval <- nodes
-  }
-  
-  algorithm="three.point"
-  # organize the data into the corHMM data and the OUwie data
-  # TO DO: add a way to shift negative continuous variables to positive then shift back
-  hOUwie.dat <- organizeHOUwieDat(data, mserr)
-  nObs <- length(hOUwie.dat$ObservedTraits)
-  #reorder phy
-  phy <- reorder(phy, "pruningwise")
-  # a way to speed up the three.point function
-  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
-  # get the appropriate OU model structure
-  if(is.null(index.ou)){
-    index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
-  }
-  # get the appropriate corhmm model structure
-  if(is.null(model.cor)){
-    model.cor <- "ER"
-  }
-  model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
-  # this allows for custom rate matricies!
-  if(!is.null(index.cor)){
-    order.test <- FALSE
-    index.cor[index.cor == 0] <- NA
-    rate <- index.cor
-    model.set.final$np <- max(rate, na.rm=TRUE)
-    rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
-    model.set.final$rate <- rate
-    model.set.final$index.matrix <- index.cor
-    model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
-    ## for precursor type models ##
-    col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
-    row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
-    drop.states <- col.sums[which(col.sums == row.sums)]
-    if(length(drop.states > 0)){
-      model.set.final$liks[,drop.states] <- 0
-    }
-    ## need to do anything to the ouwie matrix?
-  }
-
-  p.mk <- sapply(1:max(index.cor, na.rm = TRUE), function(x) c(na.omit(c(solution.cor)))[match(x, c(na.omit(c(index.cor))))])
-  p.ou <- sapply(1:max(index.ou, na.rm = TRUE), function(x) c(na.omit(c(solution.ou)))[match(x, c(na.omit(c(index.ou))))])
-  p <- c(p.mk, p.ou)
-  ReconTable <- matrix(0, length(nodes.to.eval), dim(model.set.final$liks)[2], dimnames = list(nodes.to.eval))
-  for(i in 1:length(nodes.to.eval)){
-    fix.node <- nodes.to.eval[i]
-    ReconTable[i,] <- NodeSpecific.hOuwieRecon(pars=p, phy=phy, rate.cat=rate.cat, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nMap, nCores=nCores, tip.paths=tip.paths, weighted=weighted, fix.node)
-  }
-  
-  if(rate.cat > 1){
-    StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
-  }else{
-    StateNames <- paste("(", rep(1:nObs, rate.cat), ")", sep = "")
-  }
-  colnames(ReconTable) <- StateNames
-  
-  return(ReconTable)
-}
+# hOUwieRecon <- function(nodes="all", type="marginal", nMap=50, nCores=1, houwie.obj){
+#   phy <- houwie.obj$phy
+#   data <- houwie.obj$data
+#   mserr <- houwie.obj$mserr
+#   rate.cat <- houwie.obj$rate.cat
+#   model.cor <- houwie.obj$model.cor
+#   index.cor <- houwie.obj$index.cor
+#   model.ou <- houwie.obj$model.ou
+#   index.ou <- houwie.obj$index.ou
+#   solution.cor <- houwie.obj$solution.cor
+#   solution.ou <- houwie.obj$solution.ou
+#   root.p <- houwie.obj$root.p
+#   root.station <- houwie.obj$root.station
+#   get.root.theta <- houwie.obj$get.root.theta
+#   weighted <- houwie.obj$weighted
+#   
+#   if(is.character(nodes)){
+#     if(nodes == "all"){
+#       nodes.to.eval <- 1:max(phy$edge)
+#     }
+#     if(nodes == "external"){
+#       nodes.to.eval <- 1:length(phy$tip.label)
+#     }
+#     if(nodes == "internal"){
+#       nodes.to.eval <- (length(phy$tip.label)+1):max(phy$edge)
+#     }
+#   }
+#   if(is.numeric(nodes)){
+#     nodes.to.eval <- nodes
+#   }
+#   
+#   algorithm="three.point"
+#   # organize the data into the corHMM data and the OUwie data
+#   # TO DO: add a way to shift negative continuous variables to positive then shift back
+#   hOUwie.dat <- organizeHOUwieDat(data, mserr)
+#   nObs <- length(hOUwie.dat$ObservedTraits)
+#   #reorder phy
+#   phy <- reorder(phy, "pruningwise")
+#   # a way to speed up the three.point function
+#   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
+#   # get the appropriate OU model structure
+#   if(is.null(index.ou)){
+#     index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
+#   }
+#   # get the appropriate corhmm model structure
+#   if(is.null(model.cor)){
+#     model.cor <- "ER"
+#   }
+#   model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
+#   # this allows for custom rate matricies!
+#   if(!is.null(index.cor)){
+#     order.test <- FALSE
+#     index.cor[index.cor == 0] <- NA
+#     rate <- index.cor
+#     model.set.final$np <- max(rate, na.rm=TRUE)
+#     rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
+#     model.set.final$rate <- rate
+#     model.set.final$index.matrix <- index.cor
+#     model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
+#     ## for precursor type models ##
+#     col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
+#     row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
+#     drop.states <- col.sums[which(col.sums == row.sums)]
+#     if(length(drop.states > 0)){
+#       model.set.final$liks[,drop.states] <- 0
+#     }
+#     ## need to do anything to the ouwie matrix?
+#   }
+#   
+#   p.mk <- sapply(1:max(index.cor, na.rm = TRUE), function(x) c(na.omit(c(solution.cor)))[match(x, c(na.omit(c(index.cor))))])
+#   p.ou <- sapply(1:max(index.ou, na.rm = TRUE), function(x) c(na.omit(c(solution.ou)))[match(x, c(na.omit(c(index.ou))))])
+#   p <- c(p.mk, p.ou)
+#   ReconTable <- matrix(0, length(nodes.to.eval), dim(model.set.final$liks)[2], dimnames = list(nodes.to.eval))
+#   for(i in 1:length(nodes.to.eval)){
+#     fix.node <- nodes.to.eval[i]
+#     ReconTable[i,] <- NodeSpecific.hOuwieRecon(pars=p, phy=phy, rate.cat=rate.cat, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nMap, nCores=nCores, tip.paths=tip.paths, weighted=weighted, fix.node)
+#   }
+#   
+#   if(rate.cat > 1){
+#     StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
+#   }else{
+#     StateNames <- paste("(", rep(1:nObs, rate.cat), ")", sep = "")
+#   }
+#   colnames(ReconTable) <- StateNames
+#   
+#   return(ReconTable)
+# }
 
 ## houwie node specific regime reconstruction
 
@@ -956,7 +1436,7 @@ getModelAvgParams <- function(models, model.recon, AICwt){
 }
 
 ## evaluates a set of hOUwie models 
-fit.hOUwie.set <- function(phy, data, rate.cats, index.cor.list, index.ou.list, root.p="yang", lb.cor=NULL, ub.cor=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, p=NULL, ip=NULL, nSim=1000, opts=NULL, nCores=1, weighted=FALSE, quiet=TRUE){
+fit.hOUwie.set <- function(phy, data, rate.cats, index.cor.list, index.ou.list, root.p="yang", lb.cor=NULL, ub.cor=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, p=NULL, ip=NULL, nSim=1000, opts=NULL, nCores=1, weighted=FALSE, quiet=TRUE, prune=TRUE){
   # checks
   if(var(c(length(rate.cats), length(index.cor.list), length(index.ou.list))) != 0){
     stop("The number of rate categories, discrete character models, and continuous character models don't match.", call. = FALSE)
@@ -986,7 +1466,11 @@ fit.hOUwie.set <- function(phy, data, rate.cats, index.cor.list, index.ou.list, 
   cat("\n Model fitting complete. Now assessing models and averaging parameters.\n")
   
   # check for any redundant models
-  models.pruned <- PruneRedundantModels(model.fits)
+  if(prune){
+    models.pruned <- PruneRedundantModels(model.fits)
+  }else{
+    models.pruned <- model.fits
+  }
   
   # evaluate the AIC and summarize the models
   model.table <- getModelTable(models.pruned, "AICc")
@@ -1039,12 +1523,33 @@ summarize.hOUwie.set <- function(model.fits, prune=TRUE, nSim = NULL){
 }
 
 print.houwie.set <- function(x, ...){
+  x$model.table[,2] <- round(x$model.table[,2], 3)
   x$model.table[,3] <- round(x$model.table[,3], 3)
   x$model.table[,4] <- round(x$model.table[,4], 3)
   x$model.table[,5] <- round(x$model.table[,5], 3)
-  x$model.table[,6] <- round(x$model.table[,6], 3)
   cat("Model Fit Table\n")
   print(x$model.table)
   cat("\n")
 }
 
+# forward simulation of a branch. kind of a cheap way to do discrete time stuff by just shrinking time, but the markov property should ensure that this works just fine
+forwardSimBranch <- function(theta0, state0, Q, alpha, sigma, theta, time.unit, time.steps){
+  nStates <- dim(Q)[1]
+  state.vec <- c(state0, rep(NA, time.steps-1))
+  conti.vec <- c(theta0, rep(NA, time.steps-1))
+  MkPMat <- matrix(NA, nStates, nStates)
+  for(i in 1:nStates){
+    tmp_vec_i <- rep(0, nStates)
+    tmp_vec_i[i] <- 1
+    MkPMat[i,] <- c(expm(Q * time.unit) %*% tmp_vec_i)
+  }
+  
+  for(i in 2:time.steps){
+    state_i <- state.vec[i-1]
+    conti_i <- conti.vec[i-1]
+    conti.vec[i] <- rOU(1, conti_i, time.unit, alpha[state_i], theta[state_i], sigma[state_i])
+    state.vec[i] <- sample.int(nStates, size = 1, prob = MkPMat[state_i,])
+  }
+  out <- data.frame(D = state.vec, C = conti.vec)
+  return(out)
+}

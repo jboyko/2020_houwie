@@ -12,14 +12,14 @@ ModelSetRun <- function(phy, pars, model.name, sim.index.cor, sim.index.ou, sim.
   while(length(unique(data.houwie$data[,2])) != nState){
     data.houwie <- generateData(phy, index.cor, index.ou, pars)
   }
+  if(sim.rate.cat == 1){
+    data <- data.houwie$data
+  }
   if(sim.rate.cat == 2){
     data <- data.houwie$data
     data[data[,2] == 3, 2] <- 1
     data[data[,2] == 4, 2] <- 2
     data[,2] <- as.factor(as.numeric(data[,2]))
-  }
-  if(sim.rate.cat == 1){
-    data <- data.houwie$data
   }
   if(sim.rate.cat == 3){
     data <- data.houwie$data
@@ -29,27 +29,14 @@ ModelSetRun <- function(phy, pars, model.name, sim.index.cor, sim.index.ou, sim.
     data[data[,2] == 6, 2] <- 2
     data[,2] <- as.factor(as.numeric(data[,2]))
   }
-  
-  obj <- vector("list", nModels)
-  for(j in 1:nModels){
-    hOUwieFit <- list()
-    hOUwieFit$loglik <- -Inf
-    starting.vals <- generateStartingValues(phy, fit.index.cor[[j]], fit.index.ou[[j]], data.houwie$data, nstarts)
-    for(i in 1:dim(starting.vals)[1]){
-      start.vals_i <- generateStartingValues.houwie(starting.vals[i,], data.houwie, fit.index.ou[[j]], fit.index.cor[[j]])
-      tmp <- hOUwie(phy=phy, data=data, rate.cat=fit.rate.cat[j],
-                    index.cor=fit.index.cor[[j]], root.p="yang", lb.cor=1e-5, ub.cor=21,
-                    index.ou=fit.index.ou[[j]], root.station=FALSE, get.root.theta=FALSE, mserr="none", ub.ou = ub.ou, ip = start.vals_i,
-                    nSim=nmaps, nCores=1)
-      if(tmp$loglik > hOUwieFit$loglik){
-        hOUwieFit <- tmp
-      }
-    }
-    obj[[j]] <- hOUwieFit
-  }
+  obj <- fit.hOUwie.set(phy=phy, data=data, rate.cat=fit.rate.cat,
+                        index.cor=fit.index.cor, root.p="yang", lb.cor=1e-3, 
+                        ub.cor=10, index.ou=fit.index.ou, root.station=FALSE, 
+                        get.root.theta=FALSE, mserr="none", ub.ou = ub.ou, 
+                        nSim=nmaps, nCores=1, prune=FALSE)
   out <- list(simulating.data = data.houwie,
               model.fits = obj)
-  file.name <- paste0("Sim=", model.name, "-", "Pars=", paste(pars, collapse = "_"), "-nTip=", length(phy$tip.label), "-nMap=", nmaps,"-Iter=", iter, ".Rsave")
+  file.name <- paste0("/space_2/jamesboyko/2020_hOUwie/ModelTesting/", model.name, "/Sim=", model.name, "-", "Pars=", paste(pars, collapse = "_"), "-nTip=", length(phy$tip.label), "-nMap=", nmaps,"-Iter=", iter, ".Rsave")
   save(out, file = file.name)
   cat("Done.\n")
   return(out)
@@ -611,3 +598,139 @@ organizeDat <- function(dat, simmap){
 
 
 
+ModelSetRunOld <- function(phy, pars, model.name, sim.index.cor, sim.index.ou, sim.rate.cat, fit.index.cor, fit.index.ou, fit.rate.cat, nmaps, iter, ub.ou=NULL, nstarts=1){
+  nModels <- length(fit.index.ou)
+  nState <- dim(sim.index.cor)[1]
+  cat("Begining single run for", nModels, "models...\n")
+  data.houwie <- generateData(phy, sim.index.cor, sim.index.ou, pars)
+  while(length(unique(data.houwie$data[,2])) != nState){
+    data.houwie <- generateData(phy, index.cor, index.ou, pars)
+  }
+  if(sim.rate.cat == 2){
+    data <- data.houwie$data
+    data[data[,2] == 3, 2] <- 1
+    data[data[,2] == 4, 2] <- 2
+    data[,2] <- as.factor(as.numeric(data[,2]))
+  }
+  if(sim.rate.cat == 1){
+    data <- data.houwie$data
+  }
+  if(sim.rate.cat == 3){
+    data <- data.houwie$data
+    data[data[,2] == 3, 2] <- 1
+    data[data[,2] == 5, 2] <- 1
+    data[data[,2] == 4, 2] <- 2
+    data[data[,2] == 6, 2] <- 2
+    data[,2] <- as.factor(as.numeric(data[,2]))
+  }
+  
+  obj <- vector("list", nModels)
+  for(j in 1:nModels){
+    hOUwieFit <- list()
+    hOUwieFit$loglik <- -Inf
+    starting.vals <- generateStartingValues(phy, fit.index.cor[[j]], fit.index.ou[[j]], data.houwie$data, nstarts)
+    for(i in 1:dim(starting.vals)[1]){
+      start.vals_i <- generateStartingValues.houwie(starting.vals[i,], data.houwie, fit.index.ou[[j]], fit.index.cor[[j]])
+      tmp <- hOUwie(phy=phy, data=data, rate.cat=fit.rate.cat[j],
+                    index.cor=fit.index.cor[[j]], root.p="yang", lb.cor=1e-5, ub.cor=21,
+                    index.ou=fit.index.ou[[j]], root.station=FALSE, get.root.theta=FALSE, mserr="none", ub.ou = ub.ou, ip = start.vals_i,
+                    nSim=nmaps, nCores=1)
+      if(tmp$loglik > hOUwieFit$loglik){
+        hOUwieFit <- tmp
+      }
+    }
+    obj[[j]] <- hOUwieFit
+  }
+  out <- list(simulating.data = data.houwie,
+              model.fits = obj)
+  file.name <- paste0("Sim=", model.name, "-", "Pars=", paste(pars, collapse = "_"), "-nTip=", length(phy$tip.label), "-nMap=", nmaps,"-Iter=", iter, ".Rsave")
+  save(out, file = file.name)
+  cat("Done.\n")
+  return(out)
+}
+
+getRsaves <- function(Model, nTip=NULL, nMap=NULL){
+  Rsaves <- dir(paste0("~/2020_hOUwie/ModelTesting/", Model), full.names = TRUE)
+  if(is.null(nTip)){
+    nTip = "*"
+  }
+  if(is.null(nMap)){
+    nMap =  "*"
+  }
+  Rsaves <- Rsaves[grep(paste0("nTip=", nTip), Rsaves)]
+  Rsaves <- Rsaves[grep(paste0("nMap=", nMap), Rsaves)]
+  return(Rsaves)
+}
+
+plotDataSet <- function(data.houwie){
+  xadd = 0.2
+  plotSimmap(data.houwie$simmap[[1]], fsize = 0.01, colors = cols, xlim = c(0,1.2))
+  dat.prop <- (data.houwie$data[,3] - min(data.houwie$data[,3]))/max(data.houwie$data[,3] - min(data.houwie$data[,3]))
+  jitter <- 0.1 * xadd
+  for(i in 1:length(dat.prop)){
+    lines(list(x = c(1.01, 1.01 + (dat.prop[i] * xadd)) ,y = c(i,i)))
+  }
+}
+
+getPVecFromModel <- function(hOUwie.model){
+  phy <- hOUwie.model$phy
+  data <- hOUwie.model$data
+  rate.cat <- hOUwie.model$rate.cat
+  nBins <- hOUwie.model$nBins
+  collapse <- hOUwie.model$collapse
+  model.cor <- hOUwie.model$model.cor
+  index.cor <- hOUwie.model$index.cor
+  root.p <- hOUwie.model$root.p
+  model.ou <- hOUwie.model$model.ou
+  index.ou <- hOUwie.model$index.ou
+  root.station <- hOUwie.model$root.station
+  get.root.theta <- hOUwie.model$get.root.theta
+  mserr <- hOUwie.model$mserr
+  Tmax <- max(branching.times(phy))
+  hOUwie.dat <- organizeHOUwieDat(data, mserr)
+  organizedData <- getHOUwieCombosAndData(data, rate.cat, collapse, nBins)
+  nObs <- length(hOUwie.dat$ObservedTraits)
+  #reorder phy
+  phy <- reorder(phy, "pruningwise")
+  null.cor <- FALSE
+  if(is.null(model.cor)){
+    model.cor <- "ER"
+    null.cor <- TRUE
+  }
+  model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
+  # get the appropriate OU model structure
+  if(is.null(index.ou)){
+    index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
+  }
+  
+  # this allows for custom rate matricies!
+  if(!is.null(index.cor)){
+    index.cor[index.cor == 0] <- NA
+    rate <- index.cor
+    model.set.final$np <- max(rate, na.rm=TRUE)
+    rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
+    model.set.final$rate <- rate
+    model.set.final$index.matrix <- index.cor
+    model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
+    ## for precursor type models ##
+    col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
+    row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
+    drop.states <- col.sums[which(col.sums == row.sums)]
+    if(length(drop.states > 0)){
+      model.set.final$liks[,drop.states] <- 0
+    }
+    ## need to do anything to the ouwie matrix?
+    ###############################
+  }
+  index.cor <- model.set.final$rate
+  index.cor[index.cor == max(index.cor)] <- 0  
+  p.mk <- vector("numeric", max(index.cor))
+  for(i in 1:max(index.cor)){
+    p.mk[i] <- hOUwie.model$solution.cor[index.cor == i][1]
+  }
+  p.ou <- vector("numeric", max(index.ou, na.rm = TRUE))
+  for(i in 1:max(index.ou, na.rm = TRUE)){
+    p.ou[i] <- na.omit(hOUwie.model$solution.ou[index.ou == i])[1]
+  }
+  return(c(p.mk, p.ou))
+}
