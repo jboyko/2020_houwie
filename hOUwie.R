@@ -523,7 +523,6 @@ hOUwieRecon <- function(hOUwie.model=NULL, phy=NULL, data=NULL, rate.cat=NULL, n
     }
   }
   
-  
   algorithm="three.point"
   # organize the data into the corHMM data and the OUwie data
   # TO DO: add a way to shift negative continuous variables to positive then shift back
