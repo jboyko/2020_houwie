@@ -98,7 +98,7 @@ hOUwie <- function(phy, data, rate.cat, nBins=10, collapse=TRUE,type="joint",
   algorithm="three.point"
   # organize the data into the corHMM data and the OUwie data
   # TO DO: add a way to shift negative continuous variables to positive then shift back
-  hOUwie.dat <- organizeHOUwieDat(data, mserr)
+  hOUwie.dat <- organizeHOUwieDat(data, mserr, collapse)
   organizedData <- getHOUwieCombosAndData(data, rate.cat, collapse, nBins)
   nObs <- length(hOUwie.dat$ObservedTraits)
   #reorder phy
