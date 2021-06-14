@@ -27,7 +27,7 @@
 hOUwie <- function(phy, data, rate.cat, nSim=1000,
                    model.cor=NULL, index.cor=NULL, root.p="yang", lb.cor=NULL, ub.cor=NULL,
                    model.ou=NULL, index.ou=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, 
-                   p=NULL, ip=NULL, opts=NULL, nCores=1, weighted=FALSE, quiet=FALSE, parsimony=FALSE){
+                   p=NULL, ip=NULL, opts=NULL, nCores=1, weighted=FALSE, quiet=FALSE, parsimony=FALSE, sample.tips=TRUE){
   # check that tips and data match
   # check for invariance of tip states and not that non-invariance isn't just ambiguity
   if(is.null(model.cor) & is.null(index.cor)){
@@ -140,7 +140,11 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     ## need to do anything to the ouwie matrix?
     ###############################
   }
-
+  # the number of parameters for each process
+  n_p_alpha <- length(unique(na.omit(index.ou[1,])))
+  n_p_sigma <- length(unique(na.omit(index.ou[2,])))
+  n_p_theta <- length(unique(na.omit(index.ou[3,])))
+  
   # default MLE search options
   if(is.null(opts)){
     opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.5)
@@ -161,7 +165,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     out<-NULL
     est.pars<-log(p)
     out$solution <- log(p)
-    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony)
+    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips)
   }else{
     if(!quiet){
       cat("Starting a search of parameters with", nSim, "simmaps...\n")
@@ -169,16 +173,30 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     out<-NULL
     # check for user input initial parameters 
     if(is.null(ip)){
-      means.by.regime <- with(hOUwie.dat$data.ou, tapply(hOUwie.dat$data.ou[,3], hOUwie.dat$data.ou[,2], mean))
-      if(length(unique(na.omit(index.ou[3,]))) == length(means.by.regime)){
-        start.theta <- rep(means.by.regime, length(unique(index.ou[3,]))/length(means.by.regime))
+      # means.by.regime <- with(hOUwie.dat$data.ou, tapply(hOUwie.dat$data.ou[,3], hOUwie.dat$data.ou[,2], mean))
+      # if(length(unique(na.omit(index.ou[3,]))) == length(means.by.regime)){
+      #   start.theta <- rep(means.by.regime, length(unique(index.ou[3,]))/length(means.by.regime))
+      # }else{
+      #   start.theta <- rep(mean(hOUwie.dat$data.ou[,3]), length(unique(na.omit(index.ou[3,]))))
+      # }
+      starts.alpha <- rep(log(2)/Tmax, n_p_alpha)
+      starts.sigma <- rep(var(hOUwie.dat$data.ou[,3]), n_p_sigma)
+      if(rate.cat > 1){
+        bin_index <- cut(hOUwie.dat$data.ou[,3], rate.cat, labels = FALSE)
+        combos <- expand.grid(1:max(hOUwie.dat$data.cor[,2]), 1:rate.cat)
+        disc_tips <- vector("numeric", length(phy$tip.label))
+        for(i in 1:dim(combos)[1]){
+          disc_tips[hOUwie.dat$data.cor[,2] == combos[i,1] & bin_index == combos[i,2]] <- i
+        }
       }else{
-        start.theta <- rep(mean(hOUwie.dat$data.ou[,3]), length(unique(na.omit(index.ou[3,]))))
+        disc_tips <- hOUwie.dat$data.cor[,2]
       }
+      start.theta <- getIP.theta(hOUwie.dat$data.ou[,3], disc_tips, index.ou[3,])
+      start.ou <- c(starts.alpha, starts.sigma, start.theta)
       start.cor <- rep(10/sum(phy$edge.length), model.set.final$np)
-      start.ou <- c(rep(log(2)/Tmax, length(unique(na.omit(index.ou[1,])))), 
-                    rep(var(hOUwie.dat$data.ou[,3]), length(unique(na.omit(index.ou[2,])))), 
-                    start.theta)
+      # start.ou <- c(rep(log(2)/Tmax, length(unique(na.omit(index.ou[1,])))), 
+      #               rep(var(hOUwie.dat$data.ou[,3]), length(unique(na.omit(index.ou[2,])))), 
+      #               start.theta)
       starts = c(start.cor, start.ou)
     }else{
       starts <- ip
@@ -191,12 +209,13 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
                   rep(ub.ou[1], length(unique(na.omit(index.ou[1,])))), 
                   rep(ub.ou[2], length(unique(na.omit(index.ou[2,])))), 
                   rep(ub.ou[3], length(unique(na.omit(index.ou[3,]))))))
-    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony)
+    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
+  SplitLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
   # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
   if(null.cor){
     model.cor <- NULL
@@ -214,6 +233,8 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
   names(hOUwie.dat$ObservedTraits) <- 1:length(hOUwie.dat$ObservedTraits)
   obj <- list(
     loglik = -out$objective,
+    DiscLik = SplitLiks[1],
+    ContLik = SplitLiks[2],
     AIC = 2*out$objective + 2*param.count,
     AICc = 2*out$objective+ 2*param.count*(param.count/(nb.tip-param.count-1)),
     BIC = 2*out$objective + log(nb.tip) * param.count,
@@ -253,16 +274,18 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
 hOUwie.dev <- function(p, phy, rate.cat, 
                        data.cor, liks, Q, rate, root.p,
                        data.ou, index.ou, algorithm, mserr,
-                       nSim, nCores, tip.paths=NULL, weighted = FALSE, order.test=TRUE,parsimony=FALSE,
-                       fix.node=NULL, fix.state=NULL){
+                       nSim, nCores, tip.paths=NULL, weighted = FALSE, order.test=TRUE, parsimony=FALSE,
+                       fix.node=NULL, fix.state=NULL, sample.tips=TRUE, split.liks=FALSE){
   # params are given in log form
   p <- exp(p)
+  print(p)
   # define which params are for the HMM
   k <- max(rate)-1
   p.mk <- p[1:k]
   # set the OU params
   p.ou <- p[(k+1):length(p)] 
   Rate.mat <- matrix(1, 3, dim(rate)[2])
+  alpha.na <- is.na(index.ou[1,])
   index.ou[is.na(index.ou)] <- max(index.ou, na.rm = TRUE) + 1
   Rate.mat[] <- c(p.ou, 1e-10)[index.ou]
   alpha = Rate.mat[1,]
@@ -279,7 +302,35 @@ hOUwie.dev <- function(p, phy, rate.cat,
   diag(Q) <- -rowSums(Q)
   # fit the ancestral state reconstruction
   # simulate a set of simmaps
-  simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
+  # sample a set of tips based on the probability of a stationary distribution generating the value
+  if(sample.tips & rate.cat > 1){
+    data.cor.sample <- data.cor
+    sample.index <- liks[1:length(phy$tip.label),]
+    means <- theta
+    tmp.denom <- rep(0.5, length(alpha))
+    tmp.denom[!alpha.na] <- alpha[!alpha.na]
+    vars <- sigma.sq/2*tmp.denom
+    normal.params <- rbind(means, vars)
+    sample.tip.probs <- apply(normal.params, 2, function(x) dnorm(data.ou[,3], x[1], sqrt(x[2])))
+    # sample.tip.probs <- t(apply(sample.tip.probs, 1, function(x) exp(x - max(x))))
+    sample.tip.probs <- sample.tip.probs * sample.index
+    Check1 <- any(apply(sample.tip.probs, 1, function(x) all(x == 0)))
+    # if our sample doesn't include all tip states we revert to the unsampled simmap
+    
+    if(Check1){
+      simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
+    }else{
+      data.cor.sample[,2] <- apply(sample.tip.probs, 1, function(x) sample(1:dim(Q)[1], 1, prob = x))
+      Check2 <- length(unique(data.cor.sample[,2])) != dim(Q)[1]
+      if(Check2){
+        simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
+      }else{
+        simmap <- corHMM:::makeSimmap(phy, data.cor.sample, Q, 1, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
+      }
+    }
+  }else{
+    simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
+  }
   # fit the OU models to the simmaps
   # returns log likelihood
   OU.loglik <- mclapply(simmap, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr), mc.cores = nCores)
@@ -290,9 +341,20 @@ hOUwie.dev <- function(p, phy, rate.cat,
 
   if(weighted == TRUE){
     # get the likelihoods of the simmaps
-    OU.loglik <- max(unlist(OU.loglik))
+    # OU.loglik <- max(unlist(OU.loglik))
+    OU.loglik <- unlist(OU.loglik)
+    # OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
+    Mk.loglik <- unlist(lapply(simmap, function(x) getMapProbability(x$maps, Q)))
+    # Mk.loglik <- max(Mk.loglik) + log(sum(exp(Mk.loglik - max(Mk.loglik)))) - log(nSim)
+    Total.loglik <- max(OU.loglik + Mk.loglik)
+    Mk.loglik.tmp <- Mk.loglik[which.max(OU.loglik + Mk.loglik)]
+    OU.loglik.tmp <- OU.loglik[which.max(OU.loglik + Mk.loglik)]
     # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
-    return(-(OU.loglik + Mk.loglik))
+    print(c(TotalLik = Total.loglik, DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp))
+    if(split.liks){
+      return(c(DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp))
+    }
+    return(-(Total.loglik))
   }else{
     # algebraic trick to prevent overflow and underflow while preserving as many accurate leading digits in the result as possible. The leading digits are preserved by pulling the maximum outside. The arithmetic is robust because subtracting the maximum on the inside makes sure that only negative numbers or zero are ever exponentiated, so there can be no overflow on those calculations. If there is underflow, we know the leading digits have already been returned as part of the max term on the outside. subtract log nsim for avg.
     OU.loglik <- unlist(OU.loglik)
@@ -302,6 +364,10 @@ hOUwie.dev <- function(p, phy, rate.cat,
     # max(tmp) + log(sum(exp(tmp - max(tmp)))) - log(length(tmp))
     # log(mean(exp(tmp)))
     # 
+    print(c(Total = OU.loglik + Mk.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
+    if(split.liks){
+      return(c(DiscLik = Mk.loglik, ContLik = OU.loglik))
+    }
     return(-(OU.loglik + Mk.loglik))
   }
 }
@@ -329,6 +395,48 @@ organizeHOUwieDat <- function(data, mserr){
               ObservedTraits = data.cor$ObservedTraits,
               data.cor = data.cor$corData,
               data.ou = data.ou))
+}
+
+getIP.theta <- function(x, states, index){
+  ip.theta <- vector("numeric", length(unique(index)))
+  for(i in 1:length(unique(index))){
+    state_i <- which(unique(index)[i] == index)
+    ip.theta[i] <- mean(x[states %in% state_i])
+  }
+  ip.theta[is.nan(ip.theta)] <- mean(x)
+  return(ip.theta)
+}
+
+# gets the probability of a particular painting. limited to a single change at a shift point of 0.5
+getMapProbability <- function(maps, Q){
+  BranchProbs <- lapply(maps, function(x) log(probPath(x, Q)))
+  LnLik_map <- sum(unlist(BranchProbs))
+  return(LnLik_map)
+}
+
+# the probability of a particular path
+probPath <- function(path, Q){
+  nTrans <- length(path)
+  P <- vector("numeric", length(path))
+  for(i in sequence(nTrans-1)){
+    state_i <- as.numeric(names(path)[1])
+    state_j <- as.numeric(names(path)[2])
+    time_i <- as.numeric(path[1])
+    time_j <- as.numeric(sum(path[-1]))
+    rate_i <- abs(Q[state_i,state_j])
+    rate_j <- abs(Q[state_j,state_j])
+    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+    path <- path[-1]
+  }
+  state_j <- as.numeric(names(path))
+  time_j <- as.numeric(path)
+  rate_j <- abs(Q[state_j,state_j])
+  P[nTrans] <- 1 - pexp(rate_j, time_j)
+  P <- prod(P)
+  if(P == 0){
+    P <- 1e-100
+  }
+  return(P)
 }
 
 # different OU models have different parameter structures. This will evaluate the appropriate one.
@@ -563,9 +671,10 @@ OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FA
   comp <- NA
   try(comp <- phylolm::three.point.compute(transformed.tree$tree, x, expected.vals, transformed.tree$diag, check.precision = FALSE), silent=TRUE)
   if(is.na(comp[1])){
-    return(10000000)
+    return(-1e10)
   }else{
-    logl <- -as.numeric(Ntip(phy) * log(2 * pi) + comp$logd + (comp$PP - 2 * comp$QP + comp$QQ))/2
+    nTips <- length(phy$tip.label)
+    logl <- -as.numeric(nTips * log(2 * pi) + comp$logd + (comp$PP - 2 * comp$QP + comp$QQ))/2
     return(logl)
   }
 }
@@ -617,15 +726,12 @@ print.houwie <- function(x, ...){
   ntips <- Ntip(x$phy)
   output <- data.frame(x$loglik,x$AIC,x$AICc,x$BIC, ntips, x$param.count, row.names="")
   names(output) <- c("lnL","AIC","AICc","BIC","nTaxa","nPars")
-  cat("Fit\n")
+  cat("\nFit\n")
   print(output)
-  cat("\n")
-  cat("Legend\n")
+  cat("\nLegend\n")
   print(x$legend)
-  cat("\n")
   cat("\nRegime Rate matrix\n")
   print(x$solution.cor)
-  cat("\n")
   cat("\nOU Estimates\n")
   print(x$solution.ou)
   cat("\n")

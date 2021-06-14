@@ -1,0 +1,291 @@
+job_id: tree-pruner-bdbf3821-fb61-418b-a45a-d363261c3c8f
+email: jamesboyko21@gmail.com
+tree_base: mammaltree
+tree_set: MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl
+sample_size: 100
+names: [Eremitalpa_granti, Aepyceros_melampus, Ammotragus_lervia, Antidorcas_marsupialis,
+  Cephalophus_callipygus, Cephalophus_dorsalis, Cephalophus_leucogaster, Cephalophus_nigrifrons,
+  Cephalophus_silvicultor, Hyemoschus_aquaticus, Philantomba_monticola, Tragelaphus_spekii,
+  Tayassu_pecari, Canis_lupus_dingo, Canis_mesomelas, Otocyon_megalotis, Urocyon_cinereoargenteus,
+  Vulpes_lagopus, Vulpes_vulpes, Helogale_hirtula, Galictis_vittata, Martes_martes,
+  Meles_meles, Nandinia_binotata, Procyon_lotor, Ursus_arctos, Chaetophractus_vellerosus,
+  Dasypus_novemcinctus, Cercartetus_caudatus, Thylogale_stigmatica, Elephantulus_brachyrhynchus,
+  Elephantulus_rufescens, Macroscelides_proboscideus, Dromiciops_gliroides, Caenolestes_fuliginosus,
+  Rhyncholestes_raphanurus, Manis_crassicaudata, Alouatta_seniculus, Ateles_paniscus,
+  Cebus_apella, Cercocebus_agilis, Cercopithecus_cephus, Cercopithecus_neglectus,
+  Cercopithecus_nictitans, Cercopithecus_pogonias, Colobus_guereza, Mandrillus_sphinx,
+  Miopithecus_talapoin, Euoticus_elegantulus, Galago_alleni, Galago_demidoff, Arctocebus_calabarensis,
+  Perodicticus_potto, Loxodonta_africana, Abrothrix_longipilis, Abrothrix_sanborni,
+  Akodon_azarae, Calomys_laucha, Calomys_musculinus, Irenomys_tarsalis, Loxodontomys_micropus,
+  Microtus_ochrogaster, Necromys_obscurus, Peromyscus_attwateri, Peromyscus_leucopus,
+  Phyllotis_darwini, Ctenomys_mendocinus, Chaetodipus_baileyi, Chaetodipus_intermedius,
+  Dipodomys_merriami, Perognathus_amplus, Acomys_cahirinus, Acomys_dimidiatus, Aethomys_chrysophilus,
+  Arvicanthis_niloticus, Geoxus_valdivianus, Gerbilliscus_leucogaster, Gerbilliscus_robustus,
+  Gerbillurus_paeba, Grammomys_dolichurus, Lemniscomys_rosalia, Lorentzimys_nouhuysi,
+  Mastomys_natalensis, Maxomys_surifer, Micaelamys_namaquensis, Mus_minutoides, Myotomys_unisulcatus,
+  Oligoryzomys_flavescens, Oligoryzomys_longicaudatus, Otomys_angoniensis, Otomys_irroratus,
+  Pseudohydromys_ellermani, Pseudohydromys_fuscus, Pseudohydromys_murinus, Pseudohydromys_occidentalis,
+  Rattus_rattus, Rhabdomys_pumilio, Taterillus_harringtoni, Dendromus_mesomelas, Dendromus_mystacalis,
+  Malacothrix_typica, Saccostomus_campestris, Saccostomus_mearnsi, Steatomys_pratensis,
+  Octodon_degus, Tympanoctomys_barrerae, Callosciurus_melanogaster, Cynomys_ludovicianus,
+  Epixerus_ebii, Funisciurus_anerythrus, Funisciurus_isabella, Funisciurus_lemniscatus,
+  Funisciurus_pyrropus, Heliosciurus_rufobrachium, Lariscus_obscurus, Myosciurus_pumilio,
+  Paraxerus_poensis, Protoxerus_stangeri, Spermophilus_lateralis, Sundasciurus_lowii,
+  Tamias_amoenus, Tamias_quadrimaculatus, Tamias_speciosus, Tamias_townsendii, Xerus_rutilus,
+  Napaeozapus_insignis, Tupaia_glis, Blarina_brevicauda, Crocidura_cyanea, Crocidura_flavescens,
+  Crocidura_mariquensis, Myosorex_cafer, Myosorex_varius, Sorex_fumeus, Sorex_hoyi,
+  Sorex_palustris, Parascalops_breweri, Scapanus_townsendii, Talpa_europaea]
+sample_trees: [MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5658.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4318.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9844.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4897.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2891.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6538.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4205.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5470.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8018.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3978.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0253.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5770.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8847.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5550.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7071.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6822.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8454.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0887.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7161.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6249.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3825.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1012.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1034.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5889.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8770.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1571.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9597.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8149.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6562.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9774.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5173.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1160.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7944.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7891.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0484.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5587.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3861.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7509.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5394.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3471.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7984.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1620.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4722.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0428.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6051.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2259.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6496.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1729.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8803.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8887.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1198.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3687.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6788.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1959.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6371.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5966.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1604.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0481.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3872.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7699.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4368.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3663.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7261.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4260.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2136.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8271.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1357.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7827.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3265.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1140.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5915.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1137.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4982.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0164.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5313.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9135.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1080.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0814.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7059.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4082.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8314.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9665.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0594.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2324.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9089.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0080.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5307.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9530.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4648.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9300.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6016.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9103.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8292.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5707.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5459.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8581.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9792.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8360.tre,
+  MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2070.tre, MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4303.tre]
+status: COMPLETED
+created_at: "2021-06-07T15:39:34Z"
+completed_at: "2021-06-07T15:40:24Z"
+bad_names: {MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0080.tre: [Canis_lupus_dingo,
+    Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis, Myotomys_unisulcatus,
+    Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0164.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0253.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0428.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0481.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0484.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0594.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0814.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_0887.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1012.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1034.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1080.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1137.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1140.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1160.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1198.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1357.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1571.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1604.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1620.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1729.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_1959.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2070.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2136.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2259.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2324.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_2891.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3265.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3471.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3663.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3687.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3825.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3861.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3872.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_3978.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4082.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4205.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4260.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4303.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4318.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4368.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4648.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4722.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4897.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_4982.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5173.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5307.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5313.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5394.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5459.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5470.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5550.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5587.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5658.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5707.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5770.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5889.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5915.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_5966.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6016.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6051.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6249.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6371.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6496.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6538.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6562.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6788.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_6822.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7059.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7071.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7161.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7261.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7509.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7699.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7827.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7891.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7944.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_7984.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8018.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8149.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8271.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8292.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8314.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8360.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8454.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8581.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8770.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8803.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8847.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_8887.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9089.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9103.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9135.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9300.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9530.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9597.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9665.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9774.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9792.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis], MamPhy_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_9844.tre: [
+    Canis_lupus_dingo, Cebus_apella, Galago_alleni, Galago_demidoff, Micaelamys_namaquensis,
+    Myotomys_unisulcatus, Taterillus_harringtoni, Spermophilus_lateralis]}
