@@ -230,7 +230,7 @@ singleRun <- function(iter){
   fit.ou <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(fit.cor)[1])
   pars = c(2, 5, 2.5, 2, 10, 10, 18)  # mk, alpha, sigma, theta1, theta2
   data.houwie <- generateData(phy, fit.cor, fit.ou, pars)
-  nSim = 50
+  nSim = 2
   # cols<-setNames(c("gold","red", "purple", "black"),
   #                c("1","2","3","4"))
   # plotDataSet(data.houwie); legend("bottomleft", legend = c("1A","2A","1B","2B"), pch=16, col = cols)
@@ -242,7 +242,7 @@ singleRun <- function(iter){
   OU1 <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
                 index.cor = CID.cor, model.ou = "OU1", weighted = TRUE)
   OUM <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                index.cor = CID.cor, index.ou = CD.ou, weighted = TRUE)
+                index.cor = CID.cor, index.ou = CD.ou, weighted = TRUE, p = c(0.7148757,  0.1462326, 19.5353580,  6.2355249, 14.7275790))
   BMS <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
                 index.cor = CID.cor, index.ou = CDBMS.ou, weighted = TRUE)
   CIDOUM <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 

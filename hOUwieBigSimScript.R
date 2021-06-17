@@ -98,7 +98,7 @@ pars <- list(c(1, 5, 5, 2, 10),
 
 
 for(i in 1:length(pars)){
-  res <- mclapply(1:100, function(x) singleRun(x, pars[[i]], 100, Disc_model, sim.indexes_ou[[i]], out.dirs[[i]]), mc.cores = nCores)
+  res <- mclapply(1:80, function(x) singleRun(x, pars[[i]], 100, Disc_model, sim.indexes_ou[[i]], out.dirs[[i]]), mc.cores = nCores)
 }
 
 

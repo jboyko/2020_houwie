@@ -90,7 +90,7 @@ ub.cont = c(5, 10, 20)
 opts = NULL
 
 
-singleRun <- function(index){
+singleRun <- function(index, iter){
   if(index == 1){
     model.name = "BM1"
     fit <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, model.ou = "BM1", weighted = TRUE, lb.cor = lb.disc)
@@ -139,11 +139,39 @@ singleRun <- function(index){
     model.name = "CDOUM_ABIOTIC"
     fit <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CDOUM_ABIOTIC, weighted = TRUE, lb.cor = lb.disc)
   }
+  model.name <- paste0(model.name, "_", iter)
   save(fit, file = paste0("FitSD=", model.name, ".Rsave"))
   return(fit)
 }
 
-res <- mclapply(1:12, function(x) singleRun(x), mc.cores = 12)
-
+res <- mclapply(1:12, function(x) singleRun(x, 1), mc.cores = 12)
 
 getModelTable(list("BM1" = fitBM1, "OU1" = fitOU1, "CDBMS" = fitBMS, "CDOUM" = fitOUM, "CIDBMS" = fitCIDBMS, "CIDOUM" = fitCIDOUM, "HYBOUM" = fitHYBOUM))
+
+
+res
+model.fit <- res[[1]]
+# devtools::install_github("bomeara/dentist")
+require(dentist)
+
+dentFuc1 <- function(par, model.fit){
+  out <- hOUwie(phy = model.fit$phy, data = model.fit$data, rate.cat = model.fit$rate.cat, nSim = model.fit$nSim, index.cor = model.fit$index.cor, index.ou = model.fit$index.ou, p = par)
+  return(-out$loglik)
+}
+
+getDentResults <- function(model.fit){
+  best_neglnL <- -model.fit$loglik
+  p.ou <- p.cor <- c()
+  for(i in 1:max(model.fit$index.cor, na.rm=TRUE)){
+    p.cor[i] <- na.omit(model.fit$solution.cor[model.fit$index.cor == i])[1]
+  }
+  for(j in 1:max(model.fit$index.ou, na.rm=TRUE)){
+    p.ou[j] <- na.omit(model.fit$solution.ou[model.fit$index.ou == j])[1]
+  }
+  p <- c(p.cor, p.ou)
+  dented_results <- dent_walk(par=p, fn=dentFuc1, best_neglnL=best_neglnL, delta=2, nsteps=1000, print_freq=250, model.fit=model.fit)
+}
+
+dent_res <- mclapply(res, function(x) getDentResults(x), mc.cores = length(res))
+
+

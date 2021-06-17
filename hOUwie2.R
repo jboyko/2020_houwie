@@ -1,4 +1,4 @@
-source("~/2020_hOUwie/hOUwie.R")
+source("~/2020_hOUwie/hOUwieJoint.R")
 source("~/2020_hOUwie/Utils.R")
 
 
@@ -67,12 +67,15 @@ fitContinuous(phy, dat2, model = "OU")
 # fitContinuous(phy, dat2, model = "BM")$opt$lnL
 # fitContinuous(phy, dat2, model = "white")$opt$lnL
 #undebug(hOUwie.dev)
-BM1 <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BM1", split.LnLiks = TRUE)
-OU1 <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OU1", split.LnLiks = TRUE)
-OUM <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "OUM", split.LnLiks = TRUE)
-BMS <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 10, model.cor = "ER", model.ou = "BMS", split.LnLiks = TRUE)
-CIDOUM <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 20, index.cor = CID.cor, index.ou = CIDOUM.ou, split.LnLiks = TRUE)
-CIDBMS <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 20, index.cor = CID.cor, index.ou = CIDBMS.ou, split.LnLiks = TRUE)
+BM1 <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 2, model.cor = "ER", model.ou = "BM1")
+OU1 <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 2, model.cor = "ER", model.ou = "OU1")
+BMS <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 2, model.cor = "ER", model.ou = "BMS")
+OUM <- hOUwie(phy = phy, data = data, rate.cat = 1, nBins = 2, model.cor = "ER", model.ou = "OUM")
+CIDBMS <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 4, index.cor = CID.cor, index.ou = CIDBMS.ou)
+CIDOUM <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 4, index.cor = CID.cor, index.ou = CIDOUM.ou)
+
+
+
 
 p1 <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = fit.cor, index.ou = fit.ou, p = c(1.13, 0.53, 3, 1.48, 18.03))
 # p2 <- hOUwie(phy = phy, data = data, rate.cat = 2, nBins = 10, index.cor = fit.cor, index.ou = fit.ou, p = c(1, 0.01, 3, 2, 10))
