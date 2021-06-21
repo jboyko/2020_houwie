@@ -18,7 +18,7 @@ tetTree$edge.length[tetTree$edge.length==0] <- .Machine$double.eps
 td <- make.treedata(tetTree, scales)
 td <- reorder(td, "postorder")
 phy <- td$phy
-dat <- data.frame(sp = td$phy[['tip.label']], reg = td[['foraging.mode']], FG = td[['FG.frac']])
+dat <- data.frame(sp = td$phy[['tip.label']], FM = td[['foraging.mode']], PE = td[['predator.escape']], FOG = td[['FG.frac']])
 
 # visualize and attack
 # Tmax <- max(branching.times(phy))
@@ -36,8 +36,8 @@ dat <- data.frame(sp = td$phy[['tip.label']], reg = td[['foraging.mode']], FG = 
 # legend("topleft", legend = c("AF","SW"), pch=15, col = cols)
 
 # generate the discrete model
-# getStateMat4Dat(dat[c(1,2)])$legend
-StateDepA <- equateStateMatPars(getStateMat4Dat(dat[c(1,2)])$rate.mat, 1:2)
+getStateMat4Dat(dat[c(1:3)])$legend
+StateDepA <- equateStateMatPars(getStateMat4Dat(dat[c(1:3)])$rate.mat, 1:12)
 ParamDepA <- equateStateMatPars(getRateCatMat(2), 1:2)
 DiscModelA <- getFullMat(list(StateDepA, StateDepA), ParamDepA)
 DiscModelB <- equateStateMatPars(DiscModelA, 1:2)
@@ -45,17 +45,19 @@ DiscModelB <- equateStateMatPars(DiscModelA, 1:2)
 # generate the continuous model
 HYBBMS <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, dim(DiscModelA)[1])
 SWBMS <- CDBMS <- CIDBMS <- HYBBMS
-CDBMS[2,] <- c(1,2,1,2)
-CDBMS[3,] <- 3
-CIDBMS[2,] <- c(1,1,2,2)
+CDBMS[2,] <- c(1:5,1:5)
+CDBMS[3,] <- 6
+CIDBMS[2,] <- c(1,1,1,1,1,2,2,2,2,2)
 CIDBMS[3,] <- 3
-SWBMS[2,] <- c(1,2,1,3)
-SWBMS[3,] <- 4
+# SWBMS[2,] <- c(1,2,1,3)
+# SWBMS[3,] <- 4
 HYBOUM <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(DiscModelA)[1])
-SWOUM <- CDOUM <- CIDOUM <- HYBOUM
-CDOUM[3,] <- c(3,4,3,4)
-CIDOUM[3,] <- c(3,3,4,4)
-SWOUM[3,] <- c(3,4,3,5)
+PEOUM <- FMOUM <- SWOUM <- CDOUM <- CIDOUM <- HYBOUM
+CDOUM[3,] <- c(3:7,3:7)
+CIDOUM[3,] <- c(3,3,3,3,3,4,4,4,4,4)
+FMOUM[3,] <- c(3,3,4,4,4,3,3,4,4,4)
+PEOUM[3,] <- c(3,4,5,3,4,3,4,5,3,4)
+SWOUM[3,] <- c(3,3,4,4,4,3,3,5,5,5)
 
 
 nSim <- 250
@@ -78,23 +80,54 @@ quickRun <- function(index){
     return(fit.OU1_B)
   }
   if(index == 5){
-    fit.CD <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CDOUM, weighted = TRUE)
-    return(fit.CD)
+    fit.CD_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CDOUM, weighted = TRUE)
+    return(fit.CD_A)
   }
   if(index == 6){
-    fit.CID <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CIDOUM, weighted = TRUE)
-    return(fit.CID)
+    fit.CD_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CDOUM, weighted = TRUE)
+    return(fit.CD_B)
   }
   if(index == 7){
-    fit.SW <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = SWOUM, weighted = TRUE)
-    return(fit.SW)
+    fit.CID_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CIDOUM, weighted = TRUE)
+    return(fit.CID_A)
+  }
+  if(index == 8){
+    fit.CID_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CIDOUM, weighted = TRUE)
+    return(fit.CID_B)
+  }
+  if(index == 9){
+    fit.FM_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = FMOUM, weighted = TRUE)
+    return(fit.FM_A)
+  }
+  if(index == 10){
+    fit.FM_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = FMOUM, weighted = TRUE)
+    return(fit.FM_B)
+  }
+  if(index == 11){
+    fit.PE_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = PEOUM, weighted = TRUE)
+    return(fit.PE_A)
+  }
+  if(index == 12){
+    fit.PE_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = PEOUM, weighted = TRUE)
+    return(fit.PE_B)
+  }
+  if(index == 13){
+    fit.SW_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = SWOUM, weighted = TRUE)
+    return(fit.SW_A)
+  }
+  if(index == 14){
+    fit.SW_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = SWOUM, weighted = TRUE)
+    return(fit.SW_B)
   }
 }
 
-results <- mclapply(1:7, function(x) quickRun(x), mc.cores = 7)
+results <- mclapply(1:14, function(x) quickRun(x), mc.cores = 14)
 
-# fit.SWB <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = SWOUM, weighted = TRUE)
-getModelTable(list(BM1 = fit.BM1, OU1 = fit.OU1, CD = fit.CD, CID = fit.CID, SWA = fit.SWA, SWB = fit.SWB))
+
+names(results) <- c("BM1_A", "BM1_B", "OU1_A", "OU1_B", "CD_A", "CD_B", "CID_A", "CID_B", "FM_A", "FM_B", "PE_A", "PE_B", "SW_A", "SW_B")
+getModelTable(results)
+unlist(lapply(results, function(x) x$DiscLik))
+unlist(lapply(results, function(x) x$ContLik))
 
 # Interestingly, the differ- ent strategies are often quite divergent, with active foragers (AFs) relying on frequent but often slow locomotion, whereas ambush predators move rarely, but rapidly (Miles et al. 2007 and refer- ences therein), resulting in phenotypes shaped by selection for energetic efficiency and higher stamina, versus high-speed burst locomotion (Miles et al. 2007 and references therein, Pruitt 2010).
 
