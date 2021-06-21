@@ -1,4 +1,4 @@
-hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shift.point=0.5, mserr = "none", dual = FALSE, collapse = TRUE, root.station = FALSE, get.root.theta = FALSE, lb.disc = NULL, ub.disc = NULL, lb.cont = NULL, ub.cont = NULL, opts = NULL, niter = 1000, ip = NULL, nodeproposals = 2, tipproposals = 1){
+hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mserr = "none", dual = FALSE, collapse = TRUE, root.station = FALSE, get.root.theta = FALSE, lb.disc = NULL, ub.disc = NULL, lb.cont = NULL, ub.cont = NULL, opts = NULL, niter = 1000, ip = NULL, nodeproposals = 2, tipproposals = 1){
   
   # source("~/2020_hOUwie/hOUwieEM.R")
   # require(OUwie)
@@ -8,8 +8,7 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
   # data <- trait
   # discrete_model <- "ER"
   # continuous_model <- "OUM"
-  # rate.cat <- 2
-  # shift.point <- 0.5
+  # rate.cat <- 1
   # mserr <- "none"
   # dual = FALSE
   # collapse <- TRUE
@@ -20,9 +19,9 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
   # lb.cont = NULL
   # ub.cont = NULL
   # opts = NULL
-  # niter = 50
+  # niter = 100
   # ip = NULL
-  # nodeproposals = 3
+  # nodeproposals = 2
   # tipproposals = 1
 
   # if the data has negative values, shift it right
@@ -91,7 +90,7 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
   
   # default ML search options
   if(is.null(opts)){
-    opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.1)
+    opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.05)
   }
 
   # the number of parameters for each process
@@ -112,6 +111,13 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
   corHMM_init <- quiet(corHMM(phy = phy, data = hOUwie.dat$data.cor, rate.cat = rate.cat, rate.mat = index.disc, lower.bound = lb.disc, upper.bound = ub.disc, get.tip.states = rate.cat > 1))
   marginal_nodes <- corHMM_init$states
   marginal_tips <- corHMM_init$tip.states
+  # initial paramaters for discrete
+  ip.disc <- c()
+  for(i in 1:max(index.disc, na.rm = TRUE)){
+    ip.disc[i] <- na.omit(corHMM_init$solution[index.disc == i])[1]
+  }
+  # ip.disc <- rep(mean(corHMM_init$solution[!is.na(corHMM_init$solution)]), n_p_discr)
+  
   # possible hidden states based on bins
   # all possible combinations of observed and "hidden" states
   if(rate.cat > 1){
@@ -121,22 +127,20 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
     for(i in 1:dim(combos)[1]){
       disc_tips[hOUwie.dat$data.cor[,2] == combos[i,1] & bin_index == combos[i,2]] <- i
     }
+  }else{
+    disc_tips <- apply(marginal_tips, 1, function(x) sample(1:length(x), 1, replace = FALSE, x))
   }
   stochasticmap <- NULL
   count <- 1
   while(is.null(stochasticmap)){
     disc_nodes <- apply(marginal_nodes, 1, function(x) sample(1:length(x), 1, replace = FALSE, x))
-    disc_tips <- apply(marginal_tips, 1, function(x) sample(1:length(x), 1, replace = FALSE, x))
+    # disc_tips <- apply(marginal_tips, 1, function(x) sample(1:length(x), 1, replace = FALSE, x))
     # if(rate.cat == 1){
     #   disc_tips <- apply(marginal_tips, 1, function(x) sample(1:length(x), 1, replace = FALSE, x))
     # }
-    stochasticmap <- getStochmapFromNode(phy, disc_tips, disc_nodes, shift.point, index.disc)
-    print(count)
-    count <- count + 1
+    stochasticmap <- getStochmapFromNode(phy, disc_tips, disc_nodes, index.disc, ip.disc)
   }
   
-  # initial paramaters for discrete
-  ip.disc <- rep(mean(corHMM_init$solution[!is.na(corHMM_init$solution)]), n_p_discr)
   
   # get OU param estimates | continuous model
   # OUwie_init <- quiet(OUwie(phy = stochasticmap, data = hOUwie.dat$data.ou, model = "OU1", algorithm = "three.point", simmap.tree = TRUE, root.station = root.station, get.root.theta = get.root.theta))
@@ -167,41 +171,30 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
     all_nodes[i] <- paste0(c(disc_nodes,disc_tips), collapse = "")
 
     # discrete_result <- optimize(discrete model given discrete_internal, start at best_model$discrete_params
-    # discrete_result <- nloptr(x0=log(ip.disc), eval_f=dev.discretelikelihood, lb=log(lower.disc), ub=log(upper.disc), opts=opts, maps = stochasticmap$maps, index.disc = index.disc)
-    discrete_result <- lapply(stochasticmap, function(x) nloptr(x0=log(ip.disc), eval_f=dev.discretelikelihood, lb=log(lower.disc), ub=log(upper.disc), opts=opts, maps = x$maps, index.disc = index.disc))
-    
+    discrete_result <- nloptr(x0=log(ip.disc), eval_f=dev.discretelikelihood, lb=log(lower.disc), ub=log(upper.disc), opts=opts, maps = stochasticmap$maps, index.disc = index.disc)
     
     # continuous_result <- optimize(continuous model given discrete_internal, start at best_model$continuous_params)
-    if(state_independ_cont){
-      # the continuous result won't change based on discrete regime paintings if the model is OU1 or BM1
-      if(i == 1){
-        # continuous_result <- nloptr(x0=log(ip.cont), eval_f=dev.continuouslikelihood, lb=log(lower.cont), ub=log(upper.cont), opts=opts, stochasticmap = stochasticmap, data.ou = hOUwie.dat$data.ou, index.cont = index.cont, tip.paths = tip.paths, mserr = mserr)
-        continuous_result <- lapply(stochasticmap, function(x) nloptr(x0=log(ip.cont), eval_f=dev.continuouslikelihood, lb=log(lower.cont), ub=log(upper.cont), opts=opts, stochasticmap = x, data.ou = hOUwie.dat$data.ou, index.cont = index.cont, tip.paths = tip.paths, mserr = mserr))
-      }
-    }else{
-      # continuous_result <- nloptr(x0=log(ip.cont), eval_f=dev.continuouslikelihood, lb=log(lower.cont), ub=log(upper.cont), opts=opts, stochasticmap = stochasticmap, data.ou = hOUwie.dat$data.ou, index.cont = index.cont, tip.paths = tip.paths, mserr = mserr)
-      continuous_result <- lapply(stochasticmap, function(x) nloptr(x0=log(ip.cont), eval_f=dev.continuouslikelihood, lb=log(lower.cont), ub=log(upper.cont), opts=opts, stochasticmap = x, data.ou = hOUwie.dat$data.ou, index.cont = index.cont, tip.paths = tip.paths, mserr = mserr))
-    }
+    continuous_result <- nloptr(x0=log(ip.cont), eval_f=dev.continuouslikelihood, lb=log(lower.cont), ub=log(upper.cont), opts=opts, stochasticmap = stochasticmap, data.ou = hOUwie.dat$data.ou, index.cont = index.cont, tip.paths = tip.paths, mserr = mserr)
+    
     # OUwie(phy = stochasticmap, data = hOUwie.dat$data.ou, model = "OUM", algorithm = "three.point", simmap.tree = TRUE, root.station = root.station, get.root.theta = get.root.theta)
-    # OUwie.fixed(stochasticmap, data = hOUwie.dat$data.ou, model = continuous_model, algorithm = "three.point", simmap.tree = TRUE, root.station = root.station, get.root.theta = get.root.theta, alpha = exp(continuous_result$solution)[1], sigma.sq = exp(continuous_result$solution)[2:3], theta = exp(continuous_result$solution)[4:5])
+    # OUwie.fixed(stochasticmap, data = hOUwie.dat$data.ou, model = continuous_model, algorithm = "three.point", simmap.tree = TRUE, root.station = root.station, get.root.theta = get.root.theta, alpha = rep(exp(continuous_result$solution)[1], 3), sigma.sq =rep(exp(continuous_result$solution)[2], 3),theta = exp(continuous_result$solution)[4:6])
+    # OUwie.basic(stochasticmap, hOUwie.dat$data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=rep(exp(continuous_result$solution)[1], 4), sigma.sq=rep(exp(continuous_result$solution)[2], 4), theta=exp(continuous_result$solution)[3:6], algorithm="three.point", tip.paths=tip.paths, mserr=mserr)
 
     # total_likelihood <- discrete_result$likelihood + continuous_result$likelihood
-    # total_likelihood <- (-discrete_result$objective) + (-continuous_result$objective)
-    total_likelihood <- -unlist(lapply(discrete_result, function(x) x$objective)) -unlist(lapply(continuous_result, function(x) x$objective))
-    best_map <- which.max(total_likelihood)
+    total_likelihood <- (-discrete_result$objective) + (-continuous_result$objective)
+    print(c(LnLik = total_likelihood, LnLikDisc = -discrete_result$objective, LnLikCont =-continuous_result$objective))
     
-    if(best_model[1] < total_likelihood[best_map]){
+    if(best_model[1] < total_likelihood){
       # track the current best model
-      best_model <- c(total_likelihood[best_map], -discrete_result[[best_map]]$objective, -continuous_result[[best_map]]$objective, exp(discrete_result[[best_map]]$solution), exp(continuous_result[[best_map]]$solution))
-      # the current ip come from the best model 
-      ip.disc <- exp(discrete_result[[best_map]]$solution)
-      ip.cont <- exp(continuous_result[[best_map]]$solution)
+      best_model <- c(total_likelihood, -discrete_result$objective, -continuous_result$objective, exp(discrete_result$solution), exp(continuous_result$solution))
+      # the current ip come from the best model
+      ip.disc <- exp(discrete_result$solution)
+      ip.cont <- exp(continuous_result$solution)
       # the current best discrete sample
       best_disc.nodes <- disc_nodes
       best_disc.tips <- disc_tips
+      best_map <- stochasticmap
     }
-    
-    print(c(LnLik = best_model[1], LnLikDisc = best_model[2], LnLikCont = best_model[3]))
     # a new sample is generated and we start all over
     nsamples.nodes = round(runif(1) * nodeproposals) + 1
     nsamples.tips = round(runif(1) * tipproposals)
@@ -221,14 +214,67 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, shi
         if(count == 20){
           type = "unif"
         }
-        if(count == niter){
-          return(list(best_model, best_disc.nodes, best_disc.tips))
-        }
+        # if(count == niter){
+        #   cat("\nCouldn't produce a good map, stuck at", count)
+        #   return(list(best_model, best_disc.nodes, best_disc.tips))
+        # }
       }
-      stochasticmap <- getStochmapFromNode(phy, disc_tips, disc_nodes, shift.point, index.disc)
+      stochasticmap <- getStochmapFromNode(phy, disc_tips, disc_nodes, index.disc, ip.disc)
     }
   }
-  return(list(best_model, best_disc.nodes, best_disc.tips))
+  # organizing the output
+  param.count <- max(index.cont, na.rm = TRUE) + max(index.disc, na.rm = TRUE)
+  nb.tip <- length(phy$tip.label)
+  solution <- organizeHOUwiePars(c(ip.disc, ip.cont), index.disc, index.cont)
+  nObs <- as.numeric(max(hOUwie.dat$data.cor[,2]))
+  if(rate.cat > 1){
+    StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
+  }else{
+    StateNames <- paste("(", rep(1:nObs, rate.cat), ")", sep = "")
+  }
+  rownames(solution$solution.disc) <- colnames(solution$solution.disc) <- StateNames
+  colnames(solution$solution.cont) <- StateNames
+  rownames(solution$solution.cont) <- c("alpha", "sigma.sq", "theta")
+  names(hOUwie.dat$ObservedTraits) <- 1:nObs
+  
+  obj <- list(
+    loglik = best_model[1],
+    Disc_lnLik = best_model[2],
+    Cont_lnLik = best_model[3],
+    AIC = -2*best_model[1] + 2*param.count,
+    AICc = -2*best_model[1]+ 2*param.count*(param.count/(nb.tip-param.count-1)),
+    BIC = -2*best_model[1] + log(nb.tip) * param.count,
+    param.count = param.count,
+    solution_disc = solution$solution.disc,
+    solution_cont = solution$solution.cont,
+    phy = phy,
+    best_map = best_map,
+    best_nodes = best_disc.nodes,
+    best_tips = best_disc.tips,
+    legend = hOUwie.dat$ObservedTraits,
+    data = data, 
+    hOUwie.dat = hOUwie.dat,
+    rate.cat = rate.cat, 
+    discrete_model=discrete_model, 
+    continuous_model=continuous_model, 
+    p=c(ip.disc, ip.cont), 
+    p_disc = ip.disc,
+    p_cont = ip.cont,
+    lb.disc=lb.disc, 
+    ub.disc=ub.disc,
+    lb.cont=lb.cont, 
+    ub.cont=ub.cont,
+    root.station=root.station, 
+    get.root.theta=get.root.theta, 
+    mserr = mserr,
+    ip=ip, 
+    niter=niter, 
+    opts=opts, 
+    nodeproposals = 2, 
+    tipproposals = 1
+  )
+  class(obj) <- "houwie"
+  return(obj)
 }
 
 # given a current reconstruction sample a new set of states that is unique
@@ -288,7 +334,6 @@ dev.discretelikelihood <- function(pars, maps, index.disc){
   return(-discretelikelihood)
 }
 
-# what to do about the cases where we've sampled an impossible ancestral state and descendant state in a single step?
 # gets the probability of a particular painting. limited to a single change at a shift point of 0.5
 getMapProbability <- function(maps, Q){
   BranchProbs <- lapply(maps, function(x) log(probPath(x, Q)))
@@ -304,8 +349,10 @@ probPath <- function(path, Q){
     state_i <- as.numeric(names(path)[1])
     state_j <- as.numeric(names(path)[2])
     time_i <- as.numeric(path[1])
+    time_j <- as.numeric(sum(path[-1]))
     rate_i <- abs(Q[state_i,state_j])
-    P[i] <- dexp(time_i, rate_i)
+    rate_j <- abs(Q[state_j,state_j])
+    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
     path <- path[-1]
   }
   state_j <- as.numeric(names(path))
@@ -315,23 +362,6 @@ probPath <- function(path, Q){
   P <- prod(P)
   if(P == 0){
     P <- 1e-100
-  }
-  return(P)
-}
-
-probPathOld <- function(path, Q){
-  state_i <- as.numeric(names(path)[1])
-  state_j <- as.numeric(names(path)[length(path)])
-  if(state_i != state_j){
-    time_i <- as.numeric(path[1])
-    time_j <- as.numeric(path[length(path)])
-    rate_i <- abs(Q[state_i,state_j])
-    rate_j <- abs(Q[state_j,state_j])
-    P <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
-  }else{
-    time_i <- as.numeric(path[1])
-    rate_i <- abs(Q[state_i,state_j])
-    P <- (1 - pexp(rate_i, time_i))
   }
   return(P)
 }
@@ -519,83 +549,119 @@ quiet <- function(x) {
 }
 
 ## takes a node based reconstruction and returns a map (identical to a map from simmap)
-getStochmapFromNode <- function(phy, tipstates, nodestates, shift.point, index.disc, mid.trans=TRUE, nSamples=10){
+getStochmapFromNode <- function(phy, tipstates, nodestates, index.disc, p, relative = FALSE){
   Map <- vector("list", dim(phy$edge)[1])
   Data <- c(tipstates, nodestates)
   NodeStates <- cbind(Data[phy$edge[,1]], Data[phy$edge[,2]])
-  mid.trans.index <- c()
+  model <- index.disc
+  for(i in 1:max(index.disc)){
+    model[model == i] <- p[i]
+  }
+  diag(model) <- -rowSums(model)
   for(i in 1:dim(phy$edge)[1]){
     from <- as.numeric(NodeStates[i,1])
     to <- as.numeric(NodeStates[i,2])
-    if(from == to){
-      tmp <- phy$edge.length[i]
-      names(tmp) <- from
-      Map[[i]] <- tmp
+    shortest_path <- FloydWalshAlg(model, from, to)
+    if(is.null(shortest_path)){
+      return(NULL)
+    }
+    if(relative){
+      path_rates <- 1/-diag(model)[shortest_path]
+      relative_path_rates <- path_rates/sum(path_rates)
+      tmp <- relative_path_rates * phy$edge.length[i]
     }else{
-      if(index.disc[from,to] == 0){
-        if(!mid.trans){
-          # if we only want one transition max per branch return NULL if not
-          return(NULL)
-        }
-        # if the transition is disallowed we identify where we can go in two steps
-        # if a two step transition is allowed, return a list of all possible two steps
-        mid <- which(index.disc[from,] != 0)
-        ManyMap <- vector("list", length(mid))
-        mid.trans.index <- c(mid.trans.index, i)
-        for(j in 1:length(mid)){
-          tmp <- rep(phy$edge.length[i]/3, 3)
-          names(tmp) <- c(from, mid[j], to)
-          ManyMap[[j]] <- tmp
-        }
-        Map[[i]] <- ManyMap
-      }else{
-        shift.time <- shift.point * phy$edge.length[i]
-        tmp <- c(phy$edge.length[i] - shift.time, shift.time)
-        names(tmp) <- c(from, to)
-        Map[[i]] <- tmp
-      }
+      relative_path_rates <- rep(1/length(shortest_path), length(shortest_path))
+      tmp <- relative_path_rates * phy$edge.length[i]
     }
-  }
-  # because we can have multiple mappings we will take each of those and produce a map
-  if(length(mid.trans.index) > 0){
-    # apply(expand.grid(mid.trans.index, c("1", "2")), 1, function(x) paste(x, collapse = "_"))
-    possible.combos <- lapply(mid.trans.index, function(x) paste(x, c("1", "2"), sep = "_"))
-    full.set.combos <- t(sapply(1:10, function(x) unlist(lapply(possible.combos, function(x) sample(x, 1)))))
-    # full.set.combos <- expand.grid(possible.combos)
-    # we create as many maps as potential combinations then we make a map specific to each combo
-    Maps <- vector("list", dim(full.set.combos)[1])
-    for(i in 1:dim(full.set.combos)[1]){
-      Maps[[i]] <- Map
-      combo_i <- full.set.combos[i,]
-      for(j in 1:length(combo_i)){
-        # in essence what we're doing: Maps[[k]][[2]] <- Maps[[k]][[2]][[1]]
-        # i is the particular mapping, j is the edge of the map we're changing to combo_i
-        edge_i_combo_j <- as.numeric(strsplit(as.vector(combo_i[j]), "_")[[1]])
-        Maps[[i]][[edge_i_combo_j[1]]] <- Maps[[i]][[edge_i_combo_j[1]]][[edge_i_combo_j[2]]]
-      }
-    }
-  }else{
-    Maps <- list(Map)
-  }
-  Phys <- vector("list", length(Maps))
-  for(i in 1:length(Maps)){
-    Phys[[i]] <- phy
-    mapped.edge <- corHMM:::convertSubHistoryToEdge(phy, Maps[[i]])
-    Phys[[i]]$maps <- Maps[[i]]
-    Phys[[i]]$mapped.edge <- mapped.edge
-    attr(Phys[[i]], "map.order") <- "right-to-left"
-    if (!inherits(Phys[[i]], "simmap")) 
-      class(Phys[[i]]) <- c("simmap", setdiff(class(Phys[[i]]), "simmap"))
+    names(tmp) <- shortest_path
+    Map[[i]] <- tmp
     
   }
-  # mapped.edge <- corHMM:::convertSubHistoryToEdge(phy, Map)
-  # phy$maps <- Map
-  # phy$mapped.edge <- mapped.edge
-  # attr(phy, "map.order") <- "right-to-left"
-  # if (!inherits(phy, "simmap")) 
-  #   class(phy) <- c("simmap", setdiff(class(phy), "simmap"))
-  return(Phys)
+  mapped.edge <- corHMM:::convertSubHistoryToEdge(phy, Map)
+  phy$maps <- Map
+  phy$mapped.edge <- mapped.edge
+  attr(phy, "map.order") <- "right-to-left"
+  if (!inherits(phy, "simmap"))
+    class(phy) <- c("simmap", setdiff(class(phy), "simmap"))
+  return(phy)
 }
+# getStochmapFromNode <- function(phy, tipstates, nodestates, shift.point, index.disc, mid.trans=TRUE, nSamples=10){
+#   Map <- vector("list", dim(phy$edge)[1])
+#   Data <- c(tipstates, nodestates)
+#   NodeStates <- cbind(Data[phy$edge[,1]], Data[phy$edge[,2]])
+#   mid.trans.index <- c()
+#   for(i in 1:dim(phy$edge)[1]){
+#     from <- as.numeric(NodeStates[i,1])
+#     to <- as.numeric(NodeStates[i,2])
+#     if(from == to){
+#       tmp <- phy$edge.length[i]
+#       names(tmp) <- from
+#       Map[[i]] <- tmp
+#     }else{
+#       if(index.disc[from,to] == 0){
+#         if(!mid.trans){
+#           # if we only want one transition max per branch return NULL if not
+#           return(NULL)
+#         }
+#         # if the transition is disallowed we identify where we can go in two steps
+#         # if a two step transition is allowed, return a list of all possible two steps
+#         mid <- which(index.disc[from,] != 0)
+#         ManyMap <- vector("list", length(mid))
+#         mid.trans.index <- c(mid.trans.index, i)
+#         for(j in 1:length(mid)){
+#           tmp <- rep(phy$edge.length[i]/3, 3)
+#           names(tmp) <- c(from, mid[j], to)
+#           ManyMap[[j]] <- tmp
+#         }
+#         Map[[i]] <- ManyMap
+#       }else{
+#         shift.time <- shift.point * phy$edge.length[i]
+#         tmp <- c(phy$edge.length[i] - shift.time, shift.time)
+#         names(tmp) <- c(from, to)
+#         Map[[i]] <- tmp
+#       }
+#     }
+#   }
+#   # because we can have multiple mappings we will take each of those and produce a map
+#   if(length(mid.trans.index) > 0){
+#     # apply(expand.grid(mid.trans.index, c("1", "2")), 1, function(x) paste(x, collapse = "_"))
+#     possible.combos <- lapply(mid.trans.index, function(x) paste(x, c("1", "2"), sep = "_"))
+#     full.set.combos <- t(sapply(1:10, function(x) unlist(lapply(possible.combos, function(x) sample(x, 1)))))
+#     # full.set.combos <- expand.grid(possible.combos)
+#     # we create as many maps as potential combinations then we make a map specific to each combo
+#     Maps <- vector("list", dim(full.set.combos)[1])
+#     for(i in 1:dim(full.set.combos)[1]){
+#       Maps[[i]] <- Map
+#       combo_i <- full.set.combos[i,]
+#       for(j in 1:length(combo_i)){
+#         # in essence what we're doing: Maps[[k]][[2]] <- Maps[[k]][[2]][[1]]
+#         # i is the particular mapping, j is the edge of the map we're changing to combo_i
+#         edge_i_combo_j <- as.numeric(strsplit(as.vector(combo_i[j]), "_")[[1]])
+#         Maps[[i]][[edge_i_combo_j[1]]] <- Maps[[i]][[edge_i_combo_j[1]]][[edge_i_combo_j[2]]]
+#       }
+#     }
+#   }else{
+#     Maps <- list(Map)
+#   }
+#   Phys <- vector("list", length(Maps))
+#   for(i in 1:length(Maps)){
+#     Phys[[i]] <- phy
+#     mapped.edge <- corHMM:::convertSubHistoryToEdge(phy, Maps[[i]])
+#     Phys[[i]]$maps <- Maps[[i]]
+#     Phys[[i]]$mapped.edge <- mapped.edge
+#     attr(Phys[[i]], "map.order") <- "right-to-left"
+#     if (!inherits(Phys[[i]], "simmap")) 
+#       class(Phys[[i]]) <- c("simmap", setdiff(class(Phys[[i]]), "simmap"))
+#     
+#   }
+#   # mapped.edge <- corHMM:::convertSubHistoryToEdge(phy, Map)
+#   # phy$maps <- Map
+#   # phy$mapped.edge <- mapped.edge
+#   # attr(phy, "map.order") <- "right-to-left"
+#   # if (!inherits(phy, "simmap")) 
+#   #   class(phy) <- c("simmap", setdiff(class(phy), "simmap"))
+#   return(Phys)
+# }
 
 # a basic version of OUwie that will evaluate params based on an index matrix
 OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FALSE, root.station=FALSE, get.root.theta=FALSE, shift.point=0.5, alpha, sigma.sq, theta, mserr="none", algorithm="three.point", tip.paths=NULL){
@@ -726,4 +792,78 @@ hOUwie.sim <- function(phy, Q, root.freqs, alpha, sig2, theta0, theta, nMap=1){
   # return true params and data
   data <- data.frame(sp = phy$tip.label, reg = dat.cor[,2], x = dat.ou)
   return(list(data = data, simmap = simmap))
+}
+
+
+FloydWalshAlg <- function(model, init, final){
+  nStates <- dim(model)[1]
+  Dist <- matrix(Inf, nStates, nStates)
+  Next <- matrix(NA, nStates, nStates)
+  for(V_index in sequence(nStates)){
+    Dist[V_index, V_index] <- 0
+    Next[V_index, V_index] <- V_index
+  }
+  for(V_index in sequence(nStates)){
+    To <- which(model[V_index, ] > 0)
+    Dist[V_index, To] <- 1/model[V_index, To]
+    Next[V_index, To] <- To
+  }
+  for(k in sequence(nStates)){
+    for(i in sequence(nStates)){
+      for(j in sequence(nStates)){
+        if(Dist[i,j] > Dist[i,k] + Dist[k,j]){
+          Dist[i,j] = Dist[i,k] + Dist[k,j]
+          Next[i,j] = Next[i,k]
+        }
+      }
+    }
+  }
+  if(is.na(Next[init, final])){
+    return(NULL)
+  }else{
+    path = init
+    u = init
+    v = final
+    while(u != v){
+      u <- Next[u, v]
+      path <- c(path, u)
+    }
+  }
+  return(path)
+}
+
+
+organizeHOUwiePars <- function(pars, index.disc, index.cont){
+  k <- max(index.disc, na.rm = TRUE)
+  p.mk <- pars[1:k]
+  p.ou <- pars[(k+1):length(pars)] 
+  Rate.mat <- matrix(1, 3, dim(index.disc)[2])
+  index.cont[is.na(index.cont)] <- max(index.cont, na.rm = TRUE) + 1
+  Rate.mat[] <- c(p.ou, NA)[index.cont]
+  Q <- matrix(0, dim(index.disc)[1], dim(index.disc)[2])
+  index.disc[index.disc == 0] <- max(index.disc) + 1
+  Q[] <- c(p.mk, NA)[index.disc]
+  diag(Q) <- -rowSums(Q)
+  return(list(solution.disc = Q,
+              solution.cont = Rate.mat))
+}
+
+print.houwie <- function(x, ...){
+  ntips <- Ntip(x$phy)
+  output <- data.frame(x$loglik,x$AIC,x$AICc,x$BIC, ntips, x$param.count, row.names="")
+  names(output) <- c("lnL","AIC","AICc","BIC","nTaxa","nPars")
+  cat("\nFit\n")
+  print(output)
+  cat("\nLegend\n")
+  print(x$legend)
+  cat("\nRegime Rate matrix\n")
+  print(x$solution_disc)
+  cat("\nOU Estimates\n")
+  print(x$solution_cont)
+  cat("\n")
+  if(!any(is.na(x$solution_cont[1,]))){
+    cat("\nHalf-life (another way of reporting alpha)\n")
+    print(log(2)/x$solution_cont[1,])
+  }
+  cat("\nDon't forget: your parameters have units!\n")
 }

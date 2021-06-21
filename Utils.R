@@ -255,7 +255,7 @@ SingleModelTestRunParsimony <- function(phy, index.cor, index.ou, model.cor, mod
 
 
 # a function that given a model structure and params, generates a hOUwie dataset.
-generateData <- function(phy, index.cor, index.ou, pars, quiet=FALSE){
+generateData <- function(phy, index.cor, index.ou, pars, type ="CD", quiet=FALSE){
   phy$edge.length <- phy$edge.length/max(branching.times(phy)) # ensure tree height is 1
   k.cor <- max(index.cor, na.rm = TRUE) # number of corhmm params
   k.ou <- max(index.ou, na.rm = TRUE) # number of ouwie params
@@ -283,9 +283,18 @@ generateData <- function(phy, index.cor, index.ou, pars, quiet=FALSE){
   alpha = Rate.mat[1,]
   sigma.sq = Rate.mat[2,]
   theta = Rate.mat[3,]
-  theta0 = rnorm(1, theta[which(root.p == 1)], sqrt(sigma.sq[which(root.p == 1)]/2*alpha[which(root.p == 1)])) # following Beaulieu et al (2012) we sample the root theta from the stationary distribution matchiing the root state
-  # theta0 = theta[which(root.p == 1)]
-  full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
+  # theta0 = rnorm(1, theta[which(root.p == 1)], sqrt(sigma.sq[which(root.p == 1)]/2*alpha[which(root.p == 1)])) # following Beaulieu et al (2012) we sample the root theta from the stationary distribution matchiing the root state
+  theta0 = theta[which(root.p == 1)]
+  if(type == "CD"){
+    full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
+  }else{
+    full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
+    dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.p))
+    while(!all(levels(dat.cor) %in% dat.cor)){
+      dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.p))
+    }
+    full.data$data <- cbind(full.data$data, cid.reg = dat.cor)
+  }
   obs.no.trans <- sum(unlist(lapply(full.data$simmap[[1]]$maps, function(x) length(x) - 1)))
   if(!quiet){
     cat("The observed number of transitions was found to be", obs.no.trans, "\n")
@@ -486,10 +495,6 @@ getMapWeightedPars <- function(simulators, Weight="Tip"){
 }
 
 getParDifferences <- function(simulators, fit){
-  
-  fit$solution.ou
-  simulators$index.ou
-  
   k.cor <- max(simulators$index.cor, na.rm = TRUE) - 1 # number of corhmm params
   k.ou <- max(simulators$index.ou, na.rm = TRUE) - 1 # number of ouwie params
   p.mk <- simulators$pars[1:k.cor]
@@ -503,7 +508,6 @@ getParDifferences <- function(simulators, fit){
   simulators$index.ou[is.na(simulators$index.ou)] <- max(simulators$index.ou, na.rm = TRUE) + 1
   Rate.mat[] <- c(p.ou, 1e-10)[simulators$index.ou]
   rownames(Rate.mat) <- c("alpha", "sigma.sq", "theta")
-  
 }
 
 # get the AIC table from a particular RSave for hOUwie fits

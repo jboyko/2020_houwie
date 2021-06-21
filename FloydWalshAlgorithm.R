@@ -15,7 +15,7 @@ FloydWalshAlg <- function(model, init, final){
   }
   for(V_index in sequence(nStates)){
     To <- which(model[V_index, ] > 0)
-    Dist[V_index, To] <- 1
+    Dist[V_index, To] <- 1/model[V_index, To]
     Next[V_index, To] <- To
   }
   for(k in sequence(nStates)){
@@ -29,7 +29,7 @@ FloydWalshAlg <- function(model, init, final){
     }
   }
   if(is.na(Next[init, final])){
-    stop("Impossible transition on branch detected...")
+    return(NULL)
   }else{
     path = init
     u = init

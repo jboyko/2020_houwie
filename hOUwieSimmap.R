@@ -101,7 +101,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
   hOUwie.dat <- organizeHOUwieDat(data, mserr)
   nObs <- length(hOUwie.dat$ObservedTraits)
   #reorder phy
-  phy <- reorder(phy, "pruningwise")
+  phy <- reorder.phylo(phy, "pruningwise")
   # a way to speed up the three.point function
   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   
@@ -952,7 +952,7 @@ hOUwieRecon <- function(nodes="all", type="marginal", nMap=50, nCores=1, houwie.
   hOUwie.dat <- organizeHOUwieDat(data, mserr)
   nObs <- length(hOUwie.dat$ObservedTraits)
   #reorder phy
-  phy <- reorder(phy, "pruningwise")
+  phy <- reorder.phylo(phy, "pruningwise")
   # a way to speed up the three.point function
   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   # get the appropriate OU model structure

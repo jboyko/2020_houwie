@@ -228,7 +228,7 @@ singleRun <- function(iter){
   fit.cor <- getFullMat(list(fit.cor, fit.cor), fit.cor)
   fit.cor <- equateStateMatPars(fit.cor, c(1,2,3))
   fit.ou <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(fit.cor)[1])
-  pars = c(2, 5, 2.5, 2, 10, 10, 18)  # mk, alpha, sigma, theta1, theta2
+  pars = c(0.5, 5, 2.5, 2, 10, 10, 18)  # mk, alpha, sigma, theta1, theta2
   data.houwie <- generateData(phy, fit.cor, fit.ou, pars)
   nSim = 2
   # cols<-setNames(c("gold","red", "purple", "black"),
@@ -269,7 +269,7 @@ require(geiger)
 # source("~/2020_hOUwie/Utils.R")
 source("/space_2/jamesboyko/2020_hOUwie/hOUwieSimmap.R")
 source("/space_2/jamesboyko/2020_hOUwie/Utils.R")
-files <- dir("HYBOUM/", full.names=TRUE)
+files <- dir("CDOUM/", full.names=TRUE)
 # files <- files[-grep("old", files)]
 BestAICc <- c()
 OUParsB <- OUParsA <- c()
