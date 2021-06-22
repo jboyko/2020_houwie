@@ -211,12 +211,14 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
                   rep(ub.ou[3], length(unique(na.omit(index.ou[3,]))))))
     cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
     out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
+    cat("\n")
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
   FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
+  cat("\n")
   # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
   if(null.cor){
     model.cor <- NULL

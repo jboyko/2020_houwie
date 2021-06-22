@@ -60,7 +60,7 @@ PEOUM[3,] <- c(3,4,5,3,4,3,4,5,3,4)
 SWOUM[3,] <- c(3,3,4,4,4,3,3,5,5,5)
 
 
-nSim <- 3
+nSim <- 250
 
 quickRun <- function(index){
   if(index == 1){
@@ -137,7 +137,7 @@ quickRun <- function(index){
   }
 }
 
-results <- mclapply(5:8, function(x) quickRun(x), mc.cores = 1)
+results <- mclapply(1:18, function(x) quickRun(x), mc.cores = 18)
 
 
 names(results) <- c("BM1_A", "BM1_B", "OU1_A", "OU1_B", "CDOUM_A", "CDOUM_B", "CIDOUM_A", "CIDOUM_B", "FMOUM_A", "FMOUM_B", "PEOUM_A", "PEOUM_B", "SWOUM_A", "SWOUM_B", "CDBMS_A", "CDBMS_B", "CIDBMS_A", "CIDBMS_B")
@@ -146,6 +146,9 @@ unlist(lapply(results, function(x) x$DiscLik))
 unlist(lapply(results, function(x) x$ContLik))
 
 # Interestingly, the differ- ent strategies are often quite divergent, with active foragers (AFs) relying on frequent but often slow locomotion, whereas ambush predators move rarely, but rapidly (Miles et al. 2007 and refer- ences therein), resulting in phenotypes shaped by selection for energetic efficiency and higher stamina, versus high-speed burst locomotion (Miles et al. 2007 and references therein, Pruitt 2010).
+getModelTable(results)
+par(mfrow=c(2,2))
+lapply(results[c(15,12,11,1)], function(x) plot(x$RegimeMap))
 
 
 
