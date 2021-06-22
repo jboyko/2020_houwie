@@ -209,13 +209,14 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
                   rep(ub.ou[1], length(unique(na.omit(index.ou[1,])))), 
                   rep(ub.ou[2], length(unique(na.omit(index.ou[2,])))), 
                   rep(ub.ou[3], length(unique(na.omit(index.ou[3,]))))))
+    cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
     out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
-  SplitLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
+  FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
   # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
   if(null.cor){
     model.cor <- NULL
@@ -232,15 +233,16 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
   colnames(solution$solution.ou) <- StateNames
   names(hOUwie.dat$ObservedTraits) <- 1:length(hOUwie.dat$ObservedTraits)
   obj <- list(
-    loglik = -out$objective,
-    DiscLik = SplitLiks[1],
-    ContLik = SplitLiks[2],
-    AIC = 2*out$objective + 2*param.count,
-    AICc = 2*out$objective+ 2*param.count*(param.count/(nb.tip-param.count-1)),
-    BIC = 2*out$objective + log(nb.tip) * param.count,
+    loglik = -FinalLiks$TotalLik,
+    DiscLik = FinalLiks[1],
+    ContLik = FinalLiks[2],
+    AIC = 2*FinalLiks$TotalLik + 2*param.count,
+    AICc = 2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
+    BIC = 2*FinalLiks$TotalLik + log(nb.tip) * param.count,
     param.count = param.count,
     solution.cor = solution$solution.cor,
     solution.ou = solution$solution.ou,
+    RegimeMap = FinalLiks$BestMap,
     phy = phy,
     legend = hOUwie.dat$ObservedTraits,
     data = data, 
@@ -278,7 +280,7 @@ hOUwie.dev <- function(p, phy, rate.cat,
                        fix.node=NULL, fix.state=NULL, sample.tips=TRUE, split.liks=FALSE){
   # params are given in log form
   p <- exp(p)
-  print(p)
+  #print(p)
   # define which params are for the HMM
   k <- max(rate)-1
   p.mk <- p[1:k]
@@ -349,10 +351,11 @@ hOUwie.dev <- function(p, phy, rate.cat,
     Total.loglik <- max(OU.loglik + Mk.loglik)
     Mk.loglik.tmp <- Mk.loglik[which.max(OU.loglik + Mk.loglik)]
     OU.loglik.tmp <- OU.loglik[which.max(OU.loglik + Mk.loglik)]
+    simmap.tmp <- simmap[which.max(OU.loglik + Mk.loglik)]
     # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
-    print(c(TotalLik = Total.loglik, DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp))
+    cat("\r", c(Total.loglik, Mk.loglik.tmp, OU.loglik.tmp), "     ")
     if(split.liks){
-      return(c(DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp))
+      return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp, BestMap = simmap.tmp))
     }
     return(-(Total.loglik))
   }else{
@@ -366,7 +369,7 @@ hOUwie.dev <- function(p, phy, rate.cat,
     # 
     print(c(Total = OU.loglik + Mk.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
     if(split.liks){
-      return(c(DiscLik = Mk.loglik, ContLik = OU.loglik))
+      return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
     }
     return(-(OU.loglik + Mk.loglik))
   }

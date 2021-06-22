@@ -60,7 +60,7 @@ PEOUM[3,] <- c(3,4,5,3,4,3,4,5,3,4)
 SWOUM[3,] <- c(3,3,4,4,4,3,3,5,5,5)
 
 
-nSim <- 250
+nSim <- 500
 
 quickRun <- function(index){
   if(index == 1){
@@ -119,12 +119,28 @@ quickRun <- function(index){
     fit.SW_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = SWOUM, weighted = TRUE)
     return(fit.SW_B)
   }
+  if(index == 15){
+    fit.CDBMS_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CDBMS, weighted = TRUE)
+    return(fit.CDBMS_A)
+  }
+  if(index == 16){
+    fit.CDBMS_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CDBMS, weighted = TRUE)
+    return(fit.CDBMS_B)
+  }
+  if(index == 17){
+    fit.CIDBMS_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CIDBMS, weighted = TRUE)
+    return(fit.CIDBMS_A)
+  }
+  if(index == 18){
+    fit.CIDBMS_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CIDBMS, weighted = TRUE)
+    return(fit.CIDBMS_B)
+  }
 }
 
-results <- mclapply(1:14, function(x) quickRun(x), mc.cores = 14)
+results <- mclapply(1:18, function(x) quickRun(x), mc.cores = 18)
 
 
-names(results) <- c("BM1_A", "BM1_B", "OU1_A", "OU1_B", "CD_A", "CD_B", "CID_A", "CID_B", "FM_A", "FM_B", "PE_A", "PE_B", "SW_A", "SW_B")
+names(results) <- c("BM1_A", "BM1_B", "OU1_A", "OU1_B", "CDOUM_A", "CDOUM_B", "CIDOUM_A", "CIDOUM_B", "FMOUM_A", "FMOUM_B", "PEOUM_A", "PEOUM_B", "SWOUM_A", "SWOUM_B", "CDBMS_A", "CDBMS_B", "CIDBMS_A", "CIDBMS_B")
 getModelTable(results)
 unlist(lapply(results, function(x) x$DiscLik))
 unlist(lapply(results, function(x) x$ContLik))
