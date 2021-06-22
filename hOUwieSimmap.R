@@ -22,12 +22,11 @@
 #'@param nSim the number of simmaps a single set of params is evaluated over
 #'@param opts optioins for nloptr
 #'@param nCores number of parallel cores
-#'@param weighted a logicial indicating whether to take the average OU likelihood over all simmaps (FALSE) or just take the maximum likelihood
 #'@param quiet a logical indicating whether to output user messages
 hOUwie <- function(phy, data, rate.cat, nSim=1000,
                    model.cor=NULL, index.cor=NULL, root.p="yang", lb.cor=NULL, ub.cor=NULL,
                    model.ou=NULL, index.ou=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, 
-                   p=NULL, ip=NULL, opts=NULL, nCores=1, weighted=FALSE, quiet=FALSE, parsimony=FALSE, sample.tips=TRUE){
+                   p=NULL, ip=NULL, opts=NULL, nCores=1, quiet=FALSE, parsimony=FALSE, sample.tips=TRUE){
   # check that tips and data match
   # check for invariance of tip states and not that non-invariance isn't just ambiguity
   if(is.null(model.cor) & is.null(index.cor)){
@@ -165,7 +164,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     out<-NULL
     est.pars<-log(p)
     out$solution <- log(p)
-    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips)
+    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips)
   }else{
     if(!quiet){
       cat("Starting a search of parameters with", nSim, "simmaps...\n")
@@ -210,14 +209,14 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
                   rep(ub.ou[2], length(unique(na.omit(index.ou[2,])))), 
                   rep(ub.ou[3], length(unique(na.omit(index.ou[3,]))))))
     cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
-    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
+    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
     cat("\n")
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
-  FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
+  FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
   cat("\n")
   # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
   if(null.cor){
@@ -267,7 +266,6 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     nSim=nSim, 
     opts=opts, 
     nCores=nCores, 
-    weighted=weighted, 
     quiet=quiet
     )
   class(obj) <- "houwie"
@@ -278,7 +276,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
 hOUwie.dev <- function(p, phy, rate.cat, 
                        data.cor, liks, Q, rate, root.p,
                        data.ou, index.ou, algorithm, mserr,
-                       nSim, nCores, tip.paths=NULL, weighted = FALSE, order.test=TRUE, parsimony=FALSE,
+                       nSim, nCores, tip.paths=NULL, order.test=TRUE, parsimony=FALSE,
                        fix.node=NULL, fix.state=NULL, sample.tips=TRUE, split.liks=FALSE){
   # params are given in log form
   p <- exp(p)
@@ -343,39 +341,39 @@ hOUwie.dev <- function(p, phy, rate.cat,
   # OUwie.fixed(simmap[[1]], data.ou, model = "OUM", simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="invert", tip.paths=tip.paths, mserr=mserr)
   # OUwie.fixed(simmap[[1]], data.ou, model = "OUM", simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths)
 
-  if(weighted == TRUE){
-    # get the likelihoods of the simmaps
-    # OU.loglik <- max(unlist(OU.loglik))
-    OU.loglik <- unlist(OU.loglik)
-    # OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
-    Mk.loglik <- unlist(lapply(simmap, function(x) getMapProbability(x$maps, Q)))
-    # Mk.loglik <- max(Mk.loglik) + log(sum(exp(Mk.loglik - max(Mk.loglik)))) - log(nSim)
-    Total.loglik <- max(OU.loglik + Mk.loglik)
-    Mk.loglik.tmp <- Mk.loglik[which.max(OU.loglik + Mk.loglik)]
-    OU.loglik.tmp <- OU.loglik[which.max(OU.loglik + Mk.loglik)]
-    simmap.tmp <- simmap[which.max(OU.loglik + Mk.loglik)]
-    # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
-    cat("\r", c(Total.loglik, Mk.loglik.tmp, OU.loglik.tmp), "     ")
-    if(split.liks){
-      return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp, BestMap = simmap.tmp))
-    }
-    return(-(Total.loglik))
-  }else{
-    # algebraic trick to prevent overflow and underflow while preserving as many accurate leading digits in the result as possible. The leading digits are preserved by pulling the maximum outside. The arithmetic is robust because subtracting the maximum on the inside makes sure that only negative numbers or zero are ever exponentiated, so there can be no overflow on those calculations. If there is underflow, we know the leading digits have already been returned as part of the max term on the outside. subtract log nsim for avg.
-    OU.loglik <- unlist(OU.loglik)
-    OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
-    # example
-    # tmp <- c(-100, -200, -300, -100, -250)
-    # max(tmp) + log(sum(exp(tmp - max(tmp)))) - log(length(tmp))
-    # log(mean(exp(tmp)))
-    # 
-    print(c(Total = OU.loglik + Mk.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
-    if(split.liks){
-      return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
-    }
-    return(-(OU.loglik + Mk.loglik))
+  # get the likelihoods of the simmaps
+  # OU.loglik <- max(unlist(OU.loglik))
+  OU.loglik <- unlist(OU.loglik)
+  # OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
+  Mk.loglik <- unlist(lapply(simmap, function(x) getMapProbability(x$maps, Q)))
+  # Mk.loglik <- max(Mk.loglik) + log(sum(exp(Mk.loglik - max(Mk.loglik)))) - log(nSim)
+  Total.loglik <- max(OU.loglik + Mk.loglik)
+  Mk.loglik.tmp <- Mk.loglik[which.max(OU.loglik + Mk.loglik)]
+  OU.loglik.tmp <- OU.loglik[which.max(OU.loglik + Mk.loglik)]
+  simmap.tmp <- simmap[which.max(OU.loglik + Mk.loglik)]
+  # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
+  cat("\r", c(Total.loglik, Mk.loglik.tmp, OU.loglik.tmp), "     ")
+  if(split.liks){
+    return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp, BestMap = simmap.tmp))
   }
+  return(-(Total.loglik))
 }
+  # }else{
+  #   # algebraic trick to prevent overflow and underflow while preserving as many accurate leading digits in the result as possible. The leading digits are preserved by pulling the maximum outside. The arithmetic is robust because subtracting the maximum on the inside makes sure that only negative numbers or zero are ever exponentiated, so there can be no overflow on those calculations. If there is underflow, we know the leading digits have already been returned as part of the max term on the outside. subtract log nsim for avg.
+  #   OU.loglik <- unlist(OU.loglik)
+  #   OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
+  #   # example
+  #   # tmp <- c(-100, -200, -300, -100, -250)
+  #   # max(tmp) + log(sum(exp(tmp - max(tmp)))) - log(length(tmp))
+  #   # log(mean(exp(tmp)))
+  #   # 
+  #   print(c(Total = OU.loglik + Mk.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
+  #   if(split.liks){
+  #     return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik, ContLik = OU.loglik))
+  #   }
+  #   return(-(OU.loglik + Mk.loglik))
+  # }
+#}
 
 # hOUwie's input data will be similar to OUwie, with the exception that there can be more than a single trait being evaluated thus it's defined as column 1 is species name, the last column is the continuous trait and anything in between are discrete characters (can also account for mserr if second last columns are continuous)
 organizeHOUwieDat <- function(data, mserr){

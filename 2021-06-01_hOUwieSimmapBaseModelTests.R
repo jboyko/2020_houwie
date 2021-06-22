@@ -259,6 +259,7 @@ singleRun <- function(iter){
 
 res <- mclapply(1:100, function(x) singleRun(x), mc.cores = nCores)
 getModelTable(list("BM" = BM1, "OU1" = OU1, "CDOUM" = OUM, "CDBMS" = BMS, "CIDOUM" = CIDOUM, "CIDBMS" = CIDBMS))
+
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # SUMMARY
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
