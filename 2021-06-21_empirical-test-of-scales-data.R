@@ -60,7 +60,7 @@ PEOUM[3,] <- c(3,4,5,3,4,3,4,5,3,4)
 SWOUM[3,] <- c(3,3,4,4,4,3,3,5,5,5)
 
 
-nSim <- 500
+nSim <- 3
 
 quickRun <- function(index){
   if(index == 1){
@@ -137,7 +137,7 @@ quickRun <- function(index){
   }
 }
 
-results <- mclapply(1:18, function(x) quickRun(x), mc.cores = 18)
+results <- mclapply(5:8, function(x) quickRun(x), mc.cores = 1)
 
 
 names(results) <- c("BM1_A", "BM1_B", "OU1_A", "OU1_B", "CDOUM_A", "CDOUM_B", "CIDOUM_A", "CIDOUM_B", "FMOUM_A", "FMOUM_B", "PEOUM_A", "PEOUM_B", "SWOUM_A", "SWOUM_B", "CDBMS_A", "CDBMS_B", "CIDBMS_A", "CIDBMS_B")
