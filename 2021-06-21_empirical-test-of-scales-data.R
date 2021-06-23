@@ -64,75 +64,75 @@ nSim <- 2
 
 quickRun <- function(index){
   if(index == 1){
-    fit.BM1_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, model.ou = "BM1")
+    fit.BM1_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = "BM1", nSim)
     return(fit.BM1_A)
   }
   if(index == 2){
-    fit.BM1_B <- hOUwie(phy, dat, 1, nSim, model.cor = "ER", model.ou = "BM1")
+    fit.BM1_B <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "BM1", nSim)
     return(fit.BM1_B)
   }
   if(index == 3){
-    fit.OU1_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, model.ou = "OU1")
+    fit.OU1_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = "OU1", nSim)
     return(fit.OU1_A)
   }
   if(index == 4){
-    fit.OU1_B <- hOUwie(phy, dat, 1, nSim, model.cor = "ER", model.ou = "OU1")
+    fit.OU1_B <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "OU1", nSim)
     return(fit.OU1_B)
   }
   if(index == 5){
-    fit.CD_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CDOUM)
+    fit.CD_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CDOUM, nSim)
     return(fit.CD_A)
   }
   if(index == 6){
-    fit.CD_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CDOUM)
+    fit.CD_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = CDOUM, nSim)
     return(fit.CD_B)
   }
   if(index == 7){
-    fit.CID_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CIDOUM)
+    fit.CID_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CIDOUM, nSim)
     return(fit.CID_A)
   }
   if(index == 8){
-    fit.CID_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CIDOUM)
+    fit.CID_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = CIDOUM, nSim)
     return(fit.CID_B)
   }
   if(index == 9){
-    fit.FM_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = FMOUM)
+    fit.FM_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = FMOUM, nSim)
     return(fit.FM_A)
   }
   if(index == 10){
-    fit.FM_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = FMOUM)
+    fit.FM_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = FMOUM, nSim)
     return(fit.FM_B)
   }
   if(index == 11){
-    fit.PE_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = PEOUM)
+    fit.PE_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = PEOUM, nSim)
     return(fit.PE_A)
   }
   if(index == 12){
-    fit.PE_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = PEOUM)
+    fit.PE_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = PEOUM, nSim)
     return(fit.PE_B)
   }
   if(index == 13){
-    fit.SW_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = SWOUM)
+    fit.SW_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = SWOUM, nSim)
     return(fit.SW_A)
   }
   if(index == 14){
-    fit.SW_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = SWOUM)
+    fit.SW_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = SWOUM, nSim)
     return(fit.SW_B)
   }
   if(index == 15){
-    fit.CDBMS_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CDBMS)
+    fit.CDBMS_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CDBMS, nSim)
     return(fit.CDBMS_A)
   }
   if(index == 16){
-    fit.CDBMS_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CDBMS)
+    fit.CDBMS_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = CDBMS, nSim)
     return(fit.CDBMS_B)
   }
   if(index == 17){
-    fit.CIDBMS_A <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelA, index.ou = CIDBMS)
+    fit.CIDBMS_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CIDBMS, nSim)
     return(fit.CIDBMS_A)
   }
   if(index == 18){
-    fit.CIDBMS_B <- hOUwie(phy, dat, 2, nSim, index.cor = DiscModelB, index.ou = CIDBMS)
+    fit.CIDBMS_B <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = CIDBMS, nSim)
     return(fit.CIDBMS_B)
   }
 }

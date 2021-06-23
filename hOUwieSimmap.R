@@ -23,28 +23,21 @@
 #'@param opts optioins for nloptr
 #'@param nCores number of parallel cores
 #'@param quiet a logical indicating whether to output user messages
-hOUwie <- function(phy, data, rate.cat, nSim=1000,
-                   model.cor=NULL, index.cor=NULL, root.p="yang", lb.cor=NULL, ub.cor=NULL,
-                   model.ou=NULL, index.ou=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, 
-                   p=NULL, ip=NULL, opts=NULL, nCores=1, quiet=FALSE, parsimony=FALSE, sample.tips=TRUE){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, lb.cor=NULL, ub.cor=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, p=NULL, ip=NULL, opts=NULL, nCores=1, quiet=FALSE, parsimony=FALSE, sample.tips=TRUE){
+  # if the data has negative values, shift it right - we will shift it back later
+  if(mserr == "none"){
+    if(any(data[,dim(data)[2]] < 0)){
+      cat("Negative values detected... adding 50 to the trait mean\n")
+      data[,dim(data)[2]] <- data[,dim(data)[2]] + 50
+    }
+  }else{
+    if(any(data[,dim(data)[2]-1] < 0)){
+      cat("Negative values detected... adding 50 to the trait mean\n")
+      data[,dim(data)[2]-1] <- data[,dim(data)[2]-1] + 50
+    }
+  }
   # check that tips and data match
   # check for invariance of tip states and not that non-invariance isn't just ambiguity
-  if(is.null(model.cor) & is.null(index.cor)){
-    stop("No model for discrete evolution has been specified. Please select either a default model with the model.cor argument or specify an index matrix with index.cor.", call. = FALSE)
-  }
-  
-  if(is.null(model.ou) & is.null(index.ou)){
-    stop("No model for continuous evolution has been specified. Please select either a default model with the model.ou argument or specify an index matrix with index.ou.", call. = FALSE)
-  }
-  
-  if(!is.null(index.cor) & !is.null(index.ou)){
-    if(dim(index.cor)[2] > dim(index.ou)[2]){
-      stop("Not all of your discrete states have OU parameters associated with them. Please check that your discrete index matrix (index.cor) matches your continuous index matrix (index.ou).")
-    }
-    if(dim(index.ou)[2] > dim(index.cor)[2]){
-      stop("You have specified more OU parameters than there are states in the discrete process. Please check that your discrete index matrix (index.cor) matches your continuous index matrix (index.ou).")
-    }
-  }
   if(!is.null(phy$node.label)){
     if(!quiet){
       cat("Your phylogeny had node labels, these have been removed.\n")
@@ -52,20 +45,40 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     phy$node.label <- NULL
   }
   
-  
+  # organize the data
+  hOUwie.dat <- organizeHOUwieDat(data, mserr, collapse)
+  nStates <- as.numeric(max(hOUwie.dat$data.cor[,2]))
+  nCol <- dim(data)[2] - ifelse(mserr == "none", 2, 3)
+  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   Tmax <- max(branching.times(phy))
-  if(mserr == "none"){
-    nDiscrete <- dim(data)[2] - 2
+  nObs <- length(hOUwie.dat$ObservedTraits)
+  phy <- reorder.phylo(phy, "pruningwise")
+  algorithm <- "three.point"
+  
+  if(class(discrete_model)[1] == "character"){
+    index.disc <- getDiscreteModel(hOUwie.dat$data.cor, discrete_model, rate.cat, dual, collapse)
   }else{
-    nDiscrete <- dim(data)[2] - 3
+    index.disc <- discrete_model
   }
+  if(class(continuous_model)[1] == "character"){
+    index.cont <- getOUParamStructure(continuous_model, "three.point", root.station, get.root.theta, nStates * rate.cat)
+  }else{
+    index.cont <- continuous_model
+  }
+  if(dim(index.disc)[2] > dim(index.cont)[2]){
+    stop("Not all of your discrete states have OU parameters associated with them. Please check that your discrete index matrix matches your continuous index matrix.")
+  }
+  if(dim(index.cont)[2] > dim(index.disc)[2]){
+    stop("You have specified more OU parameters than there are states in the discrete process. Please check that your discrete index matrix matches your continuous index matrix.")
+  }
+  
   if(is.null(lb.ou)){
     # the lower limit of alpha is defined as a halflife of 10000% of the max tree height
     # the lower limit of sigma is defined 10 times less than alpha
     # the lower limit of optim is defined 10 times lower than the minimum observation
     lb.alpha = log(2)/(100 * Tmax)
     lb.sigma = lb.alpha/10
-    lb.optim = min(data[, 1+nDiscrete+1])/10 
+    lb.optim = min(data[, 1+nCol+1])/10 
     lb.ou=c(lb.alpha,lb.sigma,lb.optim)
   }
   if(is.null(ub.ou)){
@@ -74,7 +87,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     # the upper limit of optim is defined 10 times more than the maximum observation
     ub.alpha = log(2)/(0.01 * Tmax)
     ub.sigma = 10 * ub.alpha
-    ub.optim = max(data[, 1+nDiscrete+1])*10 
+    ub.optim = max(data[, 1+nCol+1])*10 
     ub.ou=c(ub.alpha,ub.sigma,ub.optim)
   }
   if(is.null(lb.cor)){
@@ -93,45 +106,23 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     }
   }
   
-  
-  algorithm="three.point"
-  # organize the data into the corHMM data and the OUwie data
-  # TO DO: add a way to shift negative continuous variables to positive then shift back
-  hOUwie.dat <- organizeHOUwieDat(data, mserr)
-  nObs <- length(hOUwie.dat$ObservedTraits)
-  #reorder phy
-  phy <- reorder.phylo(phy, "pruningwise")
-  # a way to speed up the three.point function
-  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
-  
-  #scale the tree to a root height of 1
-  # phy$edge.length <- phy$edge.length/max(branching.times(phy))
   # a temporary corhmm model to set the rates up
-  null.cor <- FALSE
-  if(is.null(model.cor)){
-    model.cor <- "ER"
-    null.cor <- TRUE
-  }
-  model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
-  # get the appropriate OU model structure
-  if(is.null(index.ou)){
-    index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
-  }
-  
+  model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = "ER", rate.mat = index.disc, collapse = collapse)
+
   # this allows for custom rate matricies!
   order.test <- TRUE
-  if(!is.null(index.cor)){
+  if(!is.null(index.disc)){
     order.test <- FALSE
-    index.cor[index.cor == 0] <- NA
-    rate <- index.cor
+    index.disc[index.disc == 0] <- NA
+    rate <- index.disc
     model.set.final$np <- max(rate, na.rm=TRUE)
     rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
     model.set.final$rate <- rate
-    model.set.final$index.matrix <- index.cor
-    model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
+    model.set.final$index.matrix <- index.disc
+    model.set.final$Q <- matrix(0, dim(index.disc)[1], dim(index.disc)[2])
     ## for precursor type models ##
-    col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
-    row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
+    col.sums <- which(colSums(index.disc, na.rm=TRUE) == 0)
+    row.sums <- which(rowSums(index.disc, na.rm=TRUE) == 0)
     drop.states <- col.sums[which(col.sums == row.sums)]
     if(length(drop.states > 0)){
       model.set.final$liks[,drop.states] <- 0
@@ -140,9 +131,9 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     ###############################
   }
   # the number of parameters for each process
-  n_p_alpha <- length(unique(na.omit(index.ou[1,])))
-  n_p_sigma <- length(unique(na.omit(index.ou[2,])))
-  n_p_theta <- length(unique(na.omit(index.ou[3,])))
+  n_p_alpha <- length(unique(na.omit(index.cont[1,])))
+  n_p_sigma <- length(unique(na.omit(index.cont[2,])))
+  n_p_theta <- length(unique(na.omit(index.cont[3,])))
   
   # default MLE search options
   if(is.null(opts)){
@@ -156,15 +147,15 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
       cat("Calculating likelihood from a set of fixed parameters", "\n")
       print(p)
     }
-    if(max(index.ou, na.rm = TRUE) + max(model.set.final$index.matrix, na.rm = TRUE) != length(p)){
-      message <- paste0("The number of parameters does not match the number required by the model structure. You have supplied ", length(p), ", but the model structure requires ", max(index.ou, na.rm = TRUE) + max(model.set.final$index.matrix, na.rm = TRUE), ".")
+    if(max(index.cont, na.rm = TRUE) + max(model.set.final$index.matrix, na.rm = TRUE) != length(p)){
+      message <- paste0("The number of parameters does not match the number required by the model structure. You have supplied ", length(p), ", but the model structure requires ", max(index.cont, na.rm = TRUE) + max(model.set.final$index.matrix, na.rm = TRUE), ".")
       stop(message, call. = FALSE)
       
     }
     out<-NULL
     est.pars<-log(p)
     out$solution <- log(p)
-    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips)
+    out$objective <- hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.cont, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips)
   }else{
     if(!quiet){
       cat("Starting a search of parameters with", nSim, "simmaps...\n")
@@ -190,7 +181,7 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
       }else{
         disc_tips <- hOUwie.dat$data.cor[,2]
       }
-      start.theta <- getIP.theta(hOUwie.dat$data.ou[,3], disc_tips, index.ou[3,])
+      start.theta <- getIP.theta(hOUwie.dat$data.ou[,3], disc_tips, index.cont[3,])
       start.ou <- c(starts.alpha, starts.sigma, start.theta)
       start.cor <- rep(10/sum(phy$edge.length), model.set.final$np)
       # start.ou <- c(rep(log(2)/Tmax, length(unique(na.omit(index.ou[1,])))), 
@@ -201,30 +192,26 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
       starts <- ip
     }
     lower = log(c(rep(lb.cor, model.set.final$np), 
-                  rep(lb.ou[1], length(unique(na.omit(index.ou[1,])))), 
-                  rep(lb.ou[2], length(unique(na.omit(index.ou[2,])))), 
-                  rep(lb.ou[3], length(unique(na.omit(index.ou[3,]))))))
+                  rep(lb.ou[1], length(unique(na.omit(index.cont[1,])))), 
+                  rep(lb.ou[2], length(unique(na.omit(index.cont[2,])))), 
+                  rep(lb.ou[3], length(unique(na.omit(index.cont[3,]))))))
     upper = log(c(rep(ub.cor, model.set.final$np), 
-                  rep(ub.ou[1], length(unique(na.omit(index.ou[1,])))), 
-                  rep(ub.ou[2], length(unique(na.omit(index.ou[2,])))), 
-                  rep(ub.ou[3], length(unique(na.omit(index.ou[3,]))))))
+                  rep(ub.ou[1], length(unique(na.omit(index.cont[1,])))), 
+                  rep(ub.ou[2], length(unique(na.omit(index.cont[2,])))), 
+                  rep(ub.ou[3], length(unique(na.omit(index.cont[3,]))))))
     cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
-    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
+    out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.cont, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
     cat("\n")
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
-  FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
+  FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.cont, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
   cat("\n")
-  # params are independent corhmm rates, alpha, sigma, theta, and 1 intercept
-  if(null.cor){
-    model.cor <- NULL
-  }
-  param.count <- max(model.set.final$index.matrix, na.rm = TRUE) + max(index.ou, na.rm = TRUE)
+  param.count <- max(model.set.final$index.matrix, na.rm = TRUE) + max(index.cont, na.rm = TRUE)
   nb.tip <- length(phy$tip.label)
-  solution <- organizeHOUwiePars(out=out, rate=model.set.final$rate, Q=model.set.final$Q, index.ou=index.ou)
+  solution <- organizeHOUwiePars(out=out, rate=model.set.final$rate, Q=model.set.final$Q, index.ou=index.cont)
   if(rate.cat > 1){
     StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
   }else{
@@ -241,21 +228,21 @@ hOUwie <- function(phy, data, rate.cat, nSim=1000,
     AICc = -2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
     BIC = -2*FinalLiks$TotalLik + log(nb.tip) * param.count,
     param.count = param.count,
-    solution.cor = solution$solution.cor,
-    solution.ou = solution$solution.ou,
+    solution.disc = solution$solution.cor,
+    solution.cont = solution$solution.ou,
+    index.disc = index.disc,
+    index.cont = index.cont,
     RegimeMap = FinalLiks$BestMap,
     phy = phy,
     legend = hOUwie.dat$ObservedTraits,
     data = data, 
     hOUwie.dat = hOUwie.dat,
     rate.cat = rate.cat, 
-    model.cor=model.cor, 
-    index.cor=index.cor, 
+    discrete_model=discrete_model, 
+    continuous_model=continuous_model, 
     root.p=root.p, 
     lb.cor=lb.cor, 
     ub.cor=ub.cor,
-    model.ou=model.ou, 
-    index.ou=index.ou, 
     root.station=root.station, 
     get.root.theta=get.root.theta, 
     mserr = mserr, 
@@ -376,11 +363,11 @@ hOUwie.dev <- function(p, phy, rate.cat,
 #}
 
 # hOUwie's input data will be similar to OUwie, with the exception that there can be more than a single trait being evaluated thus it's defined as column 1 is species name, the last column is the continuous trait and anything in between are discrete characters (can also account for mserr if second last columns are continuous)
-organizeHOUwieDat <- function(data, mserr){
+organizeHOUwieDat <- function(data, mserr, collapse = TRUE){
   # return a list of corHMM data and OU data
   if(mserr=="known"){
     data.cor <- data[, 1:(dim(data)[2]-2)]
-    data.cor <- corHMM:::corProcessData(data.cor)
+    data.cor <- corHMM:::corProcessData(data.cor, collapse = collapse)
     data.ou <- data.frame(sp = data[,1], 
                           reg = data.cor$corData[,2], 
                           x = data[, dim(data)[2]-1],
@@ -408,6 +395,18 @@ getIP.theta <- function(x, states, index){
   }
   ip.theta[is.nan(ip.theta)] <- mean(x)
   return(ip.theta)
+}
+
+getDiscreteModel <- function(data, model, rate.cat, dual, collapse){
+  rate <- getStateMat4Dat(data, model, dual, collapse)$rate.mat
+  if (rate.cat > 1) {
+    StateMats <- vector("list", rate.cat)
+    for (i in 1:rate.cat) {
+      StateMats[[i]] <- rate
+    }
+    rate <- getFullMat(StateMats)
+  }
+  return(rate)
 }
 
 # gets the probability of a particular painting. limited to a single change at a shift point of 0.5
@@ -734,13 +733,13 @@ print.houwie <- function(x, ...){
   cat("\nLegend\n")
   print(x$legend)
   cat("\nRegime Rate matrix\n")
-  print(x$solution.cor)
+  print(x$solution.disc)
   cat("\nOU Estimates\n")
-  print(x$solution.ou)
+  print(x$solution.cont)
   cat("\n")
-  if(!any(is.na(x$solution.ou[1,]))){
+  if(!any(is.na(x$solution.cont[1,]))){
     cat("\nHalf-life (another way of reporting alpha)\n")
-    print(log(2)/x$solution.ou[1,])
+    print(log(2)/x$solution.cont[1,])
   }
   cat("\nDon't forget: your parameters have units!\n")
 }
@@ -918,115 +917,115 @@ PruneRedundantModels <- function(..., precision=1e-5) {
 }
 
 ## wrapper function that will evaluate some number of nodes via simmaps or marginal 
-hOUwieRecon <- function(nodes="all", type="marginal", nMap=50, nCores=1, houwie.obj){
-  phy <- houwie.obj$phy
-  data <- houwie.obj$data
-  mserr <- houwie.obj$mserr
-  rate.cat <- houwie.obj$rate.cat
-  model.cor <- houwie.obj$model.cor
-  index.cor <- houwie.obj$index.cor
-  model.ou <- houwie.obj$model.ou
-  index.ou <- houwie.obj$index.ou
-  solution.cor <- houwie.obj$solution.cor
-  solution.ou <- houwie.obj$solution.ou
-  root.p <- houwie.obj$root.p
-  root.station <- houwie.obj$root.station
-  get.root.theta <- houwie.obj$get.root.theta
-  weighted <- houwie.obj$weighted
-  
-  if(is.character(nodes)){
-    if(nodes == "all"){
-      nodes.to.eval <- 1:max(phy$edge)
-    }
-    if(nodes == "external"){
-      nodes.to.eval <- 1:length(phy$tip.label)
-    }
-    if(nodes == "internal"){
-      nodes.to.eval <- (length(phy$tip.label)+1):max(phy$edge)
-    }
-  }
-  if(is.numeric(nodes)){
-    nodes.to.eval <- nodes
-  }
-  
-  algorithm="three.point"
-  # organize the data into the corHMM data and the OUwie data
-  # TO DO: add a way to shift negative continuous variables to positive then shift back
-  hOUwie.dat <- organizeHOUwieDat(data, mserr)
-  nObs <- length(hOUwie.dat$ObservedTraits)
-  #reorder phy
-  phy <- reorder.phylo(phy, "pruningwise")
-  # a way to speed up the three.point function
-  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
-  # get the appropriate OU model structure
-  if(is.null(index.ou)){
-    index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
-  }
-  # get the appropriate corhmm model structure
-  if(is.null(model.cor)){
-    model.cor <- "ER"
-  }
-  model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
-  # this allows for custom rate matricies!
-  if(!is.null(index.cor)){
-    order.test <- FALSE
-    index.cor[index.cor == 0] <- NA
-    rate <- index.cor
-    model.set.final$np <- max(rate, na.rm=TRUE)
-    rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
-    model.set.final$rate <- rate
-    model.set.final$index.matrix <- index.cor
-    model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
-    ## for precursor type models ##
-    col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
-    row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
-    drop.states <- col.sums[which(col.sums == row.sums)]
-    if(length(drop.states > 0)){
-      model.set.final$liks[,drop.states] <- 0
-    }
-    ## need to do anything to the ouwie matrix?
-  }
-
-  p.mk <- sapply(1:max(index.cor, na.rm = TRUE), function(x) c(na.omit(c(solution.cor)))[match(x, c(na.omit(c(index.cor))))])
-  p.ou <- sapply(1:max(index.ou, na.rm = TRUE), function(x) c(na.omit(c(solution.ou)))[match(x, c(na.omit(c(index.ou))))])
-  p <- c(p.mk, p.ou)
-  ReconTable <- matrix(0, length(nodes.to.eval), dim(model.set.final$liks)[2], dimnames = list(nodes.to.eval))
-  for(i in 1:length(nodes.to.eval)){
-    fix.node <- nodes.to.eval[i]
-    ReconTable[i,] <- NodeSpecific.hOuwieRecon(pars=p, phy=phy, rate.cat=rate.cat, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nMap, nCores=nCores, tip.paths=tip.paths, weighted=weighted, fix.node)
-  }
-  
-  if(rate.cat > 1){
-    StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
-  }else{
-    StateNames <- paste("(", rep(1:nObs, rate.cat), ")", sep = "")
-  }
-  colnames(ReconTable) <- StateNames
-  
-  return(ReconTable)
-}
+# hOUwieRecon <- function(nodes="all", type="marginal", nMap=50, nCores=1, houwie.obj){
+#   phy <- houwie.obj$phy
+#   data <- houwie.obj$data
+#   mserr <- houwie.obj$mserr
+#   rate.cat <- houwie.obj$rate.cat
+#   model.cor <- houwie.obj$model.cor
+#   index.cor <- houwie.obj$index.cor
+#   model.ou <- houwie.obj$model.ou
+#   index.ou <- houwie.obj$index.ou
+#   solution.cor <- houwie.obj$solution.cor
+#   solution.ou <- houwie.obj$solution.ou
+#   root.p <- houwie.obj$root.p
+#   root.station <- houwie.obj$root.station
+#   get.root.theta <- houwie.obj$get.root.theta
+#   weighted <- houwie.obj$weighted
+#   
+#   if(is.character(nodes)){
+#     if(nodes == "all"){
+#       nodes.to.eval <- 1:max(phy$edge)
+#     }
+#     if(nodes == "external"){
+#       nodes.to.eval <- 1:length(phy$tip.label)
+#     }
+#     if(nodes == "internal"){
+#       nodes.to.eval <- (length(phy$tip.label)+1):max(phy$edge)
+#     }
+#   }
+#   if(is.numeric(nodes)){
+#     nodes.to.eval <- nodes
+#   }
+#   
+#   algorithm="three.point"
+#   # organize the data into the corHMM data and the OUwie data
+#   # TO DO: add a way to shift negative continuous variables to positive then shift back
+#   hOUwie.dat <- organizeHOUwieDat(data, mserr)
+#   nObs <- length(hOUwie.dat$ObservedTraits)
+#   #reorder phy
+#   phy <- reorder.phylo(phy, "pruningwise")
+#   # a way to speed up the three.point function
+#   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
+#   # get the appropriate OU model structure
+#   if(is.null(index.ou)){
+#     index.ou <- getOUParamStructure(model.ou, "three.point", root.station, get.root.theta, dim(model.set.final$Q)[1])
+#   }
+#   # get the appropriate corhmm model structure
+#   if(is.null(model.cor)){
+#     model.cor <- "ER"
+#   }
+#   model.set.final <- corHMM:::rate.cat.set.corHMM.JDB(phy=phy,data=hOUwie.dat$data.cor,rate.cat=rate.cat, ntraits = nObs, model = model.cor)
+#   # this allows for custom rate matricies!
+#   if(!is.null(index.cor)){
+#     order.test <- FALSE
+#     index.cor[index.cor == 0] <- NA
+#     rate <- index.cor
+#     model.set.final$np <- max(rate, na.rm=TRUE)
+#     rate[is.na(rate)]=max(rate, na.rm=TRUE)+1
+#     model.set.final$rate <- rate
+#     model.set.final$index.matrix <- index.cor
+#     model.set.final$Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[2])
+#     ## for precursor type models ##
+#     col.sums <- which(colSums(index.cor, na.rm=TRUE) == 0)
+#     row.sums <- which(rowSums(index.cor, na.rm=TRUE) == 0)
+#     drop.states <- col.sums[which(col.sums == row.sums)]
+#     if(length(drop.states > 0)){
+#       model.set.final$liks[,drop.states] <- 0
+#     }
+#     ## need to do anything to the ouwie matrix?
+#   }
+# 
+#   p.mk <- sapply(1:max(index.cor, na.rm = TRUE), function(x) c(na.omit(c(solution.cor)))[match(x, c(na.omit(c(index.cor))))])
+#   p.ou <- sapply(1:max(index.ou, na.rm = TRUE), function(x) c(na.omit(c(solution.ou)))[match(x, c(na.omit(c(index.ou))))])
+#   p <- c(p.mk, p.ou)
+#   ReconTable <- matrix(0, length(nodes.to.eval), dim(model.set.final$liks)[2], dimnames = list(nodes.to.eval))
+#   for(i in 1:length(nodes.to.eval)){
+#     fix.node <- nodes.to.eval[i]
+#     ReconTable[i,] <- NodeSpecific.hOuwieRecon(pars=p, phy=phy, rate.cat=rate.cat, data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nMap, nCores=nCores, tip.paths=tip.paths, weighted=weighted, fix.node)
+#   }
+#   
+#   if(rate.cat > 1){
+#     StateNames <- paste("(", rep(1:nObs, rate.cat), rep(LETTERS[1:rate.cat], each = nObs), ")", sep = "")
+#   }else{
+#     StateNames <- paste("(", rep(1:nObs, rate.cat), ")", sep = "")
+#   }
+#   colnames(ReconTable) <- StateNames
+#   
+#   return(ReconTable)
+# }
 
 ## houwie node specific regime reconstruction
 
 ## evaluates the regime specific state and node 
-NodeSpecific.hOuwieRecon <- function(pars, phy, rate.cat, data.cor, liks, Q, rate, root.p, data.ou, index.ou, algorithm, mserr, nSim, nCores, tip.paths, weighted, fix.node){
-  est.pars<-log(pars)
-  ReconVec <- liks[fix.node,]
-  # are we reconstructing a tip?
-  if(any(ReconVec == 1)){
-    for(i in which(ReconVec == 1)){
-      ReconVec[i] <- -hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat, data.cor=data.cor, liks=liks, Q=Q, rate=rate, root.p=root.p, data.ou=data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=FALSE, fix.node = fix.node, fix.state = i)
-    }
-  }else{
-    for(i in 1:length(ReconVec)){
-      ReconVec[i] <- -hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat, data.cor=data.cor, liks=liks, Q=Q, rate=rate, root.p=root.p, data.ou=data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=FALSE, fix.node = fix.node, fix.state = i)
-    }
-  }
-  ReconVec[ReconVec == 0] <- NA
-  ReconVec <- exp(ReconVec)/sum(exp(ReconVec), na.rm = TRUE)
-  ReconVec[is.na(ReconVec)] <- 0
-  return(ReconVec)
-}
+# NodeSpecific.hOuwieRecon <- function(pars, phy, rate.cat, data.cor, liks, Q, rate, root.p, data.ou, index.ou, algorithm, mserr, nSim, nCores, tip.paths, weighted, fix.node){
+#   est.pars<-log(pars)
+#   ReconVec <- liks[fix.node,]
+#   # are we reconstructing a tip?
+#   if(any(ReconVec == 1)){
+#     for(i in which(ReconVec == 1)){
+#       ReconVec[i] <- -hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat, data.cor=data.cor, liks=liks, Q=Q, rate=rate, root.p=root.p, data.ou=data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=FALSE, fix.node = fix.node, fix.state = i)
+#     }
+#   }else{
+#     for(i in 1:length(ReconVec)){
+#       ReconVec[i] <- -hOUwie.dev(est.pars, phy=phy, rate.cat=rate.cat, data.cor=data.cor, liks=liks, Q=Q, rate=rate, root.p=root.p, data.ou=data.ou, index.ou=index.ou, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, weighted=weighted, order.test=FALSE, fix.node = fix.node, fix.state = i)
+#     }
+#   }
+#   ReconVec[ReconVec == 0] <- NA
+#   ReconVec <- exp(ReconVec)/sum(exp(ReconVec), na.rm = TRUE)
+#   ReconVec[is.na(ReconVec)] <- 0
+#   return(ReconVec)
+# }
 
 ## wrapper function used mainly for model averaging
 getTipRecons <- function(models, nSim){
