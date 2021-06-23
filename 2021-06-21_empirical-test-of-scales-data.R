@@ -148,9 +148,10 @@ unlist(lapply(results, function(x) x$ContLik))
 # Interestingly, the differ- ent strategies are often quite divergent, with active foragers (AFs) relying on frequent but often slow locomotion, whereas ambush predators move rarely, but rapidly (Miles et al. 2007 and refer- ences therein), resulting in phenotypes shaped by selection for energetic efficiency and higher stamina, versus high-speed burst locomotion (Miles et al. 2007 and references therein, Pruitt 2010).
 load("empirical/scales2009/scales-results.Rsave")
 require(viridis)
+require(phytools)
 getModelTable(results)
-cols <- viridis(5)
-names(cols) <- 1:5
+cols <- viridis(10)
+names(cols) <- 1:10
 par(mfrow=c(1,2))
 plot(results[[6]]$RegimeMap, col = cols, lwd = 2)
 legend("topleft", legend = getStateMat4Dat(dat[c(1:3)])$legend, col = cols, pch = 16)
@@ -164,5 +165,5 @@ results[[6]]
 results[[12]]
 
 
-
+fit.CD_B
 
