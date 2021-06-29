@@ -59,8 +59,12 @@ FMOUM[3,] <- c(3,3,4,4,4,3,3,4,4,4)
 PEOUM[3,] <- c(3,4,5,3,4,3,4,5,3,4)
 SWOUM[3,] <- c(3,3,4,4,4,3,3,5,5,5)
 
+# fit.CD_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CDOUM, 2)
+# fit.BM1_B <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "BM1", 2)
+# fit.BM1_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = "BM1", 2)
 
-nSim <- 2
+
+nSim <- 500
 
 quickRun <- function(index){
   if(index == 1){
@@ -139,16 +143,25 @@ quickRun <- function(index){
 
 results <- mclapply(1:18, function(x) quickRun(x), mc.cores = 18)
 
-
 names(results) <- c("BM1_A", "BM1_B", "OU1_A", "OU1_B", "CDOUM_A", "CDOUM_B", "CIDOUM_A", "CIDOUM_B", "FMOUM_A", "FMOUM_B", "PEOUM_A", "PEOUM_B", "SWOUM_A", "SWOUM_B", "CDBMS_A", "CDBMS_B", "CIDBMS_A", "CIDBMS_B")
 getModelTable(results)
 unlist(lapply(results, function(x) x$DiscLik))
 unlist(lapply(results, function(x) x$ContLik))
 
 # Interestingly, the differ- ent strategies are often quite divergent, with active foragers (AFs) relying on frequent but often slow locomotion, whereas ambush predators move rarely, but rapidly (Miles et al. 2007 and refer- ences therein), resulting in phenotypes shaped by selection for energetic efficiency and higher stamina, versus high-speed burst locomotion (Miles et al. 2007 and references therein, Pruitt 2010).
+setwd("~/2020_hOUwie/")
 load("empirical/scales2009/scales-results.Rsave")
+source("hOUwieSimmap.R")
+source("Utils.R")
+
+require(treeplyr)
+require(OUwie)
+require(corHMM)
+require(parallel)
 require(viridis)
 require(phytools)
+require(dentist)
+
 getModelTable(results)
 cols <- viridis(10)
 names(cols) <- 1:10
@@ -165,5 +178,9 @@ results[[6]]
 results[[12]]
 
 
-fit.CD_B
+
+
+
+
+
 

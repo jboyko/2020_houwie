@@ -322,7 +322,7 @@ hOUwie.dev <- function(p, phy, rate.cat,
   }
   # fit the OU models to the simmaps
   # returns log likelihood
-  OU.loglik <- mclapply(simmap, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr), mc.cores = nCores)
+  OU.loglik <- lapply(simmap, function(x) OUwie.basic(x, data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr))
   # to show that OUwie.basic is identical to OUwie.fixed
   # OUwie.basic(simmap[[1]], data.ou, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm=algorithm, tip.paths=tip.paths, mserr=mserr)
   # OUwie.fixed(simmap[[1]], data.ou, model = "OUM", simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="invert", tip.paths=tip.paths, mserr=mserr)
@@ -424,10 +424,8 @@ probPath <- function(path, Q){
     state_i <- as.numeric(names(path)[1])
     state_j <- as.numeric(names(path)[2])
     time_i <- as.numeric(path[1])
-    time_j <- as.numeric(sum(path[-1]))
     rate_i <- abs(Q[state_i,state_j])
-    rate_j <- abs(Q[state_j,state_j])
-    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+    P[i] <- dexp(time_i, rate_i)
     path <- path[-1]
   }
   state_j <- as.numeric(names(path))
@@ -436,10 +434,35 @@ probPath <- function(path, Q){
   P[nTrans] <- 1 - pexp(rate_j, time_j)
   P <- prod(P)
   if(P == 0){
-    P <- 1e-100
+    P <- 1e-99
   }
   return(P)
 }
+
+# probPath <- function(path, Q){
+#   nTrans <- length(path)
+#   P <- vector("numeric", length(path))
+#   for(i in sequence(nTrans-1)){
+#     state_i <- as.numeric(names(path)[1])
+#     state_j <- as.numeric(names(path)[2])
+#     time_i <- as.numeric(path[1])
+#     time_j <- as.numeric(path[2])
+#     # time_j <- as.numeric(sum(path[-1]))
+#     rate_i <- abs(Q[state_i,state_j])
+#     rate_j <- abs(Q[state_j,state_j])
+#     P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+#     path <- path[-1]
+#   }
+#   state_j <- as.numeric(names(path))
+#   time_j <- as.numeric(path)
+#   rate_j <- abs(Q[state_j,state_j])
+#   P[nTrans] <- 1 - pexp(rate_j, time_j)
+#   P <- prod(P)
+#   if(P == 0){
+#     P <- 1e-99
+#   }
+#   return(P)
+# }
 
 # different OU models have different parameter structures. This will evaluate the appropriate one.
 getOUParamStructure <- function(model, algorithm, root.station, get.root.theta, k){
@@ -703,12 +726,71 @@ organizeHOUwiePars <- function(out, rate, Q, index.ou){
               solution.cor = Q))
 }
 
+simCharacterHistory <- function(phy, Q, root.freqs, Q2 = NA, NoI = NA){
+  
+  #Randomly choose starting state at root using the root.values as the probability:
+  root.value <- sample.int(dim(Q)[2], 1, FALSE, prob=root.freqs/sum(root.freqs))
+  #Reorder the phy:
+  phy <- reorder.phylo(phy, "postorder")
+  ntips <- length(phy$tip.label)
+  N <- dim(phy$edge)[1]
+  ROOT <- ntips + 1 #perhaps use an accessor to get the root node id
+  
+  #Generate vector that contains the simulated states:
+  CharacterHistory <- integer(ntips + phy$Nnode)
+  CharacterHistory[ROOT] <- as.integer(root.value)
+  anc <- phy$edge[, 1]
+  des <- phy$edge[, 2]
+  edge.length <- phy$edge.length
+  diag(Q) = 0
+  diag(Q) = -rowSums(Q)
+  
+  # setting up the alternative Q matrix at the node of interest
+  if(!any(is.na(Q2))){
+    diag(Q2) = 0
+    diag(Q2) = -rowSums(Q2)
+  }
+  if(!is.na(NoI)){
+    NewQDesc <- getDescendants(phy, NoI)
+  }
+  
+  #standard simulation protocol
+  if(any(is.na(Q2)) | is.na(NoI)){
+    for (i in N:1) {
+      p <- expm(Q * edge.length[i], method="Ward77")[CharacterHistory[anc[i]], ]
+      CharacterHistory[des[i]] <- sample.int(dim(Q)[2], size = 1, FALSE, prob = p)
+    }
+  }
+  
+  # simulating a clade under a different (Q2) evolutionary model
+  if(!any(is.na(Q2)) & !is.na(NoI)){
+    for (i in N:1) {
+      if(anc[i] %in% NewQDesc){
+        p <- expm(Q2 * edge.length[i], method="Ward77")[CharacterHistory[anc[i]], ]
+        CharacterHistory[des[i]] <- sample.int(dim(Q2)[2], size = 1, FALSE, prob = p)
+      }else{
+        p <- expm(Q * edge.length[i], method="Ward77")[CharacterHistory[anc[i]], ]
+        CharacterHistory[des[i]] <- sample.int(dim(Q)[2], size = 1, FALSE, prob = p)
+      }
+    }
+  }
+  
+  TipStates <-  CharacterHistory[1:ntips]
+  names(TipStates) <- phy$tip.label
+  NodeStates <- CharacterHistory[ROOT:(N+1)]
+  names(NodeStates) <- ROOT:(N+1)
+  
+  res <- list(TipStates = TipStates, NodeStates = NodeStates)
+  return(res)
+  #return(CharacterHistory)
+}
+
 # simulate a hOUwie model
 hOUwie.sim <- function(phy, Q, root.freqs, alpha, sig2, theta0, theta, nMap=1){
   # simulate an Mk dataset
-  dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.freqs))
+  dat.cor <- simCharacterHistory(phy, Q, root.freqs)$TipStates
   while(!all(levels(dat.cor) %in% dat.cor)){
-    dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.freqs))
+    dat.cor <- simCharacterHistory(phy, Q, root.freqs)$TipStates
   }
   dat.cor <- data.frame(sp=names(dat.cor), d=dat.cor)
   # simulate a stochastic map with true Q
@@ -1166,3 +1248,25 @@ print.houwie.set <- function(x, ...){
   cat("\n")
 }
 
+
+# forward simulation of a branch. kind of a cheap way to do discrete time stuff by just shrinking time, but the markov property should ensure that this works just fine
+forwardSimBranch <- function(theta0, state0, Q, alpha, sigma, theta, time.unit, time.steps){
+  nStates <- dim(Q)[1]
+  state.vec <- c(state0, rep(NA, time.steps-1))
+  conti.vec <- c(theta0, rep(NA, time.steps-1))
+  MkPMat <- matrix(NA, nStates, nStates)
+  for(i in 1:nStates){
+    tmp_vec_i <- rep(0, nStates)
+    tmp_vec_i[i] <- 1
+    MkPMat[i,] <- c(expm(Q * time.unit) %*% tmp_vec_i)
+  }
+  
+  for(i in 2:time.steps){
+    state_i <- state.vec[i-1]
+    conti_i <- conti.vec[i-1]
+    conti.vec[i] <- rOU(1, conti_i, time.unit, alpha[state_i], theta[state_i], sigma[state_i])
+    state.vec[i] <- sample.int(nStates, size = 1, prob = MkPMat[state_i,])
+  }
+  out <- data.frame(D = state.vec, C = conti.vec)
+  return(out)
+}

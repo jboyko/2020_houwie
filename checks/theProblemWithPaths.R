@@ -1,10 +1,11 @@
-probPath <- function(path, Q){
+probPathA <- function(path, Q){
   nTrans <- length(path)
   P <- vector("numeric", length(path))
   for(i in sequence(nTrans-1)){
     state_i <- as.numeric(names(path)[1])
     state_j <- as.numeric(names(path)[2])
     time_i <- as.numeric(path[1])
+    # time_j <- as.numeric(path[2])
     time_j <- as.numeric(sum(path[-1]))
     rate_i <- abs(Q[state_i,state_j])
     rate_j <- abs(Q[state_j,state_j])
@@ -17,19 +18,113 @@ probPath <- function(path, Q){
   P[nTrans] <- 1 - pexp(rate_j, time_j)
   P <- prod(P)
   if(P == 0){
-    P <- 1e-100
+    P <- 1e-99
   }
   return(P)
 }
 
+probPathB <- function(path, Q){
+  nTrans <- length(path)
+  P <- vector("numeric", length(path))
+  for(i in sequence(nTrans-1)){
+    state_i <- as.numeric(names(path)[1])
+    state_j <- as.numeric(names(path)[2])
+    time_i <- as.numeric(path[1])
+    time_j <- as.numeric(path[2])
+    # time_j <- as.numeric(sum(path[-1]))
+    rate_i <- abs(Q[state_i,state_j])
+    rate_j <- abs(Q[state_j,state_j])
+    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+    path <- path[-1]
+  }
+  state_j <- as.numeric(names(path))
+  time_j <- as.numeric(path)
+  rate_j <- abs(Q[state_j,state_j])
+  P[nTrans] <- 1 - pexp(rate_j, time_j)
+  P <- prod(P)
+  if(P == 0){
+    P <- 1e-99
+  }
+  return(P)
+}
+
+probPathC <- function(path, Q){
+  nTrans <- length(path)
+  P <- vector("numeric", length(path))
+  for(i in sequence(nTrans-1)){
+    state_i <- as.numeric(names(path)[1])
+    state_j <- as.numeric(names(path)[2])
+    time_i <- as.numeric(path[1])
+    rate_i <- abs(Q[state_i,state_j])
+    P[i] <- dexp(time_i, rate_i)
+    path <- path[-1]
+  }
+  state_j <- as.numeric(names(path))
+  time_j <- as.numeric(path)
+  rate_j <- abs(Q[state_j,state_j])
+  P[nTrans] <- 1 - pexp(rate_j, time_j)
+  P <- prod(P)
+  if(P == 0){
+    P <- 1e-99
+  }
+  return(P)
+}
+
+probPathD <- function(path, Q){
+  nTrans <- length(path)
+  P <- vector("numeric", length(path))
+  for(i in sequence(nTrans-1)){
+    state_i <- as.numeric(names(path)[1])
+    state_j <- as.numeric(names(path)[2])
+    time_i <- as.numeric(path[1])
+    rate_i <- abs(Q[state_i,state_j])
+    P[i] <- dexp(time_i, rate_i)/(1 - pexp(rate_i, time_i))
+    path <- path[-1]
+  }
+  state_j <- as.numeric(names(path))
+  time_j <- as.numeric(path)
+  rate_j <- abs(Q[state_j,state_j])
+  P[nTrans] <- 1 - pexp(rate_j, time_j)
+  P <- prod(P)
+  if(P == 0){
+    P <- 1e-99
+  }
+  return(P)
+}
+
+
 Q <- matrix(c(-1,1,1,-1), 2, 2)
 path <- rep(0.01, 20)
 names(path) <- rep(c(1,2), 10)
-probPath(path, Q)
+
+probPathA(path, Q)
+probPathB(path, Q)
+probPathC(path, Q)
+
+probPathA(path, Q*10)
+probPathB(path, Q*10)
+probPathC(path, Q*10)
+
+probPathA(path, Q*100)
+probPathB(path, Q*100)
+probPathC(path, Q*100)
+
+probPathA(path, Q*1000)
+probPathB(path, Q*1000)
+probPathC(path, Q*1000)
+
+length(path)
+plot(x = 50:150, y = sapply(50:150, function(x) probPathC(path, Q*x)))
 
 pathB <- sum(path)
 names(pathB) <- 1
-probPath(pathB, Q / 100)
+probPathA(pathB, Q)
+probPathB(pathB, Q)
+probPathC(pathB, Q)
+probPathA(pathB, Q*100)
+probPathB(pathB, Q*100)
+probPathC(pathB, Q*100)
+
 
 
 
