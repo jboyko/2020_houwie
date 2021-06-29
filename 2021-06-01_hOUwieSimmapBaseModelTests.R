@@ -1,8 +1,5 @@
-source("~/2020_hOUwie/hOUwieSimmap.R")
-source("~/2020_hOUwie/Utils.R")
-
-# source("/space_2/jamesboyko/2020_hOUwie/hOUwieSimmap.R")
-# source("/space_2/jamesboyko/2020_hOUwie/Utils.R")
+source("hOUwieSimmap.R")
+source("Utils.R")
 
 require(OUwie)
 require(corHMM)
@@ -12,7 +9,7 @@ require(expm)
 require(POUMM)
 require(geiger)
 
-nCores <- 80
+nCores <- 50
 nTip <- 100
 phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
 phy <- drop.extinct(phy)
@@ -105,7 +102,7 @@ singleRun <- function(iter){
   save(out, file = paste0("hOUwie-CDBMS-", iter, ".Rsave"))
   return(out)
 }
-res <- mclapply(1:100, function(x) singleRun(x), mc.cores = nCores)
+res <- mclapply(1:nCores, function(x) singleRun(x), mc.cores = nCores)
 
 getModelTable(list("BM" = BM1, "OU1" = OU1, "CDOUM" = OUM, "CDBMS" = BMS, "CIDOUM" = CIDOUM, "CIDBMS" = CIDBMS))
 
@@ -117,7 +114,7 @@ singleRun <- function(iter){
   fit.ou <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(fit.cor)[1])
   pars = c(1, 5, 5, 2, 10)  # mk, alpha, sigma, theta1, theta2
   data.houwie <- generateData(phy, fit.cor, fit.ou, pars)
-  nSim = 50
+  nSim = 100
   # cols<-setNames(c("gold","red", "purple", "black"),
   #                c("1","2","3","4"))
   # plotDataSet(data.houwie); legend("bottomleft", legend = c("1A","2A","1B","2B"), pch=16, col = cols)
@@ -125,22 +122,22 @@ singleRun <- function(iter){
   data[data[,2]==3,2] <- 1
   data[data[,2]==4,2] <- 2
   BM1 <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                index.cor = CID.cor, model.ou = "BM1", weighted = TRUE)
+                index.cor = CID.cor, model.ou = "BM1")
   OU1 <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                index.cor = CID.cor, model.ou = "OU1", weighted = TRUE)
+                index.cor = CID.cor, model.ou = "OU1")
   OUM <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                index.cor = CID.cor, index.ou = CD.ou, weighted = TRUE)
+                index.cor = CID.cor, index.ou = CD.ou)
   BMS <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                index.cor = CID.cor, index.ou = CDBMS.ou, weighted = TRUE)
+                index.cor = CID.cor, index.ou = CDBMS.ou)
   CIDOUM <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                   index.cor = CID.cor, index.ou = CID.ou, weighted = TRUE)
+                   index.cor = CID.cor, index.ou = CID.ou)
   CIDBMS <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, 
-                   index.cor = CID.cor, index.ou = CIDBMS.ou, weighted = TRUE)
+                   index.cor = CID.cor, index.ou = CIDBMS.ou)
   out <- list("BM" = BM1, "OU1" = OU1, "CDOUM" = OUM, "CDBMS" = BMS, "CIDOUM" = CIDOUM, "CIDBMS" = CIDBMS)
   save(out, file = paste0("hOUwie-CDOUM-", iter, ".Rsave"))
   return(out)
 }
-res <- mclapply(1:100, function(x) singleRun(x), mc.cores = nCores)
+res <- mclapply(1:nCores, function(x) singleRun(x), mc.cores = nCores)
 # getModelTable(list("BM" = BM1, "OU1" = OU1, "CDOUM" = OUM, "CDBMS" = BMS, "CIDOUM" = CIDOUM, "CIDBMS" = CIDBMS))
 
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

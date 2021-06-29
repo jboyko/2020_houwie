@@ -49,10 +49,10 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
   hOUwie.dat <- organizeHOUwieDat(data, mserr, collapse)
   nStates <- as.numeric(max(hOUwie.dat$data.cor[,2]))
   nCol <- dim(data)[2] - ifelse(mserr == "none", 2, 3)
-  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   Tmax <- max(branching.times(phy))
   nObs <- length(hOUwie.dat$ObservedTraits)
   phy <- reorder.phylo(phy, "pruningwise")
+  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   algorithm <- "three.point"
   
   if(class(discrete_model)[1] == "character"){
@@ -221,12 +221,12 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
   colnames(solution$solution.ou) <- StateNames
   names(hOUwie.dat$ObservedTraits) <- 1:length(hOUwie.dat$ObservedTraits)
   obj <- list(
-    loglik = -FinalLiks$TotalLik,
+    loglik = FinalLiks$TotalLik,
     DiscLik = FinalLiks[1],
     ContLik = FinalLiks[2],
-    AIC = -2*FinalLiks$TotalLik + 2*param.count,
-    AICc = -2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
-    BIC = -2*FinalLiks$TotalLik + log(nb.tip) * param.count,
+    AIC = 2*FinalLiks$TotalLik + 2*param.count,
+    AICc = 2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
+    BIC = 2*FinalLiks$TotalLik + log(nb.tip) * param.count,
     param.count = param.count,
     solution.disc = solution$solution.cor,
     solution.cont = solution$solution.ou,

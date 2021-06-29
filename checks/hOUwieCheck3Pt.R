@@ -26,12 +26,13 @@ nLikEval <- function(p.subset, nEval, nSimmaps, tree, trait){
 }
 
 # get a phylogeny rescaled to a height of 1
-source("~/2020_hOUwie/hOUwie.R")
+source("~/2020_hOUwie/hOUwieSimmap.R")
 #source("hOUwie.R")
 require(OUwie)
 require(corHMM)
 require(parallel)
 require(lhs)
+require(expm)
 
 # simulate data
 nTip <- 100
