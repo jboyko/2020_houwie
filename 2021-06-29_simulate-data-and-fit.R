@@ -32,14 +32,19 @@ CDBMS.ou[3,] <- CIDBMS.ou[3,] <- c(3,3,3,3)
 
 fit.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))
 fit.ou <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, dim(fit.cor)[1])
-pars = c(0.1, 1, 0.5, 5, 15)  # mk, alpha, sigma, theta1, theta2
+pars = c(0.1, 1, 1, 5, 15)  # mk, alpha, sigma, theta1, theta2
 data.houwie <- generateData(phy, fit.cor, fit.ou, pars)
 nSim = 50
 data <- data.houwie$data
 data[data[,2]==3,2] <- 1
 data[data[,2]==4,2] <- 2
-out <- hOUwie(phy = phy, data = data, rate.cat = 1, nSim = nSim, discrete_model = fit.cor, continuous_model = fit.ou, p = c(0.1, 1, 0.5, 5, 15))
-
+#out <- hOUwie(phy = phy, data = data, rate.cat = 1, nSim = nSim, discrete_model = fit.cor, continuous_model = fit.ou)
+q0.1 <- hOUwie(phy = phy, data = data, rate.cat = 1, nSim = nSim, discrete_model = fit.cor, continuous_model = fit.ou,
+       p = c(0.1, 1, 1, 5, 15))
+q1.0 <- hOUwie(phy = phy, data = data, rate.cat = 1, nSim = nSim, discrete_model = fit.cor, continuous_model = fit.ou,
+       p = c(1, 1, 1, 5, 15))
+q10. <- hOUwie(phy = phy, data = data, rate.cat = 1, nSim = nSim, discrete_model = fit.cor, continuous_model = fit.ou,
+       p = c(10, 1, 1, 5, 15))
 
 singleRun <- function(iter){
   fit.cor <- equateStateMatPars(getRateCatMat(2), c(1,2))

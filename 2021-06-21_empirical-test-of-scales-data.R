@@ -65,7 +65,7 @@ fit.CD_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = 
 # fit.BM1_B <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "BM1", 2)
 # fit.BM1_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = "BM1", 2)
 
-nSim <- 10
+nSim <- 500
 
 quickRun <- function(index){
   if(index == 1){

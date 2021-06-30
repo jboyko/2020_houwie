@@ -46,12 +46,12 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
   }
   
   # organize the data
+  phy <- reorder.phylo(phy, "pruningwise")
   hOUwie.dat <- organizeHOUwieDat(data, mserr, collapse)
   nStates <- as.numeric(max(hOUwie.dat$data.cor[,2]))
   nCol <- dim(data)[2] - ifelse(mserr == "none", 2, 3)
   Tmax <- max(branching.times(phy))
   nObs <- length(hOUwie.dat$ObservedTraits)
-  phy <- reorder.phylo(phy, "pruningwise")
   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   algorithm <- "three.point"
   
@@ -222,11 +222,11 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
   names(hOUwie.dat$ObservedTraits) <- 1:length(hOUwie.dat$ObservedTraits)
   obj <- list(
     loglik = FinalLiks$TotalLik,
-    DiscLik = FinalLiks[1],
-    ContLik = FinalLiks[2],
-    AIC = 2*FinalLiks$TotalLik + 2*param.count,
-    AICc = 2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
-    BIC = 2*FinalLiks$TotalLik + log(nb.tip) * param.count,
+    DiscLik = FinalLiks$DiscLik,
+    ContLik = FinalLiks$ContLik,
+    AIC = -2*FinalLiks$TotalLik + 2*param.count,
+    AICc = -2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
+    BIC = -2*FinalLiks$TotalLik + log(nb.tip) * param.count,
     param.count = param.count,
     solution.disc = solution$solution.cor,
     solution.cont = solution$solution.ou,
@@ -417,28 +417,6 @@ getMapProbability <- function(maps, Q){
 }
 
 # the probability of a particular path
-probPath <- function(path, Q){
-  nTrans <- length(path)
-  P <- vector("numeric", length(path))
-  for(i in sequence(nTrans-1)){
-    state_i <- as.numeric(names(path)[1])
-    state_j <- as.numeric(names(path)[2])
-    time_i <- as.numeric(path[1])
-    rate_i <- abs(Q[state_i,state_j])
-    P[i] <- dexp(time_i, rate_i)
-    path <- path[-1]
-  }
-  state_j <- as.numeric(names(path))
-  time_j <- as.numeric(path)
-  rate_j <- abs(Q[state_j,state_j])
-  P[nTrans] <- 1 - pexp(rate_j, time_j)
-  P <- prod(P)
-  if(P == 0){
-    P <- 1e-99
-  }
-  return(P)
-}
-
 # probPath <- function(path, Q){
 #   nTrans <- length(path)
 #   P <- vector("numeric", length(path))
@@ -446,11 +424,8 @@ probPath <- function(path, Q){
 #     state_i <- as.numeric(names(path)[1])
 #     state_j <- as.numeric(names(path)[2])
 #     time_i <- as.numeric(path[1])
-#     time_j <- as.numeric(path[2])
-#     # time_j <- as.numeric(sum(path[-1]))
 #     rate_i <- abs(Q[state_i,state_j])
-#     rate_j <- abs(Q[state_j,state_j])
-#     P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+#     P[i] <- dexp(time_i, rate_i)
 #     path <- path[-1]
 #   }
 #   state_j <- as.numeric(names(path))
@@ -459,10 +434,35 @@ probPath <- function(path, Q){
 #   P[nTrans] <- 1 - pexp(rate_j, time_j)
 #   P <- prod(P)
 #   if(P == 0){
-#     P <- 1e-99
+#     P <- 1e-300
 #   }
 #   return(P)
 # }
+
+probPath <- function(path, Q){
+  nTrans <- length(path)
+  P <- vector("numeric", length(path))
+  for(i in sequence(nTrans-1)){
+    state_i <- as.numeric(names(path)[1])
+    state_j <- as.numeric(names(path)[2])
+    time_i <- as.numeric(path[1])
+    # time_j <- as.numeric(path[2])
+    time_j <- as.numeric(sum(path[-1]))
+    rate_i <- abs(Q[state_i,state_j])
+    rate_j <- abs(Q[state_j,state_j])
+    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+    path <- path[-1]
+  }
+  state_j <- as.numeric(names(path))
+  time_j <- as.numeric(path)
+  rate_j <- abs(Q[state_j,state_j])
+  P[nTrans] <- 1 - pexp(rate_j, time_j)
+  P <- prod(P)
+  if(P == 0){
+    P <- 1e-300
+  }
+  return(P)
+}
 
 # different OU models have different parameter structures. This will evaluate the appropriate one.
 getOUParamStructure <- function(model, algorithm, root.station, get.root.theta, k){
@@ -808,8 +808,8 @@ hOUwie.sim <- function(phy, Q, root.freqs, alpha, sig2, theta0, theta, nMap=1){
 # print a houwie object
 print.houwie <- function(x, ...){
   ntips <- Ntip(x$phy)
-  output <- data.frame(x$loglik,x$AIC,x$AICc,x$BIC, ntips, x$param.count, row.names="")
-  names(output) <- c("lnL","AIC","AICc","BIC","nTaxa","nPars")
+  output <- data.frame(x$loglik,x$DiscLik, x$ContLik, x$AIC,x$AICc,x$BIC, ntips, x$param.count, row.names="")
+  names(output) <- c("lnLTot","lnLDisc", "lnLCont", "AIC","AICc","BIC","nTaxa","nPars")
   cat("\nFit\n")
   print(output)
   cat("\nLegend\n")
