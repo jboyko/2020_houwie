@@ -15,10 +15,7 @@ probPathA <- function(path, Q){
   time_j <- as.numeric(path)
   rate_j <- abs(Q[state_j,state_j])
   P[nTrans] <- 1 - pexp(rate_j, time_j)
-  P <- prod(P)
-  if(P == 0){
-    P <- 1e-300
-  }
+  P <- sum(log(P))
   return(P)
 }
 
@@ -37,45 +34,111 @@ probPathB <- function(path, Q){
   time_j <- as.numeric(path)
   rate_j <- abs(Q[state_j,state_j])
   P[nTrans] <- 1 - pexp(rate_j, time_j)
-  P <- prod(P)
-  if(P == 0){
-    P <- 1e-300
-  }
+  P <- sum(log(P))
   return(P)
 }
 
+getMapProbability <- function(maps, Q, type = "A"){
+  if(type == "A"){
+    BranchProbs <- lapply(maps, function(x) probPathA(x, Q))
+  }
+  if(type == "B"){
+    BranchProbs <- lapply(maps, function(x) probPathB(x, Q))
+  }
+  LnLik_map <- sum(unlist(BranchProbs))
+  return(LnLik_map)
+}
 
-Q <- matrix(c(-1,1,1,-1), 2, 2)
-path <- rep(0.01, 20)
-names(path) <- rep(c(1,2), 10)
+require(corHMM)
+require(nloptr)
 
-probPathA(path, Q/10)
-probPathB(path, Q/10)
+data(primates)
+phy <- primates[[1]]
+phy <- multi2di(phy)
+data <- primates[[2]]
+dat <- data.frame(sp = data[,1], d = rowSums(data[,c(2,3)]))
 
-probPathA(path, Q)
-probPathB(path, Q)
+##run corhmm
+MK <- corHMM(phy, dat, 1, model = "ER")
+##get simmap from corhmm solution
+model <- MK$solution
+simmap <- makeSimmap(tree=phy, data=data, model=model, rate.cat=1, nSim=1, nCores=1)
 
-probPathA(path, Q*10)
-probPathB(path, Q*10)
+Q <- MK$solution
+Q[is.na(MK$solution)] <- 0
+diag(Q) <- -rowSums(Q)
 
-probPathA(path, Q*100)
-probPathB(path, Q*100)
+typeA <- getMapProbability(simmap[[1]]$maps, Q, "A")
+typeB <- getMapProbability(simmap[[1]]$maps, Q, "B")
+
+dat <- data.frame(sp = data[,1], d = rowSums(data[,c(2,3)]))
+
+# what if we optimize a map 
+optMap <- function(p, phy, dat, nMap, type){
+  model <- getRateCatMat(3)
+  model[model > 0] <- p
+  diag(model) <- -rowSums(model)
+  simmap <- makeSimmap(tree=phy, data=dat, model=model, rate.cat=1, nSim=nMap, nCores=1)
+  # MK <- corHMM(phy, dat, 1, model = "ER", p = p)
+  maps <- lapply(simmap, function(x) x$maps)
+  llik <- max(unlist(lapply(maps, function(x) getMapProbability(x, model, type))))
+  # llik <- llik + MK$loglik
+  cat("\r", llik)
+  return(-llik)
+}
+
+opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.5)
+
+# with 0.1 we're good
+outA <- nloptr(x0 = 0.1, eval_f = optMap, lb = 1e-5, ub = 1, opts = opts, phy = phy, nMap = 10, dat = dat, type = "A")
+outB <- nloptr(x0 = 0.1, eval_f = optMap, lb = 1e-5, ub = 1, opts = opts, phy = phy, nMap = 10, dat = dat, type = "B")
+
+# with 0.1 we're good
+outA <- nloptr(x0 = 0.9, eval_f = optMap, lb = 1e-5, ub = 1, opts = opts, phy = phy, nMap = 10, dat = dat, type = "A")
+outB <- nloptr(x0 = 0.1, eval_f = optMap, lb = 1e-5, ub = 1, opts = opts, phy = phy, nMap = 10, dat = dat, type = "B")
 
 
+# LikTypeB <- sapply(xs, function(x) optMap(x, phy, 10, "B"))
+# 
+# xs <- seq(from = 0.5, to =1, length.out = 100)
+# 
+# par(mfrow=c(1,2))
+# plot(y = -LikTypeB, x = log(xs))
+# plot(y = -LikTypeB, x = xs)
 
-pathB <- sum(path)
-names(pathB) <- 1
-
-probPathA(pathB, Q)
-probPathB(pathB, Q)
-
-probPathA(pathB, Q*10)
-probPathB(pathB, Q*10)
-
-probPathA(pathB, Q*100)
-probPathB(pathB, Q*100)
-
-
+# 
+# 
+# Q <- matrix(c(-1,1,1,-1), 2, 2)
+# path <- rep(0.01, 20)
+# names(path) <- rep(c(1,2), 10)
+# 
+# probPathA(path, Q/10)
+# probPathB(path, Q/10)
+# 
+# probPathA(path, Q)
+# probPathB(path, Q)
+# 
+# probPathA(path, Q*10)
+# probPathB(path, Q*10)
+# 
+# probPathA(path, Q*100)
+# probPathB(path, Q*100)
+# 
+# 
+# 
+# pathB <- sum(path)
+# names(pathB) <- 1
+# 
+# probPathA(pathB, Q)
+# probPathB(pathB, Q)
+# 
+# probPathA(pathB, Q*10)
+# probPathB(pathB, Q*10)
+# 
+# probPathA(pathB, Q*100)
+# probPathB(pathB, Q*100)
+# 
+# 
 
 # 
 # # proof of concept for the tip importance
@@ -130,3 +193,19 @@ probPathB(pathB, Q*100)
 # }
 # 
 # out <- nloptr(1, dev.path, opts = opts, fit.cor=fit.cor, simmap=data.houwie$simmap[[1]])
+
+likelihood_given_number_transitions <- function(ntransitions=1, rate=0.1, time=50) {
+  timeinterval <- time/(ntransitions+1)
+  return( ((rate*exp(-rate*timeinterval))^ntransitions) * (exp(-rate*timeinterval)))
+}
+all_values <- expand.grid(ntransitions=c(0,4,100,1000), rate=c(10^seq(from=-2, to=.4, length.out=100)))
+all_values <- all_values[order(all_values$ntransitions),]
+all_values$likelihood <- NA
+for (i in sequence(nrow(all_values))) {
+  all_values$likelihood[i] <- likelihood_given_number_transitions(all_values$ntransitions[i], all_values$rate[i])
+}
+print(all_values[which.max(all_values$likelihood),])
+all_values$lnL <- log(all_values$likelihood)
+all_values$ntransitions <- as.factor(all_values$ntransitions)
+library(ggplot2) 
+ggplot(all_values, aes(x=rate, y=lnL, group=ntransitions)) + geom_line(aes(color=ntransitions))

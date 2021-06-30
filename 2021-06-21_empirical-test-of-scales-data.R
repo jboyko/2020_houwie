@@ -60,8 +60,8 @@ PEOUM[3,] <- c(3,4,5,3,4,3,4,5,3,4)
 SWOUM[3,] <- c(3,3,4,4,4,3,3,5,5,5)
 
 
-fit.CD_A <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "OUM", 2, p = fit.CD_A$p)
-fit.CD_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CDOUM, 2)
+# fit.CD_A <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "OUM", 2, p = fit.CD_A$p)
+# fit.CD_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelA, continuous_model = CDOUM, 2)
 # fit.BM1_B <- hOUwie(phy, dat, 1, discrete_model = "ER", continuous_model = "BM1", 2)
 # fit.BM1_A <- hOUwie(phy, dat, 2, discrete_model = DiscModelB, continuous_model = "BM1", 2)
 

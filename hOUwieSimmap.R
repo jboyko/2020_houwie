@@ -95,8 +95,8 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
     lb.cor= 1/(Tmax*100)
   }
   if(is.null(ub.cor)){
-    # the maximum dwell time is defined as 0.01 times the max tree height
-    ub.cor=1/(Tmax*0.01)
+    # the maximum dwell time is 1 because of a phase transition
+    ub.cor=1
   }
   
   #Ensures that weird root state probabilities that do not sum to 1 are input:
@@ -417,28 +417,6 @@ getMapProbability <- function(maps, Q){
 }
 
 # the probability of a particular path
-# probPath <- function(path, Q){
-#   nTrans <- length(path)
-#   P <- vector("numeric", length(path))
-#   for(i in sequence(nTrans-1)){
-#     state_i <- as.numeric(names(path)[1])
-#     state_j <- as.numeric(names(path)[2])
-#     time_i <- as.numeric(path[1])
-#     rate_i <- abs(Q[state_i,state_j])
-#     P[i] <- dexp(time_i, rate_i)
-#     path <- path[-1]
-#   }
-#   state_j <- as.numeric(names(path))
-#   time_j <- as.numeric(path)
-#   rate_j <- abs(Q[state_j,state_j])
-#   P[nTrans] <- 1 - pexp(rate_j, time_j)
-#   P <- prod(P)
-#   if(P == 0){
-#     P <- 1e-300
-#   }
-#   return(P)
-# }
-
 probPath <- function(path, Q){
   nTrans <- length(path)
   P <- vector("numeric", length(path))
@@ -446,11 +424,8 @@ probPath <- function(path, Q){
     state_i <- as.numeric(names(path)[1])
     state_j <- as.numeric(names(path)[2])
     time_i <- as.numeric(path[1])
-    # time_j <- as.numeric(path[2])
-    time_j <- as.numeric(sum(path[-1]))
     rate_i <- abs(Q[state_i,state_j])
-    rate_j <- abs(Q[state_j,state_j])
-    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+    P[i] <- dexp(time_i, rate_i)
     path <- path[-1]
   }
   state_j <- as.numeric(names(path))
@@ -463,6 +438,31 @@ probPath <- function(path, Q){
   }
   return(P)
 }
+
+# probPath <- function(path, Q){
+#   nTrans <- length(path)
+#   P <- vector("numeric", length(path))
+#   for(i in sequence(nTrans-1)){
+#     state_i <- as.numeric(names(path)[1])
+#     state_j <- as.numeric(names(path)[2])
+#     time_i <- as.numeric(path[1])
+#     # time_j <- as.numeric(path[2])
+#     time_j <- as.numeric(sum(path[-1]))
+#     rate_i <- abs(Q[state_i,state_j])
+#     rate_j <- abs(Q[state_j,state_j])
+#     P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
+#     path <- path[-1]
+#   }
+#   state_j <- as.numeric(names(path))
+#   time_j <- as.numeric(path)
+#   rate_j <- abs(Q[state_j,state_j])
+#   P[nTrans] <- 1 - pexp(rate_j, time_j)
+#   P <- prod(P)
+#   if(P == 0){
+#     P <- 1e-300
+#   }
+#   return(P)
+# }
 
 # different OU models have different parameter structures. This will evaluate the appropriate one.
 getOUParamStructure <- function(model, algorithm, root.station, get.root.theta, k){
