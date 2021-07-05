@@ -94,11 +94,12 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
     # the minimum dwell time is defined as 100 times the max tree height
     lb.cor= 1/(Tmax*100)
   }
-  if(is.null(ub.cor)){
-    # the maximum dwell time is 1 because of a phase transition
-    ub.cor=1
-  }
-  
+  # if(is.null(ub.cor)){
+  #   # the maximum dwell time is 1 because of a phase transition
+  #   ub.cor=1
+  # }
+  # the maximum dwell time is 1 because of a phase transition
+  ub.cor=1
   #Ensures that weird root state probabilities that do not sum to 1 are input:
   if(!is.null(root.p)){
     if(!is.character(root.p)){
@@ -463,6 +464,26 @@ probPath <- function(path, Q){
 #   }
 #   return(P)
 # }
+
+getAllContinuousModelStructures <- function(k){
+  # index.mat <- matrix(0, 3, k, dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
+  # we want all unique combinations of a parameter. then we can add a single all same
+  # how many combinations are there of 1:k numbers? 
+  potential_combos <- apply(partitions:::setparts(k), 2, function(x) paste(x, collapse="_"))
+  additinal_alpha_combos <- apply(partitions:::setparts(k) - 1, 2, function(x) paste(x, collapse="_"))
+  alpha.combos <- c(additinal_alpha_combos, potential_combos)
+  sigma.sq.combos <- potential_combos
+  theta.combos <- potential_combos
+  all_combos <- expand.grid(list(alpha.combos, sigma.sq.combos, theta.combos))
+  index_mats <- array(NA, c(3, k, dim(all_combos)[1]), dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
+  for(i in 1:dim(all_combos)[1]){
+    alpha_i <- as.numeric(unlist(strsplit(as.character(all_combos[i,1]), "_")))
+    sigma_i <- max(alpha_i) + as.numeric(unlist(strsplit(as.character(all_combos[i,2]), "_")))
+    theta_i <- max(sigma_i) + as.numeric(unlist(strsplit(as.character(all_combos[i,3]), "_")))
+    index_mats[,,i] <- rbind(alpha_i, sigma_i, theta_i)
+  }
+  return(index_mats)
+}
 
 # different OU models have different parameter structures. This will evaluate the appropriate one.
 getOUParamStructure <- function(model, algorithm, root.station, get.root.theta, k){
