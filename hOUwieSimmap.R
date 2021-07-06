@@ -63,6 +63,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
   if(class(continuous_model)[1] == "character"){
     index.cont <- getOUParamStructure(continuous_model, "three.point", root.station, get.root.theta, nStates * rate.cat)
   }else{
+    continuous_model[continuous_model == 0] <- NA
     index.cont <- continuous_model
   }
   if(dim(index.disc)[2] > dim(index.cont)[2]){
@@ -465,20 +466,29 @@ probPath <- function(path, Q){
 #   return(P)
 # }
 
-getAllContinuousModelStructures <- function(k){
+getAllContinuousModelStructures <- function(k, type = "OU"){
   # index.mat <- matrix(0, 3, k, dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
   # we want all unique combinations of a parameter. then we can add a single all same
   # how many combinations are there of 1:k numbers? 
   potential_combos <- apply(partitions:::setparts(k), 2, function(x) paste(x, collapse="_"))
-  additinal_alpha_combos <- apply(partitions:::setparts(k) - 1, 2, function(x) paste(x, collapse="_")) # this technically isn't all the possible alpha combinations, but for sim purposes we're fine.
-  alpha.combos <- c(additinal_alpha_combos, potential_combos)
+   # this technically isn't all the possible alpha combinations, but for sim purposes we're fine.
+  if(type == "OU"){
+    alpha.combos <- potential_combos
+  }
+  if(type == "BM"){
+    alpha.combos <- paste(rep(0, k), collapse="_")
+  }
+  if(type == "BMOU"){
+    needed_numerals <- 1:((2^k)-2)
+    alpha.combos <- apply(sapply(needed_numerals, function(x) as.numeric(intToBits(x)[1:k])), 2, function(x) paste(x, collapse="_")) # currently doesn't allow for BM mixed with OUA
+  }
   sigma.sq.combos <- potential_combos
   theta.combos <- potential_combos
   all_combos <- expand.grid(list(alpha.combos, sigma.sq.combos, theta.combos))
   index_mats <- array(NA, c(3, k, dim(all_combos)[1]), dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
   for(i in 1:dim(all_combos)[1]){
     alpha_i <- as.numeric(unlist(strsplit(as.character(all_combos[i,1]), "_")))
-    alpha_i[alpha_i == 0] <- NA
+    # alpha_i[alpha_i == 0] <- NA
     sigma_i <- max(c(0, alpha_i), na.rm = TRUE) + as.numeric(unlist(strsplit(as.character(all_combos[i,2]), "_")))
     theta_i <- max(sigma_i) + as.numeric(unlist(strsplit(as.character(all_combos[i,3]), "_")))
     index_mats[,,i] <- rbind(alpha_i, sigma_i, theta_i)

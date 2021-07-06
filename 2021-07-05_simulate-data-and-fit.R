@@ -11,25 +11,53 @@ require(expm)
 require(POUMM)
 require(geiger)
 
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # prerequisites
-nCores <- 80
-nIter <- 80
-nTip <- 100
-nSim <- 50
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 
-# the 32 2-state models we want to fit
-continuous_models_cd <- getAllContinuousModelStructures(2)
+nCores <- 40
+nTip <- 100
+nSim <- 100
+minAlpha = 1 
+maxAlpha = 4
+minSigma2 = 1
+maxSigma2 = 4
+minTheta = 10
+maxTheta = 20
+minRate = 0.25
+maxRate = 0.75
+
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# the 40 2-state models we want to fit - put into list form
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+
+continuous_models_cd_ou <- getAllContinuousModelStructures(2, "OU")
+continuous_models_cd_bm <- getAllContinuousModelStructures(2, "BM")
+continuous_models_cd_bmou <- getAllContinuousModelStructures(2, "BMOU")
+continuous_models_cid_ou <- continuous_models_cd_ou[,c(1,1,2,2),]
+continuous_models_cid_bm <- continuous_models_cd_bm[,c(1,1,2,2),]
+continuous_models_cid_bmou <- continuous_models_cd_bmou[,c(1,1,2,2),]
+continuous_models_cd_ou <- lapply(seq(dim(continuous_models_cd_ou)[3]), function(x) continuous_models_cd_ou[,,x])
+continuous_models_cd_bm <- lapply(seq(dim(continuous_models_cd_bm)[3]), function(x) continuous_models_cd_bm[,,x])
+continuous_models_cd_bmou <- lapply(seq(dim(continuous_models_cd_bmou)[3]), function(x) continuous_models_cd_bmou[,,x])
+continuous_models_cid_ou <- lapply(seq(dim(continuous_models_cid_ou)[3]), function(x) continuous_models_cid_ou[,,x])
+continuous_models_cid_bm <- lapply(seq(dim(continuous_models_cid_bm)[3]), function(x) continuous_models_cid_bm[,,x])
+continuous_models_cid_bmou <- lapply(1:dim(continuous_models_cid_bmou)[3], function(x) continuous_models_cid_bmou[,,x])
+all_model_structures <- c(continuous_models_cd_ou, continuous_models_cd_bm, continuous_models_cd_bmou, continuous_models_cid_ou, continuous_models_cid_bm, continuous_models_cid_bmou)
+
+# the 2 discrete models being evaluated
 discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
-continuous_models_cid <- continuous_models_cd[,c(1,1,2,2),]
 discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), discrete_model_cd)
-# dist(t(apply(continuous_models_cd[,,1:5], 3, function(x) c(x[1,], x[2,] - min(x[2,]) + 1, x[3,] - min(x[3,]) + 1))))
 
 # deciding what tree size we would like to use
 phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
 phy <- drop.extinct(phy)
 phy$edge.length <- phy$edge.length/max(branching.times(phy))
 
-# deciding which params to use. we should vary delta sigma, delta alpha and delta theta. this will be the number of replicates we have per generating model.
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# Functions
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+
 # a function which generates a parameter set given a continuous model
 generateParameters <- function(continuous_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate){
   k.alpha <- length(unique(na.omit(continuous_model[1,])))
@@ -44,41 +72,60 @@ generateParameters <- function(continuous_model, minAlpha, maxAlpha, minSigma2, 
   return(p)
 }
 
-singleRun <- function(full_data, continuous_models_cd, continuous_models_cid, discrete_model_cd, discrete_model_cid){
+# a function to fit a single continuous model given the full data
+singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_model_cid, nSim){
+  # make hidden states observed
   data <- full_data$data
   data[data[,2]==3,2] <- 1
   data[data[,2]==4,2] <- 2
-  cd_out <- apply(continuous_models_cd, 3, function(x) hOUwie(phy = phy, data = data, rate.cat = 1, nSim = nSim, discrete_model = discrete_model_cd, continuous_model = x))
-  cat("CD models complete.")
-  cid_out <- apply(continuous_models_cid, 3, function(x) hOUwie(phy = phy, data = data, rate.cat = 2, nSim = nSim, discrete_model = discrete_model_cid, continuous_model = x))
-  cat("CID models complete.")
-  return(c(cd_out, cid_out))
+  # determine if the model includes hidden states or not
+  if(dim(continuous_model)[2] == 2){
+    discrete_model <- discrete_model_cd
+    rate.cat <- 1
+  }else{
+    discrete_model <- discrete_model_cid
+    rate.cat <- 2
+  }
+  # fit the houwie model
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, discrete_model = discrete_model, continuous_model = continuous_model)
+  return(fit)
 }
 
-minAlpha = 0 
-maxAlpha = 2
-minSigma2 = 0.1
-maxSigma2 = 4
-minTheta = 2
-maxTheta = 10
-minRate = 0.25
-maxRate = 0.75
-# simulate a dataset and return all simulation information
-# generateParameters(continuous_models_cid[,,16], minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cid, minRate, maxRate)
+iter <- 1
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# CD models generate
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+for(i in 1:20){
+  model_name <- paste0("M", i)
+  cat("Begining", model_name, "...\n")
+  # generate data
+  generating_model <- all_model_structures[[i]]
+  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cd, minRate, maxRate)
+  full_data <- generateData(phy, discrete_model_cd, generating_model, pars)
+  file_name_data <- paste0("sim_data/", model_name, "_data-iter_", iter, ".Rsave")
+  save(full_data, file = file_name_data)
+  # mclapply over all model structures
+  out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
+  save(out, file = paste0("sim_fits/", model_name, "_gen-iter_", iter, ".Rsave"))
+}
 
-pars_cd <- apply(continuous_models_cd, 3, function(x) lapply(1:nIter, function(y) generateParameters(x, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cd, minRate, maxRate)))
-pars_cid <- apply(continuous_models_cid, 3, function(x) lapply(1:nIter, function(y) generateParameters(x, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cid, minRate, maxRate)))
-
-for(i in 1:length(pars)){
-  cat("Begining parameter set", i, "...\n")
-  generating_model <- continuous_models_cd[,,i]
-  generating_model_pars <- pars_cd[[i]]
-  all_data <- lapply(generating_model_pars, function(x) generateData(phy, discrete_model_cd, generating_model, x))
-  save(all_data, file = paste0("sim_data/", "cd-data-generating_model_", i, ".Rsave"))
-  out <- mclapply(all_data, function(x) singleRun(x, continuous_models_cd, continuous_models_cid, discrete_model_cd, discrete_model_cid), mc.cores = nCores)
-  save(out, file = paste0("sim_fits/", "cd-fit-generating_model_", i, ".Rsave"))
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# CID models generate
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+for(i in 21:40){
+  model_name <- paste0("M", i)
+  cat("Begining", model_name, "...\n")
+  # generate data
+  generating_model <- all_model_structures[[i]]
+  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cid, minRate, maxRate)
+  full_data <- generateData(phy, discrete_model_cid, generating_model, pars)
+  file_name_data <- paste0("sim_data/", model_name, "_data-iter_", iter, ".Rsave")
+  save(full_data, file = file_name_data)
+  # mclapply over all model structures
+  out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
+  save(out, file = paste0("sim_fits/", model_name, "_gen-iter_", iter, ".Rsave"))
 }
 
 
-# res <- mclapply(1:nCores, function(x) singleRun(x), mc.cores = nCores)
+
 
