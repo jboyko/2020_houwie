@@ -76,7 +76,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
     # the lower limit of alpha is defined as a halflife of 10000% of the max tree height
     # the lower limit of sigma is defined 10 times less than alpha
     # the lower limit of optim is defined 10 times lower than the minimum observation
-    lb.alpha = log(2)/(100 * Tmax)
+    lb.alpha = 1e-10
     lb.sigma = lb.alpha/10
     lb.optim = min(data[, 1+nCol+1])/10 
     lb.ou=c(lb.alpha,lb.sigma,lb.optim)
@@ -202,14 +202,14 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
                   rep(ub.ou[3], length(unique(na.omit(index.cont[3,]))))))
     # cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
     out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.cont, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
-    cat("\n")
+    # cat("\n")
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
   FinalLiks <- hOUwie.dev(out$solution, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.cont, algorithm=algorithm, mserr=mserr,nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks = TRUE)
-  cat("\n")
+  # cat("\n")
   param.count <- max(model.set.final$index.matrix, na.rm = TRUE) + max(index.cont, na.rm = TRUE)
   nb.tip <- length(phy$tip.label)
   solution <- organizeHOUwiePars(out=out, rate=model.set.final$rate, Q=model.set.final$Q, index.ou=index.cont)

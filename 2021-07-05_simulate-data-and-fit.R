@@ -10,13 +10,12 @@ require(phytools)
 require(expm)
 require(POUMM)
 require(geiger)
-require(lhs)
 
 # prerequisites
 nCores <- 80
 nIter <- 80
 nTip <- 100
-nSim <- 5
+nSim <- 50
 
 # the 32 2-state models we want to fit
 continuous_models_cd <- getAllContinuousModelStructures(2)
@@ -75,8 +74,9 @@ for(i in 1:length(pars)){
   generating_model <- continuous_models_cd[,,i]
   generating_model_pars <- pars_cd[[i]]
   all_data <- lapply(generating_model_pars, function(x) generateData(phy, discrete_model_cd, generating_model, x))
-  save(all_data, file = paste0("sim_data/", "cd-generating_model_", i, ".Rsave"))
-  mclapply(all_data, function(x) singleRun(x, continuous_models_cd, continuous_models_cid, discrete_model_cd, discrete_model_cid))
+  save(all_data, file = paste0("sim_data/", "cd-data-generating_model_", i, ".Rsave"))
+  out <- mclapply(all_data, function(x) singleRun(x, continuous_models_cd, continuous_models_cid, discrete_model_cd, discrete_model_cid), mc.cores = nCores)
+  save(out, file = paste0("sim_fits/", "cd-fit-generating_model_", i, ".Rsave"))
 }
 
 
