@@ -285,16 +285,17 @@ generateData <- function(phy, index.cor, index.ou, pars, type ="CD", quiet=FALSE
   theta = Rate.mat[3,]
   # theta0 = rnorm(1, theta[which(root.p == 1)], sqrt(sigma.sq[which(root.p == 1)]/2*alpha[which(root.p == 1)])) # following Beaulieu et al (2012) we sample the root theta from the stationary distribution matchiing the root state
   theta0 = theta[which(root.p == 1)]
-  if(type == "CD"){
-    full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
-  }else{
-    full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
-    dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.p))
-    while(!all(levels(dat.cor) %in% dat.cor)){
-      dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.p))
-    }
-    full.data$data <- cbind(full.data$data, cid.reg = dat.cor)
-  }
+  full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
+  # if(type == "CD"){
+  #   full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
+  # }else{
+  #   full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
+  #   dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.p))
+  #   while(!all(levels(dat.cor) %in% dat.cor)){
+  #     dat.cor <- rTraitDisc(phy, Q, states = 1:dim(Q)[1], root.value = sample(1:dim(Q)[1], 1, prob = root.p))
+  #   }
+  #   full.data$data <- cbind(full.data$data, cid.reg = dat.cor)
+  # }
   obs.no.trans <- sum(unlist(lapply(full.data$simmap[[1]]$maps, function(x) length(x) - 1)))
   if(!quiet){
     cat("The observed number of transitions was found to be", obs.no.trans, "\n")

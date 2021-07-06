@@ -23,7 +23,7 @@
 #'@param opts optioins for nloptr
 #'@param nCores number of parallel cores
 #'@param quiet a logical indicating whether to output user messages
-hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, lb.cor=NULL, ub.cor=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, p=NULL, ip=NULL, opts=NULL, nCores=1, quiet=FALSE, parsimony=FALSE, sample.tips=TRUE){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, lb.cor=NULL, ub.cor=NULL, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb.ou=NULL, ub.ou=NULL, p=NULL, ip=NULL, opts=NULL, nCores=1, quiet=TRUE, parsimony=FALSE, sample.tips=TRUE){
   # if the data has negative values, shift it right - we will shift it back later
   if(mserr == "none"){
     if(any(data[,dim(data)[2]] < 0)){
@@ -200,7 +200,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, nSim=1
                   rep(ub.ou[1], length(unique(na.omit(index.cont[1,])))), 
                   rep(ub.ou[2], length(unique(na.omit(index.cont[2,])))), 
                   rep(ub.ou[3], length(unique(na.omit(index.cont[3,]))))))
-    cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
+    # cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
     out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, rate.cat=rate.cat,data.cor=hOUwie.dat$data.cor, liks=model.set.final$liks, Q=model.set.final$Q, rate=model.set.final$rate, root.p=root.p, data.ou=hOUwie.dat$data.ou, index.ou=index.cont, algorithm=algorithm, mserr=mserr, nSim=nSim, nCores=nCores, tip.paths=tip.paths, order.test=order.test, fix.node=NULL, fix.state=NULL, parsimony = parsimony, sample.tips=sample.tips, split.liks=FALSE)
     cat("\n")
     if(!quiet){
@@ -340,7 +340,7 @@ hOUwie.dev <- function(p, phy, rate.cat,
   OU.loglik.tmp <- OU.loglik[which.max(OU.loglik + Mk.loglik)]
   simmap.tmp <- simmap[which.max(OU.loglik + Mk.loglik)]
   # OU.loglik <- log(mean(exp(unlist(OU.loglik)-comp)))+comp
-  cat("\r", c(Total.loglik, Mk.loglik.tmp, OU.loglik.tmp), "     ")
+  # cat("\r", c(Total.loglik, Mk.loglik.tmp, OU.loglik.tmp), "     ")
   if(split.liks){
     return(c(TotalLik = Total.loglik, DiscLik = Mk.loglik.tmp, ContLik = OU.loglik.tmp, BestMap = simmap.tmp))
   }
@@ -470,7 +470,7 @@ getAllContinuousModelStructures <- function(k){
   # we want all unique combinations of a parameter. then we can add a single all same
   # how many combinations are there of 1:k numbers? 
   potential_combos <- apply(partitions:::setparts(k), 2, function(x) paste(x, collapse="_"))
-  additinal_alpha_combos <- apply(partitions:::setparts(k) - 1, 2, function(x) paste(x, collapse="_"))
+  additinal_alpha_combos <- apply(partitions:::setparts(k) - 1, 2, function(x) paste(x, collapse="_")) # this technically isn't all the possible alpha combinations, but for sim purposes we're fine.
   alpha.combos <- c(additinal_alpha_combos, potential_combos)
   sigma.sq.combos <- potential_combos
   theta.combos <- potential_combos
@@ -478,7 +478,8 @@ getAllContinuousModelStructures <- function(k){
   index_mats <- array(NA, c(3, k, dim(all_combos)[1]), dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
   for(i in 1:dim(all_combos)[1]){
     alpha_i <- as.numeric(unlist(strsplit(as.character(all_combos[i,1]), "_")))
-    sigma_i <- max(alpha_i) + as.numeric(unlist(strsplit(as.character(all_combos[i,2]), "_")))
+    alpha_i[alpha_i == 0] <- NA
+    sigma_i <- max(c(0, alpha_i), na.rm = TRUE) + as.numeric(unlist(strsplit(as.character(all_combos[i,2]), "_")))
     theta_i <- max(sigma_i) + as.numeric(unlist(strsplit(as.character(all_combos[i,3]), "_")))
     index_mats[,,i] <- rbind(alpha_i, sigma_i, theta_i)
   }
