@@ -12,13 +12,13 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 # prerequisites
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 
 nCores <- 40
-nTip <- 50
-nSim <- 2
+nTip <- 100
+nSim <- 100
 minAlpha = 1 
 maxAlpha = 4
 minSigma2 = 1
@@ -28,9 +28,9 @@ maxTheta = 20
 minRate = 0.25
 maxRate = 0.75
 
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 # the 40 2-state models we want to fit - put into list form
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 
 continuous_models_cd_ou <- getAllContinuousModelStructures(2, "OU")
 continuous_models_cd_bm <- getAllContinuousModelStructures(2, "BM")
@@ -55,9 +55,9 @@ phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip)
 phy <- drop.extinct(phy)
 phy$edge.length <- phy$edge.length/max(branching.times(phy))
 
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 # Functions
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 
 # a function which generates a parameter set given a continuous model
 generateParameters <- function(continuous_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate){
@@ -92,17 +92,20 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   return(fit)
 }
 
-iter <- 2
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+iter <- 1
+#### #### #### #### #### #### #### #### #### #### #### #### 
 # CD models generate
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 for(i in 1:20){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
   # generate data
   generating_model <- all_model_structures[[i]]
   pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cd, minRate, maxRate)
-  full_data <- generateData(phy, discrete_model_cd, generating_model, pars)
+  full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
+  while(class(full_data) == "try-error"){
+    full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
+  }
   file_name_data <- paste0("sim_data/", model_name, "_data-iter_", iter, ".Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures
@@ -110,16 +113,19 @@ for(i in 1:20){
   save(out, file = paste0("sim_fits/", model_name, "_gen-iter_", iter, ".Rsave"))
 }
 
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 # CID models generate
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### #### #### #### #### #### #### #### #### #### #### #### 
 for(i in 21:40){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
   # generate data
   generating_model <- all_model_structures[[i]]
   pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cid, minRate, maxRate)
-  full_data <- generateData(phy, discrete_model_cid, generating_model, pars)
+  full_data <- try(generateData(phy, discrete_model_cid, generating_model, pars))
+  while(class(full_data) == "try-error"){
+    full_data <- try(generateData(phy, discrete_model_cid, generating_model, pars))
+  }
   file_name_data <- paste0("sim_data/", model_name, "_data-iter_", iter, ".Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures

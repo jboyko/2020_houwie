@@ -287,7 +287,7 @@ hOUwie.dev <- function(p, phy, rate.cat,
   }
   # fit the corHMM model. if rate.cat > 1, then ensure the order of the state mats is fast to slow.
   # returns negative loglikelihood (hence sign change)
-  Mk.loglik <- -corHMM:::dev.corhmm(log(p.mk), phy, liks, Q, rate, root.p, rate.cat, order.test, FALSE)
+  # Mk.loglik <- -corHMM:::dev.corhmm(log(p.mk), phy, liks, Q, rate, root.p, rate.cat, order.test, FALSE)
   # set up the rate matrix
   Q[] <- c(p.mk, 0)[rate]
   diag(Q) <- -rowSums(Q)
@@ -307,7 +307,6 @@ hOUwie.dev <- function(p, phy, rate.cat,
     sample.tip.probs <- sample.tip.probs * sample.index
     Check1 <- any(apply(sample.tip.probs, 1, function(x) all(x == 0)))
     # if our sample doesn't include all tip states we revert to the unsampled simmap
-    
     if(Check1){
       simmap <- corHMM:::makeSimmap(phy, data.cor, Q, rate.cat, root.p = root.p, nSim = nSim, fix.node = fix.node, fix.state = fix.state, parsimony=parsimony)
     }else{
@@ -335,7 +334,18 @@ hOUwie.dev <- function(p, phy, rate.cat,
   OU.loglik <- unlist(OU.loglik)
   # OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
   Mk.loglik <- unlist(lapply(simmap, function(x) getMapProbability(x$maps, Q)))
+  if(root.p == "yang"){
+    root_liks <- c(MASS:::Null(Q))
+    root_liks <- root_liks/sum(root_liks)
+  }
+  if(root.p == "flat"){
+    root_liks <- rep(1/dim(Q)[1], dim(Q)[1])
+  }
   # Mk.loglik <- max(Mk.loglik) + log(sum(exp(Mk.loglik - max(Mk.loglik)))) - log(nSim)
+  root_edge <- which.min(phy$edge[,1])
+  root_states_per_map <- unlist(lapply(simmap, function(x) as.numeric(names(x$maps[[root_edge]][1]))))
+  Root.loglik <- log(root_liks[root_states_per_map])
+  Mk.loglik <- Mk.loglik + Root.loglik
   Total.loglik <- max(OU.loglik + Mk.loglik)
   Mk.loglik.tmp <- Mk.loglik[which.max(OU.loglik + Mk.loglik)]
   OU.loglik.tmp <- OU.loglik[which.max(OU.loglik + Mk.loglik)]
@@ -413,7 +423,7 @@ getDiscreteModel <- function(data, model, rate.cat, dual, collapse){
 
 # gets the probability of a particular painting. limited to a single change at a shift point of 0.5
 getMapProbability <- function(maps, Q){
-  BranchProbs <- lapply(maps, function(x) log(probPath(x, Q)))
+  BranchProbs <- lapply(maps, function(x) probPath(x, Q))
   LnLik_map <- sum(unlist(BranchProbs))
   return(LnLik_map)
 }
@@ -434,10 +444,8 @@ probPath <- function(path, Q){
   time_j <- as.numeric(path)
   rate_j <- abs(Q[state_j,state_j])
   P[nTrans] <- 1 - pexp(rate_j, time_j)
-  P <- prod(P)
-  if(P == 0){
-    P <- 1e-300
-  }
+  P[P == 0] <- 1e-300
+  P <- sum(log(P))
   return(P)
 }
 
