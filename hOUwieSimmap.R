@@ -488,7 +488,7 @@ getAllContinuousModelStructures <- function(k, type = "OU"){
   index_mats <- array(NA, c(3, k, dim(all_combos)[1]), dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
   for(i in 1:dim(all_combos)[1]){
     alpha_i <- as.numeric(unlist(strsplit(as.character(all_combos[i,1]), "_")))
-    # alpha_i[alpha_i == 0] <- NA
+    alpha_i[alpha_i == 0] <- NA
     sigma_i <- max(c(0, alpha_i), na.rm = TRUE) + as.numeric(unlist(strsplit(as.character(all_combos[i,2]), "_")))
     theta_i <- max(sigma_i) + as.numeric(unlist(strsplit(as.character(all_combos[i,3]), "_")))
     index_mats[,,i] <- rbind(alpha_i, sigma_i, theta_i)

@@ -10,14 +10,15 @@ require(phytools)
 require(expm)
 require(POUMM)
 require(geiger)
+require(partitions)
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 
 nCores <- 40
-nTip <- 100
-nSim <- 100
+nTip <- 50
+nSim <- 2
 minAlpha = 1 
 maxAlpha = 4
 minSigma2 = 1
@@ -91,7 +92,7 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   return(fit)
 }
 
-iter <- 1
+iter <- 2
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # CD models generate
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
