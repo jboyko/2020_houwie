@@ -42,8 +42,8 @@ getLiksByMapping <- function(phy, dat, nMap, type = "max"){
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 nTip <- 100
-minRate = 0.25
-maxRate = 0.75
+minRate = 0.001
+maxRate = 0.1
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # the phylogeny
@@ -88,16 +88,16 @@ singleRun <- function(phy, nMaps, minRate, maxRate){
     cat("\n\nWorking on nMapA", i, "of length", nMaps[i], "\n")
     Mapping_res_A[[i]] <- getLiksByMapping(phy, dat, nMaps[i], type = "max")
   }
-  for(i in 1:length(nMaps)){
-    cat("\n\nWorking on nMapB", i, "of length", nMaps[i], "\n")
-    Mapping_res_B[[i]] <- getLiksByMapping(phy, dat, nMaps[i], type = "sum")
-  }
-  Mapping_res <- c(Mapping_res_A, Mapping_res_B)
+  # for(i in 1:length(nMaps)){
+  #   cat("\n\nWorking on nMapB", i, "of length", nMaps[i], "\n")
+  #   Mapping_res_B[[i]] <- getLiksByMapping(phy, dat, nMaps[i], type = "sum")
+  # }
+  Mapping_res <- c(Mapping_res_A)
   corhmm_rate <- corHMM_res$solution[1,2]
   mapping_rate <- unlist(lapply(Mapping_res, function(x) x$solution))
   estimated_rate <- c(corhmm_rate, mapping_rate)
-  nStochMaps <- c(NA, nMaps, nMaps)
-  type <- c("corhmm", rep("max", length(nMaps)), rep("sum", length(nMaps)))
+  nStochMaps <- c(NA, nMaps)
+  type <- c("corhmm", rep("max", length(nMaps)))
   fit_summary <- data.frame(true_rate = rate, estimated_rate = estimated_rate, nMaps = nStochMaps, type = type)
   cat("\n")
   return(list(fit_summary = fit_summary,
@@ -115,18 +115,60 @@ result <- mclapply(1:40, function(x) singleRun(phy, nMaps = c(10,50,100,500), mi
 
 
 require(viridis)
-load("discrete_liks_check.Rsave")
-par(mfrow=c(1,2))
-plot(x = discrete_liks_check$true_rate, y = discrete_liks_check$corhmm_rate, xlim = c(0,1), ylim = c(0,1), xlab = "true rate", ylab = "corhmm rate")
-abline(a = 0, b = 1, col = "red")
-abline(lm(discrete_liks_check$corhmm_rate ~ discrete_liks_check$true_rate))
+require(ggplot2)
+load("result.Rsave")
+discrete_rates <- do.call(rbind, lapply(result, function(x) x$fit_summary))
+discrete_rates[is.na(discrete_rates$nMaps),3] <- 0
 
-plot(x = discrete_liks_check$true_rate, y = discrete_liks_check$mapping_rate, xlim = c(0,1), ylim = c(0,1), xlab = "true rate", ylab = "mapping rate")
-abline(a = 0, b = 1, col = "red")
-abline(lm(discrete_liks_check$mapping_rate ~ discrete_liks_check$true_rate))
+corhmm_rates <- discrete_rates[discrete_rates$nMaps == 0,]
+simmap_rates <- discrete_rates[discrete_rates$nMaps != 0,]
+
+plot(x = simmap_rates$true_rate, y = simmap_rates$estimated_rate, xlim = c(0, 0.1))
+abline(a = 0, b = 1, col ="red")
+abline(lm(simmap_rates$estimated_rate~simmap_rates$true_rate))
+
+plot(x = corhmm_rates$true_rate, y = corhmm_rates$estimated_rate, xlim = c(0, 0.1))
+abline(a = 0, b = 1, col ="red")
+abline(lm(corhmm_rates$estimated_rate~corhmm_rates$true_rate))
 
 
-abline(a = 0, b = 1)
+par(mfrow=c(2,2))
+df <- Map_10
+col <- viridis(2)
+cols <- col[as.numeric(as.factor(df$type))]
+plot(x = df$true_rate, y = df$estimated_rate, xlim = c(0,1), ylim = c(0,1), xlab = "true rate", ylab = "est rate", col = cols, pch = 16, main = "10 maps")
+legend("topleft", legend = levels(as.factor(Map_10$type)), pch = 16, col = col)
+abline(a=0, b=1, col="red")
+abline(lm(df$estimated_rate[df$type == "max"]~df$true_rate[df$type == "max"]), col = col[1])
+abline(lm(df$estimated_rate[df$type == "sum"]~df$true_rate[df$type == "sum"]), col = col[2])
+
+df <- Map_50
+col <- viridis(2)
+cols <- col[as.numeric(as.factor(df$type))]
+plot(x = df$true_rate, y = df$estimated_rate, xlim = c(0,1), ylim = c(0,1), xlab = "true rate", ylab = "est rate", col = cols, pch = 16, main = "50 maps")
+legend("topleft", legend = levels(as.factor(Map_10$type)), pch = 16, col = col)
+abline(a=0, b=1, col="red")
+abline(lm(df$estimated_rate[df$type == "max"]~df$true_rate[df$type == "max"]), col = col[1])
+abline(lm(df$estimated_rate[df$type == "sum"]~df$true_rate[df$type == "sum"]), col = col[2])
+
+df <- Map_100
+col <- viridis(2)
+cols <- col[as.numeric(as.factor(df$type))]
+plot(x = df$true_rate, y = df$estimated_rate, xlim = c(0,1), ylim = c(0,1), xlab = "true rate", ylab = "est rate", col = cols, pch = 16, main = "100 maps")
+legend("topleft", legend = levels(as.factor(Map_10$type)), pch = 16, col = col)
+abline(a=0, b=1, col="red")
+abline(lm(df$estimated_rate[df$type == "max"]~df$true_rate[df$type == "max"]), col = col[1])
+abline(lm(df$estimated_rate[df$type == "sum"]~df$true_rate[df$type == "sum"]), col = col[2])
+
+df <- Map_500
+col <- viridis(2)
+cols <- col[as.numeric(as.factor(df$type))]
+plot(x = df$true_rate, y = df$estimated_rate, xlim = c(0,1), ylim = c(0,1), xlab = "true rate", ylab = "est rate", col = cols, pch = 16, main = "500 maps")
+legend("topleft", legend = levels(as.factor(Map_10$type)), pch = 16, col = col)
+abline(a=0, b=1, col="red")
+abline(lm(df$estimated_rate[df$type == "max"]~df$true_rate[df$type == "max"]), col = col[1])
+abline(lm(df$estimated_rate[df$type == "sum"]~df$true_rate[df$type == "sum"]), col = col[2])
+
 
 
 
