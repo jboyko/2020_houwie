@@ -12,7 +12,6 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # functions
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -42,8 +41,8 @@ getLiksByMapping <- function(phy, dat, nMap, type = "max"){
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 nTip <- 100
-minRate = 0.001
-maxRate = 0.1
+minRate = 0.1
+maxRate = 0.8
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # the phylogeny
@@ -56,23 +55,22 @@ phy$edge.length <- phy$edge.length/max(branching.times(phy))
 # a small aside looking at variance
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-# rate <- runif(1, min = minRate, max = maxRate)
-# Q <- matrix(c(-rate, rate,rate,-rate),2,2)
-# data <- simCharacterHistory(phy, Q, c(0.5,0.5))$TipStates
-# dat <- data.frame(sp = names(data), d = data)
-# simmap <- makeSimmap(tree=phy, data=dat, model=Q, rate.cat=1, nSim=10, nCores=1)
-# maps <- lapply(simmap, function(x) x$maps)
-# llik_10 <- unlist(lapply(maps, function(x) getMapProbability(x, Q)))
-# simmap <- makeSimmap(tree=phy, data=dat, model=Q, rate.cat=1, nSim=100, nCores=1)
-# maps <- lapply(simmap, function(x) x$maps)
-# llik_100 <- unlist(lapply(maps, function(x) getMapProbability(x, Q)))
-# simmap <- makeSimmap(tree=phy, data=dat, model=Q, rate.cat=1, nSim=500, nCores=1)
-# maps <- lapply(simmap, function(x) x$maps)
-# llik_500 <- unlist(lapply(maps, function(x) getMapProbability(x, Q)))
-# 
-# c(Map10_lik = max(llik_10), Map10_var = var(llik_10),
-#   Map100_lik = max(llik_100), Map100_var = var(llik_100),
-#   Map500_lik = max(llik_500), Map500_var = var(llik_500))
+rate <- runif(1, min = minRate, max = maxRate)
+Q <- matrix(c(-rate, rate,rate,-rate),2,2)
+data <- simCharacterHistory(phy, Q, c(0.5,0.5))$TipStates
+dat <- data.frame(sp = names(data), d = data)
+simmap <- makeSimmap(tree=phy, data=dat, model=Q, rate.cat=1, nSim=10, nCores=1)
+llik_10 <- unlist(lapply(simmap, function(x) getMapProbability(x, Q)))
+simmap <- makeSimmap(tree=phy, data=dat, model=Q, rate.cat=1, nSim=100, nCores=1)
+llik_100 <- unlist(lapply(simmap, function(x) getMapProbability(x, Q)))
+simmap <- makeSimmap(tree=phy, data=dat, model=Q, rate.cat=1, nSim=500, nCores=1)
+llik_500 <- unlist(lapply(simmap, function(x) getMapProbability(x, Q)))
+
+corHMM(phy, dat, model = "ER", p = rate, rate.cat=1)
+
+c(Map10_lik = max(llik_10), Map10_var = var(llik_10),
+  Map100_lik = max(llik_100), Map100_var = var(llik_100),
+  Map500_lik = max(llik_500), Map500_var = var(llik_500))
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # do the things

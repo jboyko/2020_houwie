@@ -333,7 +333,7 @@ hOUwie.dev <- function(p, phy, rate.cat,
   # OU.loglik <- max(unlist(OU.loglik))
   OU.loglik <- unlist(OU.loglik)
   # OU.loglik <- max(OU.loglik) + log(sum(exp(OU.loglik - max(OU.loglik)))) - log(nSim)
-  Mk.loglik <- unlist(lapply(simmap, function(x) getMapProbability(x$maps, Q)))
+  Mk.loglik <- unlist(lapply(simmap, function(x) getMapProbability(x, Q)))
   if(root.p == "yang"){
     root_liks <- c(MASS:::Null(Q))
     root_liks <- root_liks/sum(root_liks)
@@ -422,8 +422,8 @@ getDiscreteModel <- function(data, model, rate.cat, dual, collapse){
 }
 
 # gets the probability of a particular painting. limited to a single change at a shift point of 0.5
-getMapProbability <- function(maps, Q){
-  BranchProbs <- lapply(maps, function(x) probPath(x, Q))
+getMapProbability <- function(simmap, Q){
+  BranchProbs <- lapply(simmap$maps, function(x) probPath(x, Q))
   LnLik_map <- sum(unlist(BranchProbs))
   return(LnLik_map)
 }

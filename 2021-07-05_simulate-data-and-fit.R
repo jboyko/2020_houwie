@@ -18,7 +18,7 @@ require(partitions)
 
 nCores <- 40
 nTip <- 100
-nSim <- 100
+nSim <- 10
 minAlpha = 1 
 maxAlpha = 4
 minSigma2 = 1
@@ -107,11 +107,12 @@ for(i in 1:20){
   while(class(full_data) == "try-error"){
     full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
   }
-  file_name_data <- paste0("sim_data/", model_name, "_data-iter_", iter, ".Rsave")
+  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-  save(out, file = paste0("sim_fits/", model_name, "_gen-iter_", iter, ".Rsave"))
+  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
+  save(out, file = file_name_res)
 }
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -127,11 +128,12 @@ for(i in 21:40){
   while(class(full_data) == "try-error"){
     full_data <- try(generateData(phy, discrete_model_cid, generating_model, pars))
   }
-  file_name_data <- paste0("sim_data/", model_name, "_data-iter_", iter, ".Rsave")
+  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-  save(out, file = paste0("sim_fits/", model_name, "_gen-iter_", iter, ".Rsave"))
+  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
+  save(out, file = file_name_res)
 }
 
 

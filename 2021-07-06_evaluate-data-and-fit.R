@@ -12,12 +12,31 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-load("sim_fits/cd-fit-generating_model_1.Rsave")
-load("sim_data/cd-data-generating_model_1.Rsave")
+load("sim_fits/M40_gen-iter_1.Rsave")
+load("sim_data/M40_data-iter_1.Rsave")
 
-full_data <- all_data[[11]]$pars[1]
-model <- out[[11]][1]
-full_data$pars
+full_data
+# out <- out[-28]
+getModelTable(out)
+
+out[[1]]$DiscLik
+unlist(lapply(out[21:40], function(x) x$DiscLik))
+Q <- full_data$index.cor
+Q[] <- c(full_data$pars[1:3], 0)[full_data$index.cor]
+diag(Q) <- -rowSums(Q)
+getMapProbability(full_data$simmap[[1]], Q)
+
+cor_data <- full_data$data[,c(1,2)]
+cor_data[cor_data[,2] == 3, 2] <- 1
+cor_data[cor_data[,2] == 4, 2] <- 2
+
+tmp <- full_data$index.cor
+tmp[tmp ==4] <- 0 
+rate_1 <- corHMM(full_data$simmap[[1]], data = cor_data, rate.cat = 1, model = "ER")
+rate_2 <- corHMM(full_data$simmap[[1]], data = cor_data, rate.cat = 2, rate.mat = tmp)
+
+model <- out[[26]]
+
 model[[1]]$RegimeMap$maps
 
 out[[1]][[1]]$p
