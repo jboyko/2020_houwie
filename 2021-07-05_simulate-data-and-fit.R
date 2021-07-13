@@ -1,6 +1,6 @@
 setwd("~/2020_hOUwie/")
 
-source("hOUwieSimmap.R")
+source("hOUwieNode.R")
 source("Utils.R")
 
 require(OUwie)
@@ -16,8 +16,8 @@ require(partitions)
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nCores <- 40
-nTip <- 100
+nCores <- 1
+nTip <- 10
 nSim <- 10
 minAlpha = 1 
 maxAlpha = 4
@@ -25,8 +25,8 @@ minSigma2 = 1
 maxSigma2 = 4
 minTheta = 10
 maxTheta = 20
-minRate = 0.25
-maxRate = 0.75
+minRate = 0.01
+maxRate = 0.2
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # the 40 2-state models we want to fit - put into list form
@@ -107,11 +107,11 @@ for(i in 1:20){
   while(class(full_data) == "try-error"){
     full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
   }
-  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
+  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
+  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(out, file = file_name_res)
 }
 
@@ -128,11 +128,11 @@ for(i in 21:40){
   while(class(full_data) == "try-error"){
     full_data <- try(generateData(phy, discrete_model_cid, generating_model, pars))
   }
-  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
+  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nMap, "-nMap_", iter, "-iter.Rsave")
+  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(out, file = file_name_res)
 }
 
