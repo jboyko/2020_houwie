@@ -271,19 +271,19 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   Q <- matrix(0, dim(rate)[1], dim(rate)[2])
   Q[] <- c(p.mk, 0)[rate]
   diag(Q) <- -rowSums(Q)
-  if(sample.tips){
-    means <- theta
-    tmp.denom <- rep(0.5, length(alpha))
-    tmp.denom[!alpha.na] <- alpha[!alpha.na]
-    vars <- sigma.sq/2*tmp.denom
-    normal.params <- rbind(means, vars)
-    sample.tip.probs <- apply(normal.params, 2, function(x) dnorm(data[,3], x[1], sqrt(x[2])))
-    for(i in 1:length(phy$tip.label)){
-      if(all(sample.tip.probs[i,] == 0)){
-        sample.tip.probs[i,] <- rep(1, length(sample.tip.probs[i,]))
+  if(rate.cat > 1){
+    if(sample.tips){
+      means <- theta
+      vars <- sigma.sq
+      normal.params <- rbind(means, vars)
+      sample.tip.probs <- apply(normal.params, 2, function(x) dnorm(data[,3], x[1], sqrt(x[2])))
+      for(i in 1:length(phy$tip.label)){
+        if(all(sample.tip.probs[i,] == 0)){
+          sample.tip.probs[i,] <- rep(1, length(sample.tip.probs[i,]))
+        }
+        sample_tip_i <- edge_liks_list[[i]][1,] * sample.tip.probs[i,]
+        edge_liks_list[[i]][1,] <- sample_tip_i/sum(sample_tip_i)
       }
-      sample_tip_i <- edge_liks_list[[i]][1,] * sample.tip.probs[i,]
-      edge_liks_list[[i]][1,] <- sample_tip_i/sum(sample_tip_i)
     }
   }
   conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, root.p)

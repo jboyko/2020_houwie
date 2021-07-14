@@ -12,11 +12,13 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-load("sim_fits/M40_gen-iter_1.Rsave")
-load("sim_data/M40_data-iter_1.Rsave")
+load("sim_fits/M1-gen_100-nTip_10-nMap_2-iter.Rsave")
+load("sim_data/M1-gen_100-nTip_10-nMap_2-iter.Rsave")
 
 full_data
 # out <- out[-28]
+out <- out[unlist(lapply(out, function(x) class(x) != "try-error"))]
+out[[4]]
 getModelTable(out)
 
 out[[1]]$DiscLik
