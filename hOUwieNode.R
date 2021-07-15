@@ -20,7 +20,7 @@
 #'@param p a vector of params to calculate a fixed likelihood
 #'@param nSim the number of simmaps a single set of params is evaluated over
 #'@param quiet a logical indicating whether to output user messages
-hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, p=NULL, ip=NULL, opts=NULL, quiet=TRUE, sample.tips=TRUE){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, p=NULL, ip=NULL, opts=NULL, quiet=TRUE, sample_tips=TRUE){
   # if the data has negative values, shift it right - we will shift it back later
   if(mserr == "none"){
     if(any(data[,dim(data)[2]] < 0)){
@@ -117,7 +117,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   n_p_theta <- length(unique(na.omit(index.cont[3,])))
   
   # an internal data structure (internodes liks matrix) for the dev function
-  edge_liks_list <- getEdgeLiksLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
+  edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
   
   # default MLE search options
   if(is.null(opts)){
@@ -142,7 +142,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
                                 rate.cat=rate.cat, mserr=mserr, 
                                 index.disc=index.disc, index.cont=index.cont, root.p=root.p,
                                 edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, 
-                                sample.tips=sample.tips, split.liks=FALSE)
+                                sample_tips=sample_tips, split.liks=FALSE)
   }else{
     if(!quiet){
       cat("Starting a search of parameters with", nSim, "simmaps...\n")
@@ -189,18 +189,14 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
                  rate.cat=rate.cat, mserr=mserr, 
                  index.disc=index.disc, index.cont=index.cont, root.p=root.p,
                  edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, 
-                 sample.tips=sample.tips, split.liks=FALSE)
+                 sample_tips=sample_tips, split.liks=FALSE)
     cat("\n")
     if(!quiet){
       cat("Finished.\n")
     }
   }
   # preparing output
-  FinalLiks <- hOUwie.dev(p = out$solution, phy=phy, data=hOUwie.dat$data.ou, 
-                          rate.cat=rate.cat, mserr=mserr, 
-                          index.disc=index.disc, index.cont=index.cont, root.p=root.p,
-                          edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, 
-                          sample.tips=sample.tips, split.liks=TRUE)
+  FinalLiks <- hOUwie.dev(p = out$solution, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=TRUE)
   # cat("\n")
   param.count <- max(index.disc, na.rm = TRUE) + max(index.cont, na.rm = TRUE)
   nb.tip <- length(phy$tip.label)
@@ -233,9 +229,11 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     discrete_model=discrete_model, 
     continuous_model=continuous_model, 
     root.p=root.p, 
+    time_slice=time_slice,
     root.station=root.station, 
     get.root.theta=get.root.theta, 
     mserr = mserr, 
+    sample_tips = sample_tips,
     lb.cor=lb_discrete_model, 
     ub.cor=ub_discrete_model,
     lb.ou=lb_continuous_model, 
@@ -250,10 +248,73 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   return(obj)
 }
 
+hOUwieRecon <- function(houwie_obj, nodes="all"){
+  # if the class is houwie_obj
+  phy <- houwie_obj$phy
+  hOUwie.dat <- houwie_obj$hOUwie.dat
+  root.p <- houwie_obj$root.p
+  mserr <- houwie_obj$mserr
+  rate.cat <- houwie_obj$rate.cat
+  index.cont <- houwie_obj$index.cont
+  index.disc <- houwie_obj$index.disc
+  p <- houwie_obj$p
+  time_slice <- houwie_obj$time_slice
+  state_names <- colnames(houwie_obj$solution.disc)
+  sample_tips <- houwie_obj$sample_tips
+  # organize the data
+  phy <- reorder.phylo(phy, "pruningwise")
+  nTip <- length(phy$tip.label)
+  Tmax <- max(branching.times(phy))
+  nStates <- as.numeric(max(hOUwie.dat$data.cor[,2]))
+  nCol <- dim(data)[2] - ifelse(mserr == "none", 2, 3)
+  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
+  # an internal data structure (internodes liks matrix) for the dev function
+  edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
+  if(nodes == "internal"){
+    nodes_to_fix <- min(phy$edge[,1]):max(phy$edge[,1])
+  }
+  if(nodes == "external"){
+    nodes_to_fix <- 1:nTip
+  }
+  if(nodes  == "all"){
+    nodes_to_fix <- 1:max(phy$edge[,1])
+  }
+  recon_matrix <- matrix(0, length(nodes_to_fix), nStates * rate.cat, dimnames = list(nodes_to_fix, state_names))
+  for(i in 1:length(nodes_to_fix)){
+    node_i <- nodes_to_fix[i]
+    anc_edges_to_fix <- which(phy$edge[,1] == node_i)
+    dec_edges_to_fix <- which(phy$edge[,2] == node_i)
+    if(node_i <= nTip){
+      possible_states <- which(edge_liks_list_i[[dec_edges_to_fix]][1,] == 1)
+    }else{
+      possible_states <- 1:(nStates*rate.cat)
+    }
+    for(state_j in 1:(nStates*rate.cat)){
+      if(!state_j %in% possible_states){
+        next
+      }
+      edge_liks_list_i <- edge_liks_list
+      fix_vector <- numeric(nStates * rate.cat)
+      fix_vector[state_j] <- 1
+      for(k in dec_edges_to_fix){
+        edge_liks_list_i[[k]][1,]
+        edge_liks_list_i[[k]][1,] <- fix_vector
+      }
+      for(k in anc_edges_to_fix){
+        last_row <- dim(edge_liks_list_i[[k]])[1]
+        edge_liks_list_i[[k]][last_row,] <- fix_vector
+      }
+      fixed_loglik <- -hOUwie.dev(p = log(p), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list_i, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=FALSE)
+      recon_matrix[i, state_j] <- fixed_loglik
+    }
+  }
+  return(recon_matrix)
+}
+
 hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
                        index.disc, index.cont, root.p, 
                        edge_liks_list, nSim, tip.paths=NULL, 
-                       sample.tips=TRUE, split.liks=FALSE){
+                       sample_tips=TRUE, split.liks=FALSE){
   p <- exp(p)
   print(p)
   k <- max(index.disc, na.rm = TRUE)
@@ -272,7 +333,7 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   Q[] <- c(p.mk, 0)[rate]
   diag(Q) <- -rowSums(Q)
   if(rate.cat > 1){
-    if(sample.tips){
+    if(sample_tips){
       means <- theta
       vars <- sigma.sq
       normal.params <- rbind(means, vars)
@@ -323,13 +384,13 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   return(-llik_houwie)
 }
 
-getEdgeLiksLiks <- function(phy, data, n.traits, rate.cat, time_slice){
+getEdgeLiks <- function(phy, data, n.traits, rate.cat, time_slice){
   edge_liks_list <- vector("list", dim(phy$edge)[1])
   nTip <- length(phy$tip.label)
   for(edge_i in 1:dim(phy$edge)[1]){
     # +2 because we slice the middle of the branch and need 2 terminal nodes (ancestor and descendent)
     n_slice <- (phy$edge.length[edge_i] %/% time_slice) + 2
-    edge_liks_list[[edge_i]] <- matrix(0, n_slice, n.traits * rate.cat)
+    edge_liks_list[[edge_i]] <- matrix(1, n_slice, n.traits * rate.cat)
     if(phy$edge[edge_i,2] <= nTip){
       tmp <- numeric(n.traits)
       species_i <- phy$tip.label[phy$edge[edge_i,2]]
@@ -353,7 +414,7 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list, root.p){
     p_mat_i <- expm(Q * (time_edge/n_edges), method=c("Ward77"))
     for(inter_edge_i in 2:(n_edges+1)){
       dec_states <- edge_liks_list[[edge_i]][inter_edge_i-1,]
-      v <- c(p_mat_i %*% dec_states )
+      v <- edge_liks_list[[edge_i]][inter_edge_i,] * c(p_mat_i %*% dec_states )
       edge_liks_list[[edge_i]][inter_edge_i,] <- v/sum(v)
     }
   }
@@ -371,18 +432,26 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list, root.p){
       liks_j <- edge_liks_list[[j]]
       v <- v * liks_j[dim(liks_j)[1],]
     }
-    v <- v/sum(v)
-    edge_liks_list[[edge_i]][1,] <- v
+    v <- edge_liks_list[[edge_i]][1,] * v
+    edge_liks_list[[edge_i]][1,] <- v/sum(v)
     n_edges <- dim(edge_liks_list[[edge_i]])[1] - 1
     time_edge <- phy$edge.length[edge_i]
     p_mat_i <- expm(Q * (time_edge/n_edges), method=c("Ward77"))
     for(inter_edge_i in 2:(n_edges+1)){
       dec_states <- edge_liks_list[[edge_i]][inter_edge_i-1,]
-      v <- c(p_mat_i %*% dec_states )
+      v <- edge_liks_list[[edge_i]][inter_edge_i,] * c(p_mat_i %*% dec_states )
       edge_liks_list[[edge_i]][inter_edge_i,] <- v/sum(v)
     }
   }
   # do the root
+  dec_combo_index_i <- which(phy$edge[,1] == root)
+  v <- 1
+  for(j in dec_combo_index_i){
+    liks_j <- edge_liks_list[[j]]
+    v <- v * edge_liks_list[[j]][dim(liks_j)[1],]
+  }
+  v <- v/sum(v)
+  # root prior
   if(class(root.p)[1] == "character"){
     if(root.p == "yang"){
       root_liks <- c(MASS:::Null(Q))
@@ -392,17 +461,12 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list, root.p){
       root_liks <- rep(1/dim(Q)[1], dim(Q)[1])
     }
     if(root.p == "maddfitz"){
-      root_liks <- conditional_probs$root_state/sum(conditional_probs$root_state)
+      root_liks <- v
     }
   }else{
     root_liks <- root.p/sum(root.p)
   }
-  dec_combo_index_i <- which(phy$edge[,1] == root)
-  v <- 1
-  for(j in dec_combo_index_i){
-    v <- v * edge_liks_list[[j]][dim(edge_liks_list[[j]])[1],]
-  }
-  v <- v/sum(v)
+  # root state probabilities
   root_state <-  v * root_liks
   root_state <- root_state/sum(root_state)
   return(list(root_state = root_state,

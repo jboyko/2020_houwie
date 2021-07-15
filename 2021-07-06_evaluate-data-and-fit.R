@@ -1,6 +1,6 @@
 setwd("~/2020_hOUwie/")
 
-source("hOUwieSimmap.R")
+source("hOUwieNode.R")
 source("Utils.R")
 
 require(OUwie)
@@ -12,14 +12,20 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-load("sim_fits/M1-gen_100-nTip_10-nMap_2-iter.Rsave")
-load("sim_data/M1-gen_100-nTip_10-nMap_2-iter.Rsave")
+load("sim_fits/M40-gen_100-nTip_10-nMap_2-iter.Rsave")
+load("sim_data/M40-gen_100-nTip_10-nMap_2-iter.Rsave")
 
 full_data
-# out <- out[-28]
+names(out) <- paste("M", 1:40, sep = "")
 out <- out[unlist(lapply(out, function(x) class(x) != "try-error"))]
-out[[4]]
 getModelTable(out)
+
+houwie_obj <- out[[1]]
+
+
+
+
+
 
 out[[1]]$DiscLik
 unlist(lapply(out[21:40], function(x) x$DiscLik))

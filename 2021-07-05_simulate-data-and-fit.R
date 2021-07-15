@@ -16,13 +16,13 @@ require(partitions)
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nCores <- 1
+nCores <- 40
 nTip <- 100
 nSim <- 10
-minAlpha = 1 
-maxAlpha = 4
-minSigma2 = 1
-maxSigma2 = 4
+minAlpha = 0.5
+maxAlpha = 2
+minSigma2 = 0.5
+maxSigma2 = 2
 minTheta = 10
 maxTheta = 20
 minRate = 0.1
@@ -93,7 +93,7 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   return(fit)
 }
 
-iter <- 1
+iter <- "TMP"
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # CD models generate
 #### #### #### #### #### #### #### #### #### #### #### #### 

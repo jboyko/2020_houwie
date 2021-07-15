@@ -99,7 +99,7 @@ require(expm)
 require(MASS)
 source("hOUwieNode.R")
 
-nTip <- 100
+nTip <- 5
 rate <- 1
 n <- 10
 phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
@@ -111,12 +111,19 @@ nState <- dim(Q)[1]
 data <- sim.char(phy, Q, 1, "discrete")[,,1]
 data <- data.frame(sp = names(data), d = data)
 
-phy <- reorder(phy, "pruningwise")
-edge_liks_list <- getEdgeLiksLiks(phy, data, 2, 1, 0.25)
+phy <- reorder.phylo(phy, "pruningwise")
+edge_liks_list <- getEdgeLiks(phy, data, 2, 1, 0.25)
+
+phy$edge
+
+# edge_liks_list[[1]][2,] <- c(0,1)
+# edge_liks_list[[7]][4,] <- c(0,1) 
+# edge_liks_list[[8]][4,] <- c(0,1)
 
 conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, "yang")
-internode_maps <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, 200)
+internode_maps <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, 1)
 simmaps <- getMapFromSubstHistory(internode_maps, phy)
+plot(simmaps[[1]])
 tmp <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, c(0.5, 0.5))))
 ouwie_res <- lapply(simmaps, function(x) OUwie.basic(x,cbind(data, rnorm(nTip, 10)), simmap.tree=TRUE, alpha = c(1,1), sigma.sq = c(1,1), theta = c(10,10)))
 houwie_llik <- unlist(ouwie_res) + tmp
