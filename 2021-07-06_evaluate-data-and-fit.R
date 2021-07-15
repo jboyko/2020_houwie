@@ -12,8 +12,8 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-files_fits <- paste("sim_fits/M", 1:40, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
-files_data <- paste("sim_data/M", 1:40, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
+files_fits <- paste("sim_fits/M", 1:20, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
+files_data <- paste("sim_data/M", 1:20, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
 
 table_list <- list()
 for(i in 1:length(files_fits)){
@@ -22,6 +22,11 @@ for(i in 1:length(files_fits)){
   names(out) <- paste("M", 1:40, sep = "")
   table_list[[i]] <- getModelTable(out)
 }
+
+recon <- hOUwieRecon(out[[11]])
+recon_table <- recon[101:199,]
+recon_table <- t(apply(recon_table, 1, function(x) exp(x)/sum(exp(x))))
+nodelabels(thermo = recon_table)
 
 out[[9]]$index.cont
 

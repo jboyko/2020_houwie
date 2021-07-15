@@ -285,7 +285,7 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
     anc_edges_to_fix <- which(phy$edge[,1] == node_i)
     dec_edges_to_fix <- which(phy$edge[,2] == node_i)
     if(node_i <= nTip){
-      possible_states <- which(edge_liks_list_i[[dec_edges_to_fix]][1,] == 1)
+      possible_states <- which(edge_liks_list[[dec_edges_to_fix]][1,] == 1)
     }else{
       possible_states <- 1:(nStates*rate.cat)
     }

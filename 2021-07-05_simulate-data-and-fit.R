@@ -90,6 +90,7 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   }
   # fit the houwie model
   fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, discrete_model = discrete_model, continuous_model = continuous_model)
+  fit$recon <- hOUwieRecon(fit, nodes = "all")
   return(fit)
 }
 
@@ -102,10 +103,11 @@ for(i in 1:20){
   cat("Begining", model_name, "...\n")
   # generate data
   generating_model <- all_model_structures[[i]]
-  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cd, minRate, maxRate)
-  full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
+  discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
+  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, generating_model, minRate, maxRate)
+  full_data <- try(generateData(phy, generating_model, generating_model, pars))
   while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
+    full_data <- try(generateData(phy, generating_model, generating_model, pars))
   }
   file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
@@ -115,6 +117,7 @@ for(i in 1:20){
   # p = c(0.483848937,  0.007448614,  0.693147181,  0.284018414, 15.829464035)
   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(out, file = file_name_res)
+  full_data <- NULL
 }
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -125,10 +128,11 @@ for(i in 21:40){
   cat("Begining", model_name, "...\n")
   # generate data
   generating_model <- all_model_structures[[i]]
-  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cid, minRate, maxRate)
-  full_data <- try(generateData(phy, discrete_model_cid, generating_model, pars))
+  discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
+  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate)
+  full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, discrete_model_cid, generating_model, pars))
+    full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   }
   file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
@@ -136,6 +140,7 @@ for(i in 21:40){
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(out, file = file_name_res)
+  full_data <- NULL
 }
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
