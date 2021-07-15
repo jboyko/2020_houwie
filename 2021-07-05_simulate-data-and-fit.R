@@ -44,7 +44,7 @@ continuous_models_cd_bmou <- lapply(seq(dim(continuous_models_cd_bmou)[3]), func
 continuous_models_cid_ou <- lapply(seq(dim(continuous_models_cid_ou)[3]), function(x) continuous_models_cid_ou[,,x])
 continuous_models_cid_bm <- lapply(seq(dim(continuous_models_cid_bm)[3]), function(x) continuous_models_cid_bm[,,x])
 continuous_models_cid_bmou <- lapply(1:dim(continuous_models_cid_bmou)[3], function(x) continuous_models_cid_bmou[,,x])
-all_model_structures <- c(continuous_models_cd_ou, continuous_models_cd_bm, continuous_models_cd_bmou, continuous_models_cid_ou, continuous_models_cid_bm, continuous_models_cid_bmou)
+all_model_structures <- c(continuous_models_cd_bm, continuous_models_cd_bmou, continuous_models_cd_ou, continuous_models_cid_bm, continuous_models_cid_bmou, continuous_models_cid_ou)
 
 # the 2 discrete models being evaluated
 discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
@@ -93,7 +93,7 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   return(fit)
 }
 
-iter <- "TMP"
+iter <- "tmp"
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # CD models generate
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -146,10 +146,11 @@ for(i in 1:40){
   cat("Begining", model_name, "...\n")
   # generate data
   generating_model <- all_model_structures[[i]]
-  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model_cd, minRate, maxRate)
-  full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
+  discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
+  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate)
+  full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, discrete_model_cd, generating_model, pars))
+    full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   }
   file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
@@ -157,7 +158,14 @@ for(i in 1:40){
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(out, file = file_name_res)
+  full_data <- NULL
 }
+
+
+
+
+
+
 
 
 

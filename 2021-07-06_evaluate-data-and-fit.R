@@ -12,12 +12,24 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-load("sim_fits/M40-gen_100-nTip_10-nMap_2-iter.Rsave")
-load("sim_data/M40-gen_100-nTip_10-nMap_2-iter.Rsave")
+files_fits <- paste("sim_fits/M", 1:40, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
+files_data <- paste("sim_data/M", 1:40, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
+
+table_list <- list()
+for(i in 1:length(files_fits)){
+  load(files_fits[i])
+  load(files_data[i])
+  names(out) <- paste("M", 1:40, sep = "")
+  table_list[[i]] <- getModelTable(out)
+}
+
+out[[9]]$index.cont
+
+
 
 full_data
 names(out) <- paste("M", 1:40, sep = "")
-out <- out[unlist(lapply(out, function(x) class(x) != "try-error"))]
+# out <- out[unlist(lapply(out, function(x) class(x) != "try-error"))]
 getModelTable(out)
 
 houwie_obj <- out[[1]]
