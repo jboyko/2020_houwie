@@ -12,14 +12,16 @@ require(POUMM)
 require(geiger)
 require(partitions)
 
-files_fits <- paste("sim_fits/M", 1:20, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
-files_data <- paste("sim_data/M", 1:20, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
+files_fits <- paste("sim_fits/M", 1:40, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
+files_data <- paste("sim_data/M", 1:40, "-gen_100-nTip_10-nMap_tmp-iter.Rsave", sep = "")
 
 table_list <- list()
 for(i in 1:length(files_fits)){
   load(files_fits[i])
   load(files_data[i])
   names(out) <- paste("M", 1:40, sep = "")
+  names_out <- unlist(lapply(out, class))
+  out <- out[names_out == "houwie"]
   table_list[[i]] <- getModelTable(out)
 }
 

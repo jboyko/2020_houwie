@@ -104,10 +104,10 @@ for(i in 1:20){
   # generate data
   generating_model <- all_model_structures[[i]]
   discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
-  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, generating_model, minRate, maxRate)
-  full_data <- try(generateData(phy, generating_model, generating_model, pars))
+  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate)
+  full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, generating_model, generating_model, pars))
+    full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   }
   file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)

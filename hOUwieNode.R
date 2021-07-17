@@ -364,7 +364,9 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   }else{
     root_liks <- root.p/sum(root.p)
   }
-  llik_discrete <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, root_liks)))
+  times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
+  p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
+  llik_discrete <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, root_liks, p_mats_per_edge)))
   character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique) == 1))
   if(character_dependence_check){
     llik_continuous <- OUwie.basic(simmaps[[1]], data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr)
@@ -539,11 +541,8 @@ getInternodeMap <- function(phy, Q, edge_liks_list, root_state, nSim){
 }
 
 # probability of a particular stochastic mapping path
-getPathProb <- function(path, Q){
-  all.equal <- var(path) == 0
-  if(all.equal){
-    section_length <- path[1]
-    p_mat <- expm(Q * section_length)
+getPathProb <- function(path, Q=NULL, p_mat=NULL){
+  if(!is.null(p_mat)){
     path_states <- as.numeric(names(path))
     P <- vector("numeric", length(path)-1)
     for(i in 1:(length(path)-1)){
@@ -551,25 +550,41 @@ getPathProb <- function(path, Q){
       path_states <- path_states[-1]
     }
   }else{
-    nTrans <- length(path)
-    P <- vector("numeric", length(path)-1)
-    path_cp <- path
-    for(i in sequence(nTrans-1)){
-      state_i <- as.numeric(names(path_cp)[1])
-      state_j <- as.numeric(names(path_cp)[2])
-      time_i <- as.numeric(path_cp[1])
-      P[i] <- expm(Q * time_i)[state_i, state_j]
-      path_cp <- path_cp[-1]
+    all.equal <- var(path) == 0
+    if(all.equal){
+      section_length <- path[1]
+      p_mat <- expm(Q * section_length)
+      path_states <- as.numeric(names(path))
+      P <- vector("numeric", length(path)-1)
+      for(i in 1:(length(path)-1)){
+        P[i] <- p_mat[path_states[1],path_states[2]]
+        path_states <- path_states[-1]
+      }
+    }else{
+      nTrans <- length(path)
+      P <- vector("numeric", length(path)-1)
+      path_cp <- path
+      for(i in sequence(nTrans-1)){
+        state_i <- as.numeric(names(path_cp)[1])
+        state_j <- as.numeric(names(path_cp)[2])
+        time_i <- as.numeric(path_cp[1])
+        P[i] <- expm(Q * time_i)[state_i, state_j]
+        path_cp <- path_cp[-1]
+      }
     }
   }
   return(sum(log(P)))
 }
 
 # probability of a particular stochastic map
-getMapProb <- function(simmap, Q, root_prior){
+getMapProb <- function(simmap, Q=NULL, root_prior, p_mats=NULL){
   map <- simmap$maps
   root_state <- as.numeric(names(map[[which.min(simmap$edge[,1])]][1]))
-  pathway_liks <- unlist(lapply(map, function(x) getPathProb(x, Q)))
+  if(!is.null(p_mats)){
+    pathway_liks <- unlist(mapply(function(x,y) getPathProb(path = x, Q=Q, p_mat=y), x = map, y = p_mats))
+  }else{
+    pathway_liks <- unlist(lapply(map, function(x) getPathProb(path = x, Q=Q, p_mat=NULL)))
+  }
   llik <- sum(c(pathway_liks, log(root_prior)[root_state]))
   return(llik)
 }
