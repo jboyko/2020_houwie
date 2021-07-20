@@ -266,12 +266,12 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
   time_slice <- houwie_obj$time_slice
   state_names <- colnames(houwie_obj$solution.disc)
   sample_tips <- houwie_obj$sample_tips
+  nSim <- houwie_obj$nSim
   # organize the data
   phy <- reorder.phylo(phy, "pruningwise")
   nTip <- length(phy$tip.label)
   Tmax <- max(branching.times(phy))
   nStates <- as.numeric(max(hOUwie.dat$data.cor[,2]))
-  nCol <- dim(data)[2] - ifelse(mserr == "none", 2, 3)
   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   # an internal data structure (internodes liks matrix) for the dev function
   edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
@@ -298,23 +298,28 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
     }else{
       possible_states <- 1:(nStates*rate.cat)
     }
-    for(state_j in 1:(nStates*rate.cat)){
-      if(!state_j %in% possible_states){
-        next
+    check_unreasonable_recon <- TRUE
+    while(check_unreasonable_recon){
+      for(state_j in 1:(nStates*rate.cat)){
+        if(!state_j %in% possible_states){
+          next
+        }
+        edge_liks_list_i <- edge_liks_list
+        fix_vector <- numeric(nStates * rate.cat)
+        fix_vector[state_j] <- 1
+        for(k in dec_edges_to_fix){
+          edge_liks_list_i[[k]][1,]
+          edge_liks_list_i[[k]][1,] <- fix_vector
+        }
+        for(k in anc_edges_to_fix){
+          last_row <- dim(edge_liks_list_i[[k]])[1]
+          edge_liks_list_i[[k]][last_row,] <- fix_vector
+        }
+        fixed_loglik <- -hOUwie.dev(p = log(p), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list_i, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=FALSE)
+        recon_matrix[i, state_j] <- fixed_loglik
       }
-      edge_liks_list_i <- edge_liks_list
-      fix_vector <- numeric(nStates * rate.cat)
-      fix_vector[state_j] <- 1
-      for(k in dec_edges_to_fix){
-        edge_liks_list_i[[k]][1,]
-        edge_liks_list_i[[k]][1,] <- fix_vector
-      }
-      for(k in anc_edges_to_fix){
-        last_row <- dim(edge_liks_list_i[[k]])[1]
-        edge_liks_list_i[[k]][last_row,] <- fix_vector
-      }
-      fixed_loglik <- -hOUwie.dev(p = log(p), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list_i, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=FALSE)
-      recon_matrix[i, state_j] <- fixed_loglik
+      recon_loglik <- max(recon_matrix[i, ]) + log(sum(exp(recon_matrix[i, ] - max(recon_matrix[i, ]))))
+      check_unreasonable_recon <- recon_loglik < houwie_obj$loglik * 1.05
     }
   }
   recon_matrix <- t(apply(recon_matrix, 1, function(x) x - max(x)))

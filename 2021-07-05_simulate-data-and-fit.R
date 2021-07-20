@@ -170,7 +170,10 @@ for(i in 1:40){
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 setwd("~/2020_hOUwie/")
+source("hOUwieNode.R")
+
 files_fits <- dir("sim_fits/", full.names = TRUE)
+data_fits <-  dir("data_fits/", full.names = TRUE)
 
 for(i in 1:length(files_fits)){
   print(i)
@@ -189,7 +192,7 @@ for(i in 1:length(files_fits)){
   save(out, file = files_fits[i])
 }
 
-
-
+undebug(hOUwieRecon)
+test <- hOUwieRecon(out[[j]])
 
 
