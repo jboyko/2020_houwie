@@ -20,7 +20,7 @@
 #'@param p a vector of params to calculate a fixed likelihood
 #'@param nSim the number of simmaps a single set of params is evaluated over
 #'@param quiet a logical indicating whether to output user messages
-hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, p=NULL, ip=NULL, opts=NULL, quiet=TRUE, sample_tips=TRUE){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=TRUE, nodes="internal", p=NULL, ip=NULL, opts=NULL, quiet=TRUE, sample_tips=TRUE){
   # if the data has negative values, shift it right - we will shift it back later
   if(mserr == "none"){
     if(any(data[,dim(data)[2]] < 0)){
@@ -219,6 +219,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     param.count = param.count,
     solution.disc = solution$solution.cor,
     solution.cont = solution$solution.ou,
+    recon = NULL,
     index.disc = index.disc,
     index.cont = index.cont,
     phy = phy,
@@ -245,6 +246,10 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     quiet=quiet
   )
   class(obj) <- "houwie"
+  if(recon){
+    houwie_recon <- hOUwieRecon(obj, nodes)
+    obj$recon <- houwie_recon
+  }
   return(obj)
 }
 
@@ -270,16 +275,20 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
   tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
   # an internal data structure (internodes liks matrix) for the dev function
   edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
-  if(nodes == "internal"){
-    nodes_to_fix <- min(phy$edge[,1]):max(phy$edge[,1])
+  if(is.character(nodes[1])){
+    if(nodes == "internal"){
+      nodes_to_fix <- min(phy$edge[,1]):max(phy$edge[,1])
+    }
+    if(nodes == "external"){
+      nodes_to_fix <- 1:nTip
+    }
+    if(nodes  == "all"){
+      nodes_to_fix <- 1:max(phy$edge[,1])
+    }
+  }else{
+    nodes_to_fix <- nodes
   }
-  if(nodes == "external"){
-    nodes_to_fix <- 1:nTip
-  }
-  if(nodes  == "all"){
-    nodes_to_fix <- 1:max(phy$edge[,1])
-  }
-  recon_matrix <- matrix(0, length(nodes_to_fix), nStates * rate.cat, dimnames = list(nodes_to_fix, state_names))
+  recon_matrix <- matrix(-Inf, length(nodes_to_fix), nStates * rate.cat, dimnames = list(nodes_to_fix, state_names))
   for(i in 1:length(nodes_to_fix)){
     node_i <- nodes_to_fix[i]
     anc_edges_to_fix <- which(phy$edge[,1] == node_i)
@@ -308,6 +317,8 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
       recon_matrix[i, state_j] <- fixed_loglik
     }
   }
+  recon_matrix <- t(apply(recon_matrix, 1, function(x) x - max(x)))
+  recon_matrix <- round(exp(recon_matrix)/rowSums(exp(recon_matrix)), 10)
   return(recon_matrix)
 }
 
@@ -384,6 +395,21 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   }
   cat("\r", llik_houwie, llik_discrete, llik_continuous)
   return(-llik_houwie)
+}
+
+getModelParams <- function(houwie_obj){
+  if(class(houwie_obj) != "houwie"){
+    stop("Object must be of class houwie.")
+  }
+  if(is.null(houwie_obj$recon)){
+    stop("hOUwie object must include a state reconstruction for model averaged parameters.")
+  }
+  houwie_obj$recon
+  parameter_matrix <- houwie_obj$solution.cont
+  parameter_matrix[is.na(parameter_matrix)] <- 1e-10
+  parameter_matrix <- rbind(parameter_matrix, wait.times = 1/rowSums(houwie_obj$solution.disc, na.rm = TRUE))
+  parameters_by_node <- t(apply(houwie_obj$recon, 1, function(x) colSums(x * t(parameter_matrix))))
+  return(parameters_by_node)
 }
 
 getEdgeLiks <- function(phy, data, n.traits, rate.cat, time_slice){

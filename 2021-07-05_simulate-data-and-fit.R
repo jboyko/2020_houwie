@@ -18,9 +18,9 @@ require(partitions)
 
 nCores <- 40
 nTip <- 100
-nSim <- 10
+nSim <- 50
 minAlpha = 0.5
-maxAlpha = 2
+maxAlpha = 4
 minSigma2 = 0.5
 maxSigma2 = 2
 minTheta = 10
@@ -89,12 +89,11 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
     rate.cat <- 2
   }
   # fit the houwie model
-  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, discrete_model = discrete_model, continuous_model = continuous_model)
-  fit$recon <- hOUwieRecon(fit, nodes = "all")
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, discrete_model = discrete_model, continuous_model = continuous_model, recon = TRUE, nodes = "all")
   return(fit)
 }
 
-iter <- "tmp"
+iter <- "2"
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # CD models generate
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -166,9 +165,29 @@ for(i in 1:40){
   full_data <- NULL
 }
 
+#### #### #### #### #### #### #### #### #### #### #### #### 
+# ASR was still in log lik mode - this is now corrected, but have fix here
+#### #### #### #### #### #### #### #### #### #### #### #### 
 
+setwd("~/2020_hOUwie/")
+files_fits <- dir("sim_fits/", full.names = TRUE)
 
-
+for(i in 1:length(files_fits)){
+  print(i)
+  load(files_fits[i])
+  for(j in 1:length(out)){
+    if(class(out[[j]]) != "houwie"){
+      next
+    }
+    if(mean(rowSums(out[[j]]$recon)) == 1){
+      next
+    }
+    out[[j]]$recon[out[[j]]$recon == 0] <- -Inf
+    tmp <- t(apply(out[[j]]$recon, 1, function(x) x - max(x)))
+    out[[j]]$recon <- round(exp(tmp)/rowSums(exp(tmp)), 10)
+  }
+  save(out, file = files_fits[i])
+}
 
 
 
