@@ -308,7 +308,6 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
         fix_vector <- numeric(nStates * rate.cat)
         fix_vector[state_j] <- 1
         for(k in dec_edges_to_fix){
-          edge_liks_list_i[[k]][1,]
           edge_liks_list_i[[k]][1,] <- fix_vector
         }
         for(k in anc_edges_to_fix){
@@ -364,7 +363,9 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     }
   }
   conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, root.p)
-  internode_maps <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, nSim)
+  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, nSim)
+  internode_maps <- lapply(internode_maps_and_discrete_probs, function(x) x$map)
+  discrete_probs <- lapply(internode_maps_and_discrete_probs, function(x) x$llik)
   simmaps <- getMapFromSubstHistory(internode_maps, phy)
   if(class(root.p)[1] == "character"){
     if(root.p == "yang"){
@@ -380,9 +381,9 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   }else{
     root_liks <- root.p/sum(root.p)
   }
-  times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
-  p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
-  llik_discrete <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, root_liks, p_mats_per_edge)))
+  # times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
+  # p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
+  llik_discrete <- unlist(discrete_probs)
   character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique) == 1))
   if(character_dependence_check){
     llik_continuous <- OUwie.basic(simmaps[[1]], data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr)
@@ -531,7 +532,7 @@ getInternodeMap <- function(phy, Q, edge_liks_list, root_state, nSim){
   rev.pruning.order <- rev(reorder.phylo(phy, "pruningwise", index.only = TRUE))
   sub_histories <- vector("list", nSim)
   root_edge <- which(phy$edge[,1] == nTip + 1)
-  Map_i <- mapply(function(x, y) rep(x, y), x=reduced_edge_length/2, y=number_of_edges_per_edge*2)
+  Map_i <- mapply(function(x, y) rep(x, y), x=reduced_edge_length/2, y=number_of_edges_per_edge*2, SIMPLIFY = FALSE)
   check_vector <- vector("character", nSim)
   sim_counter <- 0
   while(sim_counter < nSim){
@@ -565,10 +566,24 @@ getInternodeMap <- function(phy, Q, edge_liks_list, root_state, nSim){
     if(!current_mapping_id %in% check_vector){
       sim_counter <- sim_counter + 1
       check_vector[sim_counter] <- current_mapping_id
-      sub_histories[[sim_counter]] <- Map_i
+      path_probs <- numeric(length(state_samples))
+      for(i in 1:length(state_samples)){
+        path_probs[i] <- getPathStateProb(state_samples[[i]], Pij[,,i])
+      }
+      sub_histories[[sim_counter]] <- list(llik = sum(path_probs), map = Map_i)
     }
   }
   return(sub_histories)
+}
+
+# get path probability internal
+getPathStateProb <- function(path_states, p_mat){
+  P <- vector("numeric", length(path_states)-1)
+  for(i in 1:(length(path_states)-1)){
+    P[i] <- p_mat[path_states[1],path_states[2]]
+    path_states <- path_states[-1]
+  }
+  return(sum(log(P)))
 }
 
 # probability of a particular stochastic mapping path
@@ -617,6 +632,7 @@ getMapProb <- function(simmap, Q=NULL, root_prior, p_mats=NULL){
     pathway_liks <- unlist(lapply(map, function(x) getPathProb(path = x, Q=Q, p_mat=NULL)))
   }
   llik <- sum(c(pathway_liks, log(root_prior)[root_state]))
+  # llik <- sum(pathway_liks)
   return(llik)
 }
 

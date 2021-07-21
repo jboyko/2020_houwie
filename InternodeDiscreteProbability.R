@@ -3,40 +3,40 @@ require(expm)
 # functions
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-# getBranchProb <- function(Q, bl, x0, xt, n){
-#   if(n == 0){
-#     path_i <- c(x0, xt)
-#     llik_vec <- getPathProb(path_i, bl, Q)
-#     names(llik_vec) <- paste0(path_i, collapse="_")
-#     return(llik_vec)
-#   }
-#   t <- bl/(n+1)
-#   p_mat <- expm(Q * t)
-#   combo.list <- list()
-#   for(i in 1:n){
-#     combo.list[[i]] <- c(1,2)
-#   }
-#   combos <- expand.grid(combo.list)
-#   llik_vec <- numeric(dim(combos)[1])
-#   for(i in 1:dim(combos)[1]){
-#     path_i <- c(x0, as.numeric(combos[i,]), xt)
-#     llik_vec[i] <- getPathProb(path_i, bl, Q)
-#     names(llik_vec)[i] <- paste0(path_i, collapse="_")
-#   }
-#   return(llik_vec)
-# }
+getBranchProb <- function(Q, bl, x0, xt, n){
+  if(n == 0){
+    path_i <- c(x0, xt)
+    llik_vec <- getPathProb(path_i, bl, Q)
+    names(llik_vec) <- paste0(path_i, collapse="_")
+    return(llik_vec)
+  }
+  t <- bl/(n+1)
+  p_mat <- expm(Q * t)
+  combo.list <- list()
+  for(i in 1:n){
+    combo.list[[i]] <- c(1,2)
+  }
+  combos <- expand.grid(combo.list)
+  llik_vec <- numeric(dim(combos)[1])
+  for(i in 1:dim(combos)[1]){
+    path_i <- c(x0, as.numeric(combos[i,]), xt)
+    llik_vec[i] <- getPathProb(path_i, bl, Q)
+    names(llik_vec)[i] <- paste0(path_i, collapse="_")
+  }
+  return(llik_vec)
+}
 # 
-# getPathProb <- function(path, bl, Q){
-#   section_length <- bl/(length(path)-1)
-#   p_mat <- expm(Q * section_length)
-#   path_cp <- path
-#   P <- vector("numeric", length(path)-1)
-#   for(i in 1:(length(path)-1)){
-#     P[i] <- p_mat[path_cp[1],path_cp[2]]
-#     path_cp <- path_cp[-1]
-#   }
-#   return(sum(log(P)))
-# }
+getPathProb <- function(path, bl, Q){
+  section_length <- bl/(length(path)-1)
+  p_mat <- expm(Q * section_length)
+  path_cp <- path
+  P <- vector("numeric", length(path)-1)
+  for(i in 1:(length(path)-1)){
+    P[i] <- p_mat[path_cp[1],path_cp[2]]
+    path_cp <- path_cp[-1]
+  }
+  return(sum(log(P)))
+}
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # evaluation of branhces
@@ -48,15 +48,15 @@ xt = 1
 n = 1
 bl = 1
 
-# c(getPathProb(c(1,1), bl, Q))
-# 
-# c(getPathProb(c(1,1,1), bl, Q),
-#   getPathProb(c(1,2,1), bl, Q))
-# 
-# c(getPathProb(c(1,1,1,1), bl, Q),
-#   getPathProb(c(1,2,1,1), bl, Q),
-#   getPathProb(c(1,1,2,1), bl, Q),
-#   getPathProb(c(1,2,2,1), bl, Q))
+c(getPathProb(c(1,1), bl, Q))
+
+c(getPathProb(c(1,1,1), bl, Q),
+  getPathProb(c(1,2,1), bl, Q))
+
+c(getPathProb(c(1,1,1,1), bl, Q),
+  getPathProb(c(1,2,1,1), bl, Q),
+  getPathProb(c(1,1,2,1), bl, Q),
+  getPathProb(c(1,2,2,1), bl, Q))
 
 getBranchProb(Q, bl, x0 = 1, xt = 2, n=2)
 
@@ -99,9 +99,9 @@ require(expm)
 require(MASS)
 source("hOUwieNode.R")
 
-nTip <- 50
+nTip <- 5
 rate <- 1
-n <- 10
+n <- 200
 phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
 phy <- drop.extinct(phy)
 phy$edge.length <- phy$edge.length/max(branching.times(phy))
@@ -114,14 +114,12 @@ data <- data.frame(sp = names(data), d = data)
 phy <- reorder.phylo(phy, "pruningwise")
 edge_liks_list <- getEdgeLiks(phy, data, 2, 1, 0.25)
 
-phy$edge
-
 # edge_liks_list[[1]][2,] <- c(0,1)
 # edge_liks_list[[7]][4,] <- c(0,1) 
 # edge_liks_list[[8]][4,] <- c(0,1)
 
 conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, "yang")
-internode_maps <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, 100)
+internode_maps <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, 1)
 simmaps <- getMapFromSubstHistory(internode_maps, phy)
 times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
 p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
@@ -129,11 +127,7 @@ llik_discrete_A <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, c(0.5,0.5
 # llik_discrete_B <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, c(0.5,0.5), NULL)))
 ouwie_res <- lapply(simmaps, function(x) OUwie.basic(x,cbind(data, rnorm(nTip, 10)), simmap.tree=TRUE, alpha = c(1,1), sigma.sq = c(1,1), theta = c(10,10)))
 
-# tmp <- unlist(lapply(simmaps, function(x) getMapProb(x, Q, c(0.5, 0.5))))
-houwie_llik <- unlist(ouwie_res) + tmp
-max(houwie_llik) + log(sum(exp(houwie_llik - max(houwie_llik))))
-
-plot(simmaps[[1]])
+log(sum(exp(llik_discrete_A)))
 corHMM(phy, data, 1, model = "ER", p = rate)
 
 
