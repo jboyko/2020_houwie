@@ -362,7 +362,7 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
       }
     }
   }
-  conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, root.p)
+  conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list)
   if(class(root.p)[1] == "character"){
     if(root.p == "yang"){
       root_liks <- c(MASS:::Null(Q))
@@ -383,7 +383,6 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   simmaps <- getMapFromSubstHistory(internode_maps, phy)
   # times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
   # p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
-  root_states 
   llik_discrete <- unlist(discrete_probs)
   character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique) == 1))
   if(character_dependence_check){
@@ -438,7 +437,7 @@ getEdgeLiks <- function(phy, data, n.traits, rate.cat, time_slice){
   return(edge_liks_list)
 }
 
-getConditionalInternodeLik <- function(phy, Q, edge_liks_list, root.p){
+getConditionalInternodeLik <- function(phy, Q, edge_liks_list){
   nTip <- length(phy$tip.label)
   external_index <- which(phy$edge[,2] <= nTip)
   # external edges
@@ -485,25 +484,25 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list, root.p){
     liks_j <- edge_liks_list[[j]]
     v <- v * edge_liks_list[[j]][dim(liks_j)[1],]
   }
-  v <- v/sum(v)
-  # root prior
-  if(class(root.p)[1] == "character"){
-    if(root.p == "yang"){
-      root_liks <- c(MASS:::Null(Q))
-      root_liks <- root_liks/sum(root_liks)
-    }
-    if(root.p == "flat"){
-      root_liks <- rep(1/dim(Q)[1], dim(Q)[1])
-    }
-    if(root.p == "maddfitz"){
-      root_liks <- v
-    }
-  }else{
-    root_liks <- root.p/sum(root.p)
-  }
-  # root state probabilities
-  root_state <-  v * root_liks
-  root_state <- root_state/sum(root_state)
+  root_state <- v/sum(v)
+  # # root prior
+  # if(class(root.p)[1] == "character"){
+  #   if(root.p == "yang"){
+  #     root_liks <- c(MASS:::Null(Q))
+  #     root_liks <- root_liks/sum(root_liks)
+  #   }
+  #   if(root.p == "flat"){
+  #     root_liks <- rep(1/dim(Q)[1], dim(Q)[1])
+  #   }
+  #   if(root.p == "maddfitz"){
+  #     root_liks <- v
+  #   }
+  # }else{
+  #   root_liks <- root.p/sum(root.p)
+  # }
+  # # root state probabilities
+  # root_state <-  v * root_liks
+  # root_state <- root_state/sum(root_state)
   return(list(root_state = root_state,
               edge_liks_list = edge_liks_list))
 }

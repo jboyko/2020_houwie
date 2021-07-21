@@ -18,7 +18,7 @@ require(partitions)
 
 nCores <- 40
 nTip <- 100
-nSim <- 50
+nSim <- 100
 minAlpha = 0.5
 maxAlpha = 4
 minSigma2 = 0.5

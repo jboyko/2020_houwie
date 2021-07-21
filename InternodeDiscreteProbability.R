@@ -118,7 +118,7 @@ edge_liks_list <- getEdgeLiks(phy, data, 2, 1, 0.25)
 # edge_liks_list[[7]][4,] <- c(0,1) 
 # edge_liks_list[[8]][4,] <- c(0,1)
 
-conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, "yang")
+conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list)
 internode_maps <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, 1)
 simmaps <- getMapFromSubstHistory(internode_maps, phy)
 times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
