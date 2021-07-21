@@ -47,13 +47,13 @@ for(h in 1:dim(possible_internal_combinations)[1]){
   }
   root_state <- numeric(2)
   root_state[combo_h[length(combo_h)]] <- 1
-  tmp <- getInternodeMap(phy, Q, edge_liks_list_i, root_state, 1)
+  tmp <- getInternodeMap(phy, Q, edge_liks_list_i, root_state, c(0.5, 0.5), 1)
   disc_liks[[h]] <- tmp[[1]]$llik
   internode_maps[[h]] <- tmp[[1]]$map
   houwie_simmaps[[h]] <- getMapFromSubstHistory(list(tmp[[1]]$map), phy)[[1]]
 }
 
-log(sum(exp(unlist(disc_liks)))) + log(0.5)
+log(sum(exp(unlist(disc_liks))))
 corHMM(phy, data[,c(1,2)], 1, model = "ER", p = rate)$loglik
 
 

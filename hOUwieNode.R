@@ -363,10 +363,6 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     }
   }
   conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list, root.p)
-  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, nSim)
-  internode_maps <- lapply(internode_maps_and_discrete_probs, function(x) x$map)
-  discrete_probs <- lapply(internode_maps_and_discrete_probs, function(x) x$llik)
-  simmaps <- getMapFromSubstHistory(internode_maps, phy)
   if(class(root.p)[1] == "character"){
     if(root.p == "yang"){
       root_liks <- c(MASS:::Null(Q))
@@ -381,8 +377,13 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   }else{
     root_liks <- root.p/sum(root.p)
   }
+  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, root_liks, nSim)
+  internode_maps <- lapply(internode_maps_and_discrete_probs, function(x) x$map)
+  discrete_probs <- lapply(internode_maps_and_discrete_probs, function(x) x$llik)
+  simmaps <- getMapFromSubstHistory(internode_maps, phy)
   # times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
   # p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
+  root_states 
   llik_discrete <- unlist(discrete_probs)
   character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique) == 1))
   if(character_dependence_check){
@@ -507,7 +508,7 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list, root.p){
               edge_liks_list = edge_liks_list))
 }
 
-getInternodeMap <- function(phy, Q, edge_liks_list, root_state, nSim){
+getInternodeMap <- function(phy, Q, edge_liks_list, root_state, root_liks, nSim){
   # set-up
   nStates <- dim(Q)[1]
   nTip <- length(phy$tip.label)
@@ -570,7 +571,8 @@ getInternodeMap <- function(phy, Q, edge_liks_list, root_state, nSim){
       for(i in 1:length(state_samples)){
         path_probs[i] <- getPathStateProb(state_samples[[i]], Pij[,,i])
       }
-      sub_histories[[sim_counter]] <- list(llik = sum(path_probs), map = Map_i)
+      llik <- sum(path_probs) + log(root_liks[root_sample])
+      sub_histories[[sim_counter]] <- list(llik = llik, map = Map_i)
     }
   }
   return(sub_histories)
