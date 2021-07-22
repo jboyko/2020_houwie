@@ -4,12 +4,14 @@
 #'@author James Boyko
 #'@param phy a phylogeny of class phylo
 #'@param data data.frame where [,1] = species name,  [,2:j] are discrete traits, [,j:m] are the continuous trait (and possible mserr). if mserr = "none" j=m-1, if mserr = "known j=m-2. m is the number of total columns in the dataset.
-#'@param rate.cat the number rate categories in the corHMM model
-#'@param discrete_model a single corHMM model or a vector of corHMM models (ARD, ER, or SYM) 
-#'@param continuous_model designates the default OU model (BM1, BMS, OU1, OUM, OUMV, OUMA, OUMVA)
-#'@param root.p designates the root prior (yang, maddfitz, flat, numeric vector)
-#'@param get.root.theta logical indicating whether the starting state, theta_0, should be estimated
-#'#'@param root.station logical indicating whether to assume a random starting point (TRUE) or a fixed starting point (FALSE) 
+#'@param rate.cat the number rate categories for the discrete model (rate.cat > 1 means hidden markov model)
+#'@param discrete_model designates a default discrete models (ARD, ER, or SYM) or a custom index matrix
+#'@param continuous_model designates a default continuous model (BM1, BMS, OU1, OUM, OUMV, OUMA, OUMVA) or a custom index matrix
+#'@param root.p designates the root prior (yang, maddfitz, flat, or numeric vector)
+#'@param collapse a boolean indicating whether multiple traits should be collapsed to exlude non-observed trait combinations (e.g. if 00, 11, and 10 are all present, if collapse = FALSE the possible combination of 01 would be part of the model)
+#'@param dual a boolean indicating whether transitions which require two changes are allowed (e.g. by default 00 to 11 is not allowed, but can be if dual = TRUE)
+#'@param get.root.theta a boolean indicating whether the starting state, theta_0, should be estimated
+#'#'@param root.station a booleean indicating whether to assume a random starting point (TRUE) or a fixed starting point (FALSE) 
 #'@param mserr designates whether mserr is included (known) or not (none)
 #'@param lb_discrete_model lower bound for trans rate. default is 1e-5
 #'@param ub_discrete_model upper bound for trans rate. default is 21
@@ -19,7 +21,10 @@
 #'@param ip a vector of initial params 
 #'@param p a vector of params to calculate a fixed likelihood
 #'@param nSim the number of simmaps a single set of params is evaluated over
-#'@param quiet a logical indicating whether to output user messages
+#'@param quiet a boolean indicating whether to output user messages
+#'@param recon a boolean indicating whether marginal node state reconstruction should be preformed
+#'@param nodes which nodes should be reconstructed ("all", "internal", "external", or a numeric vector)
+#'@param sample_tips a boolean which indicates whether the continuous values should inform the discrete tip values when initializing the stochastic mapping (default is TRUE)
 hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=TRUE, nodes="internal", p=NULL, ip=NULL, opts=NULL, quiet=TRUE, sample_tips=TRUE){
   # if the data has negative values, shift it right - we will shift it back later
   if(mserr == "none"){
@@ -377,19 +382,31 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   }else{
     root_liks <- root.p/sum(root.p)
   }
-  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, root_liks, nSim)
-  internode_maps <- lapply(internode_maps_and_discrete_probs, function(x) x$map)
-  discrete_probs <- lapply(internode_maps_and_discrete_probs, function(x) x$llik)
-  simmaps <- getMapFromSubstHistory(internode_maps, phy)
-  # times_per_edge <- unlist(lapply(internode_maps[[1]], function(x) x[1]))
-  # p_mats_per_edge <- lapply(times_per_edge, function(x) expm(Q * x))
+  # initial sample
+  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, root_liks, nSim, check_vector = NULL)
+  internode_maps <- internode_maps_and_discrete_probs$maps
+  internode_samples <- internode_maps_and_discrete_probs$state_samples
+  # if additional samples are needed (didn't reach nSim), they are taken ~randomly
+  if(length(internode_samples) < nSim){
+    additional_sims <- nSim - length(internode_samples)
+    check_vector <- unlist(lapply(internode_samples, function(x) paste0(unlist(x), collapse="")))
+    random_internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, edge_liks_list, conditional_probs$root_state, root_liks, additional_sims, check_vector = check_vector)
+    internode_maps <- c(internode_maps, random_internode_maps_and_discrete_probs$maps)
+    internode_samples <- c(internode_samples, random_internode_maps_and_discrete_probs$state_samples)
+  }
+  # calculte the discrete probabilities based on the given Q matrix (Pij already calculated)
+  discrete_probs <- lapply(internode_samples, function(x) getStateSampleProb(state_sample = x, Pij = internode_maps_and_discrete_probs$Pij, root_liks = root_liks, root_edges = internode_maps_and_discrete_probs$root_edges))
   llik_discrete <- unlist(discrete_probs)
+  # generate maps
+  simmaps <- getMapFromSubstHistory(internode_maps, phy)
+  # if there is no character dependence the map has no influence on continuous likleihood
   character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique) == 1))
   if(character_dependence_check){
     llik_continuous <- OUwie.basic(simmaps[[1]], data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr)
   }else{
     llik_continuous <- unlist(lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr)))
   }
+  # combine probabilities being careful to avoid underflow
   llik_houwie <- llik_discrete + llik_continuous
   llik_houwie <- max(llik_houwie) + log(sum(exp(llik_houwie - max(llik_houwie))))
   llik_discrete <- max(llik_discrete) + log(sum(exp(llik_discrete - max(llik_discrete))))
@@ -507,7 +524,7 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list){
               edge_liks_list = edge_liks_list))
 }
 
-getInternodeMap <- function(phy, Q, edge_liks_list, root_state, root_liks, nSim){
+getInternodeMap <- function(phy, Q, edge_liks_list, root_state, root_liks, nSim, check_vector=NULL){
   # set-up
   nStates <- dim(Q)[1]
   nTip <- length(phy$tip.label)
@@ -531,50 +548,64 @@ getInternodeMap <- function(phy, Q, edge_liks_list, root_state, root_liks, nSim)
   # simulate nSim substitution histories
   rev.pruning.order <- rev(reorder.phylo(phy, "pruningwise", index.only = TRUE))
   sub_histories <- vector("list", nSim)
-  root_edge <- which(phy$edge[,1] == nTip + 1)
+  root_edges <- which(phy$edge[,1] == nTip + 1)
+  edge_index <- phy$edge
   Map_i <- mapply(function(x, y) rep(x, y), x=reduced_edge_length/2, y=number_of_edges_per_edge*2, SIMPLIFY = FALSE)
-  check_vector <- vector("character", nSim)
-  sim_counter <- 0
-  while(sim_counter < nSim){
-    # each map will have edges split into equal time portions
-    state_samples <- lapply(number_of_nodes_per_edge, function(x) numeric(x))
-    root_sample <- sample(1:nStates, 1, prob = root_state)
-    for(i in root_edge){
-      state_samples[[i]][1] <- root_sample
+  if(!is.null(check_vector)){
+    state_samples <- vector("list", nSim)
+    sim_counter <- 0
+    while(sim_counter < nSim){
+      state_sample <- getInternodeStateSample(Pj, root_state, root_edges, rev.pruning.order, edge_index, nStates, number_of_nodes_per_edge)
+      current_mapping_id <- paste0(unlist(state_sample), collapse="")
+      if(!current_mapping_id %in% check_vector){
+        sim_counter <- sim_counter + 1
+        state_samples[[sim_counter]] <- state_sample
+        check_vector <- c(check_vector, current_mapping_id)
+      }
     }
-    # sample the nodes along a branch the last dec node goes into the next map
-    for(edge_i in rev.pruning.order){
-      from <- state_samples[[edge_i]][1]
-      count <- 2
-      n_inter_nodes <- length(state_samples[[edge_i]])
-      for(inter_edge_i in (n_inter_nodes-1):1){
-        to <- sample(1:nStates, 1, prob = Pj[[edge_i]][from,,inter_edge_i])
-        from <- state_samples[[edge_i]][count] <- to
-        count <- count + 1
-      }
-      ancestor_to_add <- phy$edge[edge_i,2]
-      anc_edge <- which(ancestor_to_add == phy$edge[,1])
-      for(i in anc_edge){
-        state_samples[[i]][1] <- to
-      }
-      # the first and last sample are represented once
-      state_transitions <- rep(state_samples[[edge_i]][-c(1, length(state_samples[[edge_i]]))], each = 2)
-      state_samples_i <- c(state_samples[[edge_i]][1], state_transitions, state_samples[[edge_i]][length(state_samples[[edge_i]])])
-      names(Map_i[[edge_i]]) <- state_samples_i
+  }else{
+    state_samples <- lapply(1:nSim, function(x) getInternodeStateSample(Pj, root_state, root_edges, rev.pruning.order, edge_index, nStates, number_of_nodes_per_edge))
+    mapping_ids <- unlist(lapply(state_samples, function(x) paste0(unlist(x), collapse="")))
+    state_samples <- state_samples[!duplicated(mapping_ids, nmax = 1)]
+  }
+  maps <- lapply(state_samples, function(x) getMapFromStateSample(Map_i, x))
+  return(list(state_samples=state_samples, maps = maps, root_edges=root_edges,
+              Pij = Pij, Pj = Pj))
+}
+
+getMapFromStateSample <- function(map, state_sample){
+  for(edge_i in 1:length(map)){
+    state_transitions <- rep(state_sample[[edge_i]][-c(1, length(state_sample[[edge_i]]))], each = 2)
+    state_samples_i <- c(state_sample[[edge_i]][1],state_transitions,state_sample[[edge_i]][length(state_sample[[edge_i]])])
+    names(map[[edge_i]]) <- state_samples_i
+  }
+  return(map)
+}
+
+getInternodeStateSample <- function(Pj, root_state, root_edge, rev.pruning.order, edge_index, nStates, number_of_nodes_per_edge){
+  # each map will have edges split into equal time portions
+  state_samples <- lapply(number_of_nodes_per_edge, function(x) numeric(x))
+  root_sample <- sample(1:nStates, 1, prob = root_state)
+  for(i in root_edge){
+    state_samples[[i]][1] <- root_sample
+  }
+  # sample the nodes along a branch the last dec node goes into the next map
+  for(edge_i in rev.pruning.order){
+    from <- state_samples[[edge_i]][1]
+    count <- 2
+    n_inter_nodes <- length(state_samples[[edge_i]])
+    for(inter_edge_i in (n_inter_nodes-1):1){
+      to <- sample(1:nStates, 1, prob = Pj[[edge_i]][from,,inter_edge_i])
+      from <- state_samples[[edge_i]][count] <- to
+      count <- count + 1
     }
-    current_mapping_id <- paste(unlist(state_samples), collapse="_")
-    if(!current_mapping_id %in% check_vector){
-      sim_counter <- sim_counter + 1
-      check_vector[sim_counter] <- current_mapping_id
-      path_probs <- numeric(length(state_samples))
-      for(i in 1:length(state_samples)){
-        path_probs[i] <- getPathStateProb(state_samples[[i]], Pij[,,i])
-      }
-      llik <- sum(path_probs) + log(root_liks[root_sample])
-      sub_histories[[sim_counter]] <- list(llik = llik, map = Map_i)
+    ancestor_to_add <- edge_index[edge_i,2]
+    anc_edge <- which(ancestor_to_add == edge_index[,1])
+    for(i in anc_edge){
+      state_samples[[i]][1] <- to
     }
   }
-  return(sub_histories)
+  return(state_samples)
 }
 
 # get path probability internal
@@ -587,41 +618,51 @@ getPathStateProb <- function(path_states, p_mat){
   return(sum(log(P)))
 }
 
-# probability of a particular stochastic mapping path
-getPathProb <- function(path, Q=NULL, p_mat=NULL){
-  if(!is.null(p_mat)){
-    path_states <- as.numeric(names(path))
-    P <- vector("numeric", length(path)-1)
-    for(i in 1:(length(path)-1)){
-      P[i] <- p_mat[path_states[1],path_states[2]]
-      path_states <- path_states[-1]
-    }
-  }else{
-    all.equal <- var(path) == 0
-    if(all.equal){
-      section_length <- path[1]
-      p_mat <- expm(Q * section_length)
-      path_states <- as.numeric(names(path))
-      P <- vector("numeric", length(path)-1)
-      for(i in 1:(length(path)-1)){
-        P[i] <- p_mat[path_states[1],path_states[2]]
-        path_states <- path_states[-1]
-      }
-    }else{
-      nTrans <- length(path)
-      P <- vector("numeric", length(path)-1)
-      path_cp <- path
-      for(i in sequence(nTrans-1)){
-        state_i <- as.numeric(names(path_cp)[1])
-        state_j <- as.numeric(names(path_cp)[2])
-        time_i <- as.numeric(path_cp[1])
-        P[i] <- expm(Q * time_i)[state_i, state_j]
-        path_cp <- path_cp[-1]
-      }
-    }
+getStateSampleProb <- function(state_sample, Pij, root_liks, root_edges){
+  path_probs <- numeric(length(state_sample))
+  root_sample <- state_sample[[root_edges[1]]][1] # the root sample
+  for(i in 1:length(state_sample)){
+    path_probs[i] <- getPathStateProb(state_sample[[i]], Pij[,,i])
   }
-  return(sum(log(P)))
+  llik <- sum(path_probs) + log(root_liks[root_sample])
+  return(llik)
 }
+
+# # probability of a particular stochastic mapping path
+# getPathProb <- function(path, Q=NULL, p_mat=NULL){
+#   if(!is.null(p_mat)){
+#     path_states <- as.numeric(names(path))
+#     P <- vector("numeric", length(path)-1)
+#     for(i in 1:(length(path)-1)){
+#       P[i] <- p_mat[path_states[1],path_states[2]]
+#       path_states <- path_states[-1]
+#     }
+#   }else{
+#     all.equal <- var(path) == 0
+#     if(all.equal){
+#       section_length <- path[1]
+#       p_mat <- expm(Q * section_length)
+#       path_states <- as.numeric(names(path))
+#       P <- vector("numeric", length(path)-1)
+#       for(i in 1:(length(path)-1)){
+#         P[i] <- p_mat[path_states[1],path_states[2]]
+#         path_states <- path_states[-1]
+#       }
+#     }else{
+#       nTrans <- length(path)
+#       P <- vector("numeric", length(path)-1)
+#       path_cp <- path
+#       for(i in sequence(nTrans-1)){
+#         state_i <- as.numeric(names(path_cp)[1])
+#         state_j <- as.numeric(names(path_cp)[2])
+#         time_i <- as.numeric(path_cp[1])
+#         P[i] <- expm(Q * time_i)[state_i, state_j]
+#         path_cp <- path_cp[-1]
+#       }
+#     }
+#   }
+#   return(sum(log(P)))
+# }
 
 # probability of a particular stochastic map
 getMapProb <- function(simmap, Q=NULL, root_prior, p_mats=NULL){
@@ -1063,7 +1104,7 @@ simCharacterHistory <- function(phy, Q, root.freqs, Q2 = NA, NoI = NA){
 hOUwie.sim <- function(phy, Q, root.freqs, alpha, sig2, theta0, theta, nMap=1){
   # simulate an Mk dataset
   dat.cor <- simCharacterHistory(phy, Q, root.freqs)$TipStates
-  while(!all(levels(dat.cor) %in% dat.cor)){
+  while(!all(1:dim(Q)[1] %in% dat.cor)){
     dat.cor <- simCharacterHistory(phy, Q, root.freqs)$TipStates
   }
   dat.cor <- data.frame(sp=names(dat.cor), d=dat.cor)

@@ -18,7 +18,7 @@ require(partitions)
 
 nCores <- 40
 nTip <- 100
-nSim <- 100
+nSim <- 25
 minAlpha = 0.5
 maxAlpha = 4
 minSigma2 = 0.5
@@ -112,7 +112,7 @@ for(i in 1:20){
   save(full_data, file = file_name_data)
   # mclapply over all model structures
   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-  # tmp <- singleFit(full_data, all_model_structures[[i]], discrete_model_cd, discrete_model_cid, 10)
+  # tmp <- singleFit(full_data, all_model_structures[[1]], discrete_model_cd, discrete_model_cid, 10)
   # p = c(0.483848937,  0.007448614,  0.693147181,  0.284018414, 15.829464035)
   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(out, file = file_name_res)
