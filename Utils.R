@@ -436,7 +436,25 @@ getParTable <- function(index.ou, big.obj){
   return(table)
 }
 
-organizeSimulators <- function(simulators){
+# from a simmap create an ancestral state reconstruciton at nodes
+getReconTableFromSimmap <- function(simmap){
+  nNodes <- max(simmap$edge)
+  nTips <- length(simmap$tip.label)
+  nStates <- dim(simmap$mapped.edge)[2]
+  recon_table <- matrix(0, nNodes, nStates, dimnames = list(1:nNodes, 1:nStates))
+  for(i in 1:nTips){
+    edge_i <- simmap$maps[[which(simmap$edge[,2] == i)]]
+    recon_table[i, as.numeric(names(edge_i[length(edge_i)]))] <- 1
+  }
+  for(i in (nTips+1):nNodes){
+    edge_i <- simmap$maps[[which(simmap$edge[,1] == i)[1]]]
+    recon_table[i, as.numeric(names(edge_i[1]))] <- 1
+  }
+  return(recon_table)
+}
+
+
+organizeGeneratingData <- function(simulators){
   k.cor <- max(simulators$index.cor, na.rm = TRUE) - 1 # number of corhmm params
   k.ou <- max(simulators$index.ou, na.rm = TRUE) - 1 # number of ouwie params
   p.mk <- simulators$pars[1:k.cor]
@@ -450,8 +468,12 @@ organizeSimulators <- function(simulators){
   simulators$index.ou[is.na(simulators$index.ou)] <- max(simulators$index.ou, na.rm = TRUE) + 1
   Rate.mat[] <- c(p.ou, 1e-10)[simulators$index.ou]
   rownames(Rate.mat) <- c("alpha", "sigma.sq", "theta")
-  return(list(pars.cor = Q,
-              pars.ou = Rate.mat))
+  recon <- getReconTableFromSimmap(simulators$simmap[[1]])
+  obj <- list(solution.disc = Q,
+              solution.cont = Rate.mat,
+              recon = recon)
+  class(obj) <- "houwie"
+  return(obj)
 }
 
 # weight a set of simulating parameters by their time spent in a particular state

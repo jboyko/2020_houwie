@@ -46,6 +46,7 @@ getAllJointProbs <- function(phy, data){
     }
     plotting_simmaps[[h]] <- simmaps
   }
+  
   joint_probability_table <- matrix(NA, length(internode_maps), 3, dimnames = list(1:length(houwie_simmaps), c("disc", "cont", "total")))
   for(i in 1:length(houwie_simmaps)){
     llik_discrete <- unlist(disc_liks)[i]

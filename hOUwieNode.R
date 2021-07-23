@@ -390,7 +390,7 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   if(length(internode_samples) < nSim){
     additional_sims <- nSim - length(internode_samples)
     check_vector <- unlist(lapply(internode_samples, function(x) paste0(unlist(x), collapse="")))
-    random_internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, edge_liks_list, conditional_probs$root_state, root_liks, additional_sims, check_vector = check_vector)
+    random_internode_maps_and_discrete_probs <- getInternodeMap(phy, Q * 100, edge_liks_list, conditional_probs$root_state, root_liks, additional_sims, check_vector = check_vector)
     internode_maps <- c(internode_maps, random_internode_maps_and_discrete_probs$maps)
     internode_samples <- c(internode_samples, random_internode_maps_and_discrete_probs$state_samples)
   }
@@ -427,9 +427,9 @@ getModelParams <- function(houwie_obj){
   if(is.null(houwie_obj$recon)){
     stop("hOUwie object must include a state reconstruction for model averaged parameters.")
   }
-  houwie_obj$recon
   parameter_matrix <- houwie_obj$solution.cont
   parameter_matrix[is.na(parameter_matrix)] <- 1e-10
+  diag(houwie_obj$solution.disc) <- NA
   parameter_matrix <- rbind(parameter_matrix, wait.times = 1/rowSums(houwie_obj$solution.disc, na.rm = TRUE))
   parameters_by_node <- t(apply(houwie_obj$recon, 1, function(x) colSums(x * t(parameter_matrix))))
   return(parameters_by_node)
@@ -827,21 +827,27 @@ getDiscreteModel <- function(data, model, rate.cat, dual, collapse){
 getAllContinuousModelStructures <- function(k, type = "OU"){
   # index.mat <- matrix(0, 3, k, dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
   # we want all unique combinations of a parameter. then we can add a single all same
-  # how many combinations are there of 1:k numbers? 
+  # how many combinations are there of 1:k numbers?
   potential_combos <- apply(partitions:::setparts(k), 2, function(x) paste(x, collapse="_"))
   # this technically isn't all the possible alpha combinations, but for sim purposes we're fine.
-  if(type == "OU"){
-    alpha.combos <- potential_combos
-  }
   if(type == "BM"){
     alpha.combos <- paste(rep(0, k), collapse="_")
+    theta.combos <- paste(rep(1, k), collapse="_")
+  }
+  if(type == "OU"){
+    alpha.combos <- potential_combos
+    theta.combos <- potential_combos
   }
   if(type == "BMOU"){
-    needed_numerals <- 1:((2^k)-2)
+    if(k > 2){
+      stop("BMOU must be manually created if k > 1 atm. Sorry.")
+    }
+    # needed_numerals <- 1:((2^k)-2)
+    needed_numerals <- 1
     alpha.combos <- apply(sapply(needed_numerals, function(x) as.numeric(intToBits(x)[1:k])), 2, function(x) paste(x, collapse="_")) # currently doesn't allow for BM mixed with OUA
+    theta.combos <- potential_combos
   }
   sigma.sq.combos <- potential_combos
-  theta.combos <- potential_combos
   all_combos <- expand.grid(list(alpha.combos, sigma.sq.combos, theta.combos))
   index_mats <- array(NA, c(3, k, dim(all_combos)[1]), dimnames = list(c("alpha", "sigma.sq", "theta"), c(1:k)))
   for(i in 1:dim(all_combos)[1]){

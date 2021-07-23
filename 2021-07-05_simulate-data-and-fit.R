@@ -16,7 +16,7 @@ require(partitions)
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nCores <- 40
+nCores <- 28
 nTip <- 100
 nSim <- 25
 minAlpha = 0.5
