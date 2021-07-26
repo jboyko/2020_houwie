@@ -16,7 +16,7 @@ require(partitions)
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nCores <- 28
+nCores <- 24
 nTip <- 100
 nSim <- 25
 minAlpha = 0.5
@@ -93,11 +93,14 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   return(fit)
 }
 
-iter <- "1"
+
+  
+
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # CD models generate
 #### #### #### #### #### #### #### #### #### #### #### #### 
-for(i in 1:20){
+for(iter in 1:5){
+for(i in 1:12){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
   # generate data
@@ -118,11 +121,12 @@ for(i in 1:20){
   save(out, file = file_name_res)
   full_data <- NULL
 }
-
+}
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # CID models generate
 #### #### #### #### #### #### #### #### #### #### #### #### 
-for(i in 21:40){
+for(iter in 1:5){
+for(i in 13:24){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
   # generate data
@@ -141,11 +145,12 @@ for(i in 21:40){
   save(out, file = file_name_res)
   full_data <- NULL
 }
-
+}
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # both models generate
 #### #### #### #### #### #### #### #### #### #### #### #### 
-for(i in 1:40){
+for(iter in 1:5){
+for(i in 1:24){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
   # generate data
@@ -164,35 +169,35 @@ for(i in 1:40){
   save(out, file = file_name_res)
   full_data <- NULL
 }
-
+}
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # ASR was still in log lik mode - this is now corrected, but have fix here
 #### #### #### #### #### #### #### #### #### #### #### #### 
-
-setwd("~/2020_hOUwie/")
-source("hOUwieNode.R")
-
-files_fits <- dir("sim_fits/", full.names = TRUE)
-data_fits <-  dir("data_fits/", full.names = TRUE)
-
-for(i in 1:length(files_fits)){
-  print(i)
-  load(files_fits[i])
-  for(j in 1:length(out)){
-    if(class(out[[j]]) != "houwie"){
-      next
-    }
-    if(mean(rowSums(out[[j]]$recon)) == 1){
-      next
-    }
-    out[[j]]$recon[out[[j]]$recon == 0] <- -Inf
-    tmp <- t(apply(out[[j]]$recon, 1, function(x) x - max(x)))
-    out[[j]]$recon <- round(exp(tmp)/rowSums(exp(tmp)), 10)
-  }
-  save(out, file = files_fits[i])
-}
-
-undebug(hOUwieRecon)
-test <- hOUwieRecon(out[[j]])
+# 
+# setwd("~/2020_hOUwie/")
+# source("hOUwieNode.R")
+# 
+# files_fits <- dir("sim_fits/", full.names = TRUE)
+# data_fits <-  dir("data_fits/", full.names = TRUE)
+# 
+# for(i in 1:length(files_fits)){
+#   print(i)
+#   load(files_fits[i])
+#   for(j in 1:length(out)){
+#     if(class(out[[j]]) != "houwie"){
+#       next
+#     }
+#     if(mean(rowSums(out[[j]]$recon)) == 1){
+#       next
+#     }
+#     out[[j]]$recon[out[[j]]$recon == 0] <- -Inf
+#     tmp <- t(apply(out[[j]]$recon, 1, function(x) x - max(x)))
+#     out[[j]]$recon <- round(exp(tmp)/rowSums(exp(tmp)), 10)
+#   }
+#   save(out, file = files_fits[i])
+# }
+# 
+# undebug(hOUwieRecon)
+# test <- hOUwieRecon(out[[j]])
 
 

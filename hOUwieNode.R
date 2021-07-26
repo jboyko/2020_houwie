@@ -368,6 +368,9 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     }
   }
   conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list)
+  if(any(is.na(conditional_probs$root_state))){
+    return(-1e6)
+  }
   if(class(root.p)[1] == "character"){
     if(root.p == "yang"){
       root_liks <- c(MASS:::Null(Q))
@@ -845,7 +848,8 @@ getAllContinuousModelStructures <- function(k, type = "OU"){
     # needed_numerals <- 1:((2^k)-2)
     needed_numerals <- 1
     alpha.combos <- apply(sapply(needed_numerals, function(x) as.numeric(intToBits(x)[1:k])), 2, function(x) paste(x, collapse="_")) # currently doesn't allow for BM mixed with OUA
-    theta.combos <- potential_combos
+    # theta.combos <- potential_combos
+    theta.combos <- paste(rep(1, k), collapse="_")
   }
   sigma.sq.combos <- potential_combos
   all_combos <- expand.grid(list(alpha.combos, sigma.sq.combos, theta.combos))
