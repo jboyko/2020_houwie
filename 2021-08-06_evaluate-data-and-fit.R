@@ -12,6 +12,9 @@ require(expm)
 require(POUMM)
 require(geiger)
 require(partitions)
+require(ggplot2)
+require(dplyr)
+require(reshape)
 
 files_fits <- dir("sim_fits/", full.names = TRUE)
 files_data <- dir("sim_data/", full.names = TRUE)
@@ -56,23 +59,54 @@ getComparisonList <- function(fit_path){
   return(comparison_list)
 }
 
-require(viridis)
-
-model_name <- CD_models[1]
-model_files <- files_fits[grep(model_name, files_fits)]
-
-pars_list <- lapply(model_files, getComparisonList)
-RMSE <- do.call(rbind, lapply(pars_list, function(x) colMeans(sqrt((x[[1]][1:100,] - x[[2]][1:100,])^2))))
-
-plot(x = pars_list$true_generating_parameters[,column_number], 
-     y = pars_list$model_averaged_parameters[,column_number], 
-     ylim = c(0, 10), xlim = c(0, 10), col = cols[1], ylab = "estimated", xlab = "generating", main = colnames(pars_list$true_generating_parameters)[column_number], pch = 16)
-for(i in 2:length(files_fits)){
-  pars_list <- getComparisonList(files_fits[i])
-  points(x = pars_list$true_generating_parameters[,column_number], 
-         y = pars_list$model_averaged_parameters[,column_number],
-         col = cols[i], pch = 16)
+pars_list <- list()
+tri_index <- lower.tri(matrix(NA, 100, 100))
+# models <- paste("M", 1:24, sep = "")
+models <- CIDx_models
+for(i in 1:length(models)){
+  model_name <- models[i]
+  print(model_name)
+  model_files <- files_fits[grep(paste(model_name, "-", sep=""), files_fits)]
+  pars_list[[i]] <- lapply(model_files, getComparisonList)
 }
+names(pars_list) <- models
+
+getPropCorrect <- function(focal_run){
+  diff_table_est <-  diff_table_true <- matrix(NA, 4950, 4)
+  count <- 1
+  true_par <- log(focal_run$true_generating_parameters)[1:100,]
+  est_par <- log(focal_run$model_averaged_parameters)[1:100,]
+  for(i in 1:99){
+    for(j in (i+1):100){
+      diff_table_true[count, ] <- true_par[i, ] - true_par[j, ]
+      diff_table_est[count, ] <- est_par[i, ] - est_par[j, ]
+      count <- count + 1
+    }
+  }
+  # true_sd <- apply(log(focal_run$true_generating_parameters)[1:100,], 2, sd)
+  # est_sd <- apply(log(focal_run$model_averaged_parameters)[1:100,], 2, sd)
+  focal_prop_correct <- 1 - colMeans(abs((diff_table_true >= 0) - (diff_table_est >= 0)))
+  # focal_prop_correct <- colMeans(sqrt((true_par - est_par)^2))
+  #focal_prop_correct <- colMeans(diff_table_true - diff_table_est)
+  names(focal_prop_correct) <- colnames(focal_run$true_generating_parameters)
+  return(focal_prop_correct)
+}
+
+out <- list()
+for(i in 1:length(models)){
+  print(i)
+  focal_model <- pars_list[[i]]
+  prop_correct_model <- do.call(rbind, lapply(focal_model, getPropCorrect))
+  out[[i]] <- data.frame(model = models[i], prop_correct_model)
+}
+
+sign_table <- melt(do.call(rbind, out), id="model")
+sign_table[,1] <- factor(sign_table[,1], levels = models)
+ggplot(sign_table, aes(x = variable, y = value)) + 
+  geom_boxplot() +
+  labs(x = "model", y = "PropCorrect")
+
+
 
 
 

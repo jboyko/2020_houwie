@@ -505,24 +505,6 @@ getConditionalInternodeLik <- function(phy, Q, edge_liks_list){
     v <- v * edge_liks_list[[j]][dim(liks_j)[1],]
   }
   root_state <- v/sum(v)
-  # # root prior
-  # if(class(root.p)[1] == "character"){
-  #   if(root.p == "yang"){
-  #     root_liks <- c(MASS:::Null(Q))
-  #     root_liks <- root_liks/sum(root_liks)
-  #   }
-  #   if(root.p == "flat"){
-  #     root_liks <- rep(1/dim(Q)[1], dim(Q)[1])
-  #   }
-  #   if(root.p == "maddfitz"){
-  #     root_liks <- v
-  #   }
-  # }else{
-  #   root_liks <- root.p/sum(root.p)
-  # }
-  # # root state probabilities
-  # root_state <-  v * root_liks
-  # root_state <- root_state/sum(root_state)
   return(list(root_state = root_state,
               edge_liks_list = edge_liks_list))
 }
@@ -630,42 +612,6 @@ getStateSampleProb <- function(state_sample, Pij, root_liks, root_edges){
   llik <- sum(path_probs) + log(root_liks[root_sample])
   return(llik)
 }
-
-# # probability of a particular stochastic mapping path
-# getPathProb <- function(path, Q=NULL, p_mat=NULL){
-#   if(!is.null(p_mat)){
-#     path_states <- as.numeric(names(path))
-#     P <- vector("numeric", length(path)-1)
-#     for(i in 1:(length(path)-1)){
-#       P[i] <- p_mat[path_states[1],path_states[2]]
-#       path_states <- path_states[-1]
-#     }
-#   }else{
-#     all.equal <- var(path) == 0
-#     if(all.equal){
-#       section_length <- path[1]
-#       p_mat <- expm(Q * section_length)
-#       path_states <- as.numeric(names(path))
-#       P <- vector("numeric", length(path)-1)
-#       for(i in 1:(length(path)-1)){
-#         P[i] <- p_mat[path_states[1],path_states[2]]
-#         path_states <- path_states[-1]
-#       }
-#     }else{
-#       nTrans <- length(path)
-#       P <- vector("numeric", length(path)-1)
-#       path_cp <- path
-#       for(i in sequence(nTrans-1)){
-#         state_i <- as.numeric(names(path_cp)[1])
-#         state_j <- as.numeric(names(path_cp)[2])
-#         time_i <- as.numeric(path_cp[1])
-#         P[i] <- expm(Q * time_i)[state_i, state_j]
-#         path_cp <- path_cp[-1]
-#       }
-#     }
-#   }
-#   return(sum(log(P)))
-# }
 
 # probability of a particular stochastic map
 getMapProb <- function(simmap, Q=NULL, root_prior, p_mats=NULL){
@@ -1052,7 +998,6 @@ organizeHOUwiePars <- function(out, index.disc, index.cont){
 }
 
 simCharacterHistory <- function(phy, Q, root.freqs, Q2 = NA, NoI = NA){
-  
   #Randomly choose starting state at root using the root.values as the probability:
   root.value <- sample.int(dim(Q)[2], 1, FALSE, prob=root.freqs/sum(root.freqs))
   #Reorder the phy:
@@ -1154,6 +1099,96 @@ getModelTable <- function(model.list, type="AIC"){
   out <- data.frame(np = ParCount, lnLik = LogLik, AIC = AIC, dAIC = dAIC, AICwt = AICwt)
   colnames(out) <- gsub("AIC", type, colnames(out))
   return(out)
+}
+
+# script for generating all the possible underlying mappings and looking at joint probablity. using this we can look at the bias produced by looking only at the discrete mappings.
+fixEdgeLiksLiks <- function(edge_liks_list, combo, phy, n_tips, n_nodes, n_internodes, nStates, rate.cat){
+  # fix the externals
+  for(j in 1:n_tips){
+    tip_index <- n_nodes + n_internodes + which(phy$edge[phy$edge[,2] <= n_tips,2] == j)
+    tip_state <- combo[tip_index]
+    dec_edges_to_fix <- which(phy$edge[,2] == j)
+    fix_vector <- numeric(nStates * rate.cat)
+    fix_vector[tip_state] <- 1
+    for(k in dec_edges_to_fix){
+      edge_liks_list[[k]][1,] <- fix_vector
+    }
+  }
+  # fix the internals
+  for(j in 1:n_nodes){
+    node_index <- unique(phy$edge[,1])[j]
+    node_state <- combo[j]
+    anc_edges_to_fix <- which(phy$edge[,1] == node_index)
+    dec_edges_to_fix <- which(phy$edge[,2] == node_index)
+    fix_vector <- numeric(nStates * rate.cat)
+    fix_vector[node_state] <- 1
+    for(k in dec_edges_to_fix){
+      edge_liks_list[[k]][1,] <- fix_vector
+    }
+    for(k in anc_edges_to_fix){
+      last_row <- dim(edge_liks_list[[k]])[1]
+      edge_liks_list[[k]][last_row,] <- fix_vector
+    }
+  }
+  # fix the inter nodes
+  if(n_internodes > 0){
+    for(j in 1:n_internodes){
+      internode_index_list <- which(unlist(lapply(edge_liks_list, function(x) dim(x)[1] - 2)) >= 1)[j]
+      internode_state <- combo[j + n_nodes]
+      internode_index_edge <- which(apply(edge_liks_list[[internode_index_list]], 1, function(x) sum(x) > 1))[1]
+      fix_vector <- numeric(nStates * rate.cat)
+      fix_vector[internode_state] <- 1
+      edge_liks_list[[internode_index_list]][internode_index_edge,] <- fix_vector
+    }
+  }
+  return(edge_liks_list)
+}
+
+getAllJointProbs<- function(phy, data, rate.cat, time_slice, Q, alpha, sigma.sq, theta, quiet=TRUE){
+  # prerequisites
+  hOUwie.dat <- organizeHOUwieDat(data, "none", TRUE)
+  nStates <- as.numeric(max(hOUwie.dat$data.cor[,2]))
+  tip.paths <- lapply(1:length(phy$tip.label), function(x) OUwie:::getPathToRoot(phy, x))
+  # generate the edge_liks_list
+  edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
+  # determine all the possible ways to fix the node states
+  # how many nodes and internodes are we fixing?
+  n_tips <- length(phy$tip.label)
+  n_nodes <- n_tips - 1
+  n_internodes <- sum(unlist(lapply(edge_liks_list, function(x) dim(x)[1] - 2)))
+  # what are the possible internal combinations?
+  internal_possibilities <- rep(list(1:(nStates*rate.cat)), n_nodes + n_internodes)
+  external_possibilities <- lapply(edge_liks_list[phy$edge[,2] <= n_tips], function(x) which(x[1,] == 1))
+  all_combinations <- expand.grid(c(internal_possibilities, external_possibilities))
+  # the joint probability table
+  joint_probability_table <- matrix(NA, dim(all_combinations)[1], 3, dimnames = list(1:dim(all_combinations)[1], c("disc", "cont", "total")))
+  if(!quiet){
+    cat("Begining to calcualte all possible map combinations...\n")
+  }
+  # for each possibility, generate an edge_liks_list to match
+  for(i in 1:dim(all_combinations)[1]){
+    if(!quiet){
+      cat("\r", i, "of", dim(all_combinations)[1], "complete.         ")
+    }
+    combo_i <- as.numeric(all_combinations[i,])
+    root_state <- numeric(nStates * rate.cat)
+    root_state[combo_i[which(unique(phy$edge[,1]) == n_tips + 1)[1]]] <- 1
+    edge_liks_list_i <- fixEdgeLiksLiks(edge_liks_list, combo_i, phy, n_tips, n_nodes, n_internodes, nStates, rate.cat)
+    root_liks <- rep(1, nStates * rate.cat)/(nStates * rate.cat)
+    # calculate the discrete probability of the edge_liks_list
+    tmp <- getInternodeMap(phy, Q, edge_liks_list_i, root_state, root_liks, 1)
+    internode_maps <- tmp$maps
+    internode_samples <- tmp$state_samples
+    llik_discrete <- unlist(lapply(internode_samples, function(x) getStateSampleProb(state_sample = x, Pij = tmp$Pij, root_liks = root_liks, root_edges = tmp$root_edges)))
+    # generate a stochstic map
+    simmaps <- getMapFromSubstHistory(internode_maps, phy)
+    llik_continuous <- unlist(lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr="none")))
+    joint_probability_table[i,] <- c(llik_discrete, llik_continuous, llik_discrete + llik_continuous)
+  }
+  if(!quiet){
+    cat("\n")
+  }
+  return(joint_probability_table)
 }
 
 # print a houwie object
