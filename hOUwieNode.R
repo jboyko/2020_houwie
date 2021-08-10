@@ -215,12 +215,12 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   colnames(solution$solution.ou) <- StateNames
   names(hOUwie.dat$ObservedTraits) <- 1:length(hOUwie.dat$ObservedTraits)
   obj <- list(
-    loglik = FinalLiks[1],
-    DiscLik = FinalLiks[2],
-    ContLik = FinalLiks[3],
-    AIC = -2*FinalLiks[1] + 2*param.count,
-    AICc = -2*FinalLiks[1]+ 2*param.count*(param.count/(nb.tip-param.count-1)),
-    BIC = -2*FinalLiks[1] + log(nb.tip) * param.count,
+    loglik = FinalLiks$TotalLik,
+    DiscLik = FinalLiks$DiscLik,
+    ContLik = FinalLiks$ContLik,
+    AIC = -2*FinalLiks$TotalLik + 2*param.count,
+    AICc = -2*FinalLiks$TotalLik+ 2*param.count*(param.count/(nb.tip-param.count-1)),
+    BIC = -2*FinalLiks$TotalLik + log(nb.tip) * param.count,
     param.count = param.count,
     solution.disc = solution$solution.cor,
     solution.cont = solution$solution.ou,
@@ -229,6 +229,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     index.cont = index.cont,
     phy = phy,
     legend = hOUwie.dat$ObservedTraits,
+    expected_vals = FinalLiks$expected_vals,
     data = data, 
     hOUwie.dat = hOUwie.dat,
     rate.cat = rate.cat, 
@@ -410,14 +411,14 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     llik_continuous <- unlist(lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr)))
   }
   # combine probabilities being careful to avoid underflow
-  llik_houwie <- llik_discrete + llik_continuous
-  llik_houwie <- max(llik_houwie) + log(sum(exp(llik_houwie - max(llik_houwie))))
+  llik_houwies <- llik_discrete + llik_continuous
+  llik_houwie <- max(llik_houwies) + log(sum(exp(llik_houwies - max(llik_houwies))))
   llik_discrete <- max(llik_discrete) + log(sum(exp(llik_discrete - max(llik_discrete))))
   llik_continuous <- max(llik_continuous) + log(sum(exp(llik_continuous - max(llik_continuous))))
   if(split.liks){
-    # llik_discrete <- max(llik_discrete) + log(sum(exp(llik_discrete - max(llik_discrete))))
-    # llik_continuous <- max(llik_continuous) + log(sum(exp(llik_continuous - max(llik_continuous))))
-    return(c(TotalLik = llik_houwie, DiscLik = llik_discrete, ContLik = llik_continuous))
+    expected_vals <- lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr,return.expected.vals=TRUE))
+    expected_vals <- colSums(do.call(rbind, expected_vals) * exp(llik_houwies - max(llik_houwies))/sum(exp(llik_houwies - max(llik_houwies))))
+      return(list(TotalLik = llik_houwie, DiscLik = llik_discrete, ContLik = llik_continuous, expected_vals = expected_vals))
   }
   cat("\r", llik_houwie, llik_discrete, llik_continuous)
   return(-llik_houwie)
@@ -649,7 +650,7 @@ getMapFromSubstHistory <- function(maps, phy){
 }
 
 # probability of the continuous parameter
-OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FALSE, root.station=FALSE, get.root.theta=FALSE, shift.point=0.5, alpha, sigma.sq, theta, mserr="none", algorithm="three.point", tip.paths=NULL){
+OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FALSE, root.station=FALSE, get.root.theta=FALSE, shift.point=0.5, alpha, sigma.sq, theta, mserr="none", algorithm="three.point", tip.paths=NULL, return.expected.vals=FALSE){
   
   # organize tip states based on what the simmap suggests
   mapping <- unlist(lapply(phy$maps, function(x) names(x[length(x)])))
@@ -742,6 +743,9 @@ OUwie.basic<-function(phy, data, simmap.tree=TRUE, root.age=NULL, scaleHeight=FA
   }else{
     expected.vals <- colSums(t(W) * pars[,1])
     names(expected.vals) <- phy$tip.label
+  }
+  if(return.expected.vals){
+    return(expected.vals)
   }
   transformed.tree <- OUwie:::transformPhy(phy, map, pars, tip.paths)
   # generate a map from node based reconstructions
@@ -1162,6 +1166,7 @@ getAllJointProbs<- function(phy, data, rate.cat, time_slice, Q, alpha, sigma.sq,
   all_combinations <- expand.grid(c(internal_possibilities, external_possibilities))
   # the joint probability table
   joint_probability_table <- matrix(NA, dim(all_combinations)[1], 3, dimnames = list(1:dim(all_combinations)[1], c("disc", "cont", "total")))
+  simmap_list <- vector("list", dim(all_combinations)[1])
   if(!quiet){
     cat("Begining to calcualte all possible map combinations...\n")
   }
@@ -1183,12 +1188,14 @@ getAllJointProbs<- function(phy, data, rate.cat, time_slice, Q, alpha, sigma.sq,
     # generate a stochstic map
     simmaps <- getMapFromSubstHistory(internode_maps, phy)
     llik_continuous <- unlist(lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr="none")))
+    simmap_list[[i]] <- simmaps[[1]]
     joint_probability_table[i,] <- c(llik_discrete, llik_continuous, llik_discrete + llik_continuous)
   }
   if(!quiet){
     cat("\n")
   }
-  return(joint_probability_table)
+  class(simmap_list) <- c("multiSimmap", "multiPhylo")
+  return(list(joint_probability_table=joint_probability_table, simmap_list=simmap_list, all_combinations=all_combinations))
 }
 
 # print a houwie object
