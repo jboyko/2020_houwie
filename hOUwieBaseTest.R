@@ -17,7 +17,7 @@ files_data <- dir("sim_data/", full.names = TRUE)
 
 i = 1
 # for a particular fit file
-fit_path <- files_fits[grep("M9-", files_fits)][1]
+fit_path <- files_fits[grep("M21-", files_fits)][10]
 
 load(fit_path)
 # load the fit
@@ -69,6 +69,6 @@ tbl <- list(optimized=tmp,
 
 getModelTable(tbl)
 
-res_nlopt <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 1.1, 50, recon=FALSE, optimizer = "nlopt", ip = "good")
-res_sann_rgh <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 1.1, 100, recon=FALSE, optimizer = "sann", ip = "good")
+res_nlopt <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 50, recon=FALSE, optimizer = "nlopt")
+res_sann_rgh <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 50, recon=FALSE, optimizer = "sann", opts = list(max.call=10000, smooth=FALSE, temperature=100000))
 res_sann_smth <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 1.1, 50, recon=FALSE, optimizer = "sann", opts = list(max.call=1e4, smooth=TRUE))

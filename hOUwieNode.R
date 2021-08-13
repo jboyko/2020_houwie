@@ -28,7 +28,7 @@
 #'@param sample_tips a boolean which indicates whether the continuous values should inform the discrete tip values when initializing the stochastic mapping (default is TRUE)
 #'@param n_starts a numeric value specifying how many optimizations are to occur
 #'@param ncores a nunmeric value indicating how many cores are to be used, only useful if n_starts is greater than 2.
-hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=FALSE, nodes="internal", p=NULL, ip="good", optimizer="nlopt", opts=NULL, quiet=FALSE, sample_tips=TRUE, n_starts = 1, ncores = 1){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=FALSE, nodes="internal", p=NULL, ip=NULL, optimizer="nlopt", opts=NULL, quiet=FALSE, sample_tips=TRUE, n_starts = 1, ncores = 1){
   # if the data has negative values, shift it right - we will shift it back later
   if(mserr == "none"){
     if(any(data[,dim(data)[2]] < 0)){
@@ -54,7 +54,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     cat("You have specified more cores are to be used than the number of starts. Setting ncores to be equal to the number of optimizations.\n")
     ncores <- n_starts
   }
-  
+
   # organize the data
   phy <- reorder.phylo(phy, "pruningwise")
   hOUwie.dat <- organizeHOUwieDat(data, mserr, collapse)
@@ -154,9 +154,8 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       stop(message, call. = FALSE)
     }
     out<-NULL
-    est.pars<-log(p)
     pars <- out$solution <- log(p)
-    out$objective <- hOUwie.dev(p = est.pars, phy=phy, data=hOUwie.dat$data.ou, 
+    out$objective <- hOUwie.dev(p = log(p), phy=phy, data=hOUwie.dat$data.ou, 
                                 rate.cat=rate.cat, mserr=mserr, 
                                 index.disc=index.disc, index.cont=index.cont, root.p=root.p,
                                 edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, 
@@ -173,7 +172,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
                   rep(ub_continuous_model[3], length(unique(na.omit(index.cont[3,]))))))
     # cat(c("TotalLnLik", "DiscLnLik", "ContLnLik"), "\n")
     # check for user input initial parameters 
-    if(is.character(ip)){
+    if(is.null(ip)){
       if(rate.cat > 1){
         bin_index <- cut(hOUwie.dat$data.ou[,3], rate.cat, labels = FALSE)
         combos <- expand.grid(1:max(hOUwie.dat$data.cor[,2]), 1:rate.cat)
@@ -188,28 +187,28 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       starts.sigma <- rep(var(hOUwie.dat$data.ou[,3]), n_p_sigma)
       start.theta <- getIP.theta(hOUwie.dat$data.ou[,3], disc_tips, index.cont[3,])
       start.cor <- rep(10/sum(phy$edge.length), n_p_trans)
-      starts = c(start.cor, starts.alpha, starts.sigma, start.theta)
-      if(ip == "good"){
-        if(!quiet){
-          cat("Generating an initial parameter estimation point based on the independent models.\n This may take some time, but is generally worth it.\n")
-        }
-        spec_opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.25)
-        discrete_init <- silence(corHMM(phy=phy, data=hOUwie.dat$data.cor, rate.cat=rate.cat, rate.mat=index.disc, node.states="joint", opts = spec_opts))
-        map <- OUwie:::getMapFromNode(phy, hOUwie.dat$data.cor[,2], discrete_init$states, 0.5)
-        phy_ouwie <- getMapFromSubstHistory(list(map), phy)
-        tmp_continuous <- nloptr(x0 = log(c(starts.alpha, starts.sigma, start.theta)), eval_f = OUwie.basic.dev, lb=lower[-seq(n_p_trans)], ub=upper[-seq(n_p_trans)], opts=spec_opts, phy = phy_ouwie[[1]], data = hOUwie.dat$data.ou, mserr = mserr, index.cont = index.cont, tip.paths = tip.paths)
-        # continuous_init <- OUwie(phy=phy_ouwie[[1]], data=hOUwie.dat$data.ou, model="OUM", simmap.tree=TRUE, algorithm="three.point")
-        starts.ou <- exp(tmp_continuous$solution)
-        start.cor <- sapply(seq(max(discrete_init$index.mat, na.rm = TRUE)), function(x) na.omit(discrete_init$solution[discrete_init$index.mat == x])[1])
-        starts <- c(start.cor, starts.ou)
+      starts.basic = c(start.cor, starts.alpha, starts.sigma, start.theta)
+      if(!quiet){
+        cat("Generating an initial parameter estimation point based on independent models.\n This may take some time, but is generally worth it.\n")
       }
+      spec_opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
+      discrete_init <- silence(corHMM(phy=phy, data=hOUwie.dat$data.cor, rate.cat=rate.cat, rate.mat=index.disc, node.states="joint", opts = spec_opts))
+      map <- OUwie:::getMapFromNode(phy, hOUwie.dat$data.cor[,2], discrete_init$states, 0.5)
+      phy_ouwie <- getMapFromSubstHistory(list(map), phy)
+      tmp_continuous <- nloptr(x0 = log(c(starts.alpha, starts.sigma, start.theta)), eval_f = OUwie.basic.dev, lb=lower[-seq(n_p_trans)], ub=upper[-seq(n_p_trans)], opts=spec_opts, phy = phy_ouwie[[1]], data = hOUwie.dat$data.ou, mserr = mserr, index.cont = index.cont, tip.paths = tip.paths)
+      # continuous_init <- OUwie(phy=phy_ouwie[[1]], data=hOUwie.dat$data.ou, model="OUM", simmap.tree=TRUE, algorithm="three.point")
+      starts.ou <- exp(tmp_continuous$solution)
+      start.cor <- sapply(seq(max(discrete_init$index.mat, na.rm = TRUE)), function(x) na.omit(discrete_init$solution[discrete_init$index.mat == x])[1])
+      starts <- c(start.cor, starts.ou)
+      starts[starts < exp(lower)] <- starts.basic[starts < exp(lower)]
+      starts[starts > exp(upper)] <- starts.basic[starts > exp(upper)]
     }else{
       starts <- ip
     }
     if(!quiet){
       cat("Starting a thorough search of parameters with", nSim, "simmaps using the", optimizer, "optimization protocol...\n")
     }
-    multiple_starts <- generateMultiStarting(starts, index.disc, index.cont, n_starts)
+    multiple_starts <- generateMultiStarting(starts, index.disc, index.cont, n_starts, exp(lower), exp(upper))
     if(optimizer == "nlopt"){
       # out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts,
       #              phy=phy, data=hOUwie.dat$data.ou,
@@ -249,9 +248,9 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   liks_houwie <- hOUwie.dev(p = pars, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=TRUE)
   houwie_obj <- getHouwieObj(liks_houwie, pars=exp(pars), phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
   # adding independent model if included
-  if(ip == "good"){
+  if(is.null(p)){
     liks_indep <- hOUwie.dev(p = log(starts), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=TRUE)
-    houwie_obj$indep_model <- getHouwieObj(liks_indep, pars=starts, phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
+    houwie_obj$init_model <- getHouwieObj(liks_indep, pars=starts, phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
   }
   # conducting ancestra state resconstruction
   if(recon){
@@ -339,7 +338,6 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
                        edge_liks_list, nSim, tip.paths=NULL, 
                        sample_tips=TRUE, split.liks=FALSE){
   p <- exp(p)
-  print(p)
   k <- max(index.disc, na.rm = TRUE)
   p.mk <- p[1:k]
   p.ou <- p[(k+1):length(p)] 
@@ -422,7 +420,8 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     expected_vals <- colSums(do.call(rbind, expected_vals) * exp(llik_houwies - max(llik_houwies))/sum(exp(llik_houwies - max(llik_houwies))))
       return(list(TotalLik = llik_houwie, DiscLik = llik_discrete, ContLik = llik_continuous, expected_vals = expected_vals))
   }
-  cat("\r", llik_houwie, llik_discrete, llik_continuous)
+  print(c(llik_houwie, llik_discrete, llik_continuous))
+  print(p)
   return(-llik_houwie)
 }
 
@@ -1240,7 +1239,7 @@ silence <- function(x) {
 }
 
 # generate random starting values for multiple starts
-generateMultiStarting <- function(starts, index.disc, index.cont, n_starts){
+generateMultiStarting <- function(starts, index.disc, index.cont, n_starts, lower, upper){
   n_p_trans <- max(index.disc, na.rm = TRUE)
   n_p_alpha <- length(unique(na.omit(index.cont[1,])))
   n_p_sigma <- length(unique(na.omit(index.cont[2,])))
@@ -1249,7 +1248,17 @@ generateMultiStarting <- function(starts, index.disc, index.cont, n_starts){
   multiple_starts[[1]] <- starts
   if(n_starts > 1){
     for(i in 2:n_starts){
-      multiple_starts[[i]] <- sapply(starts, function(x) exp(runif(1, log(x/10), log(x*10))))
+      multiple_starts[[i]] <- numeric(length(starts))
+      for(j in 1:length(starts)){
+        if(starts[j]/10 <= lower[j] | starts[j]*10 >= upper[j]){
+          lb <- (lower[j]+lower[j]*0.01)*10
+          ub <- (upper[j]-upper[j]*0.01)/10
+        }else{
+          lb <- starts[j]
+          ub <- starts[j]
+        }
+        multiple_starts[[i]][j] <- exp(runif(1, log(lb/10), log(ub*10)))
+      }
     }
   }
   return(multiple_starts)
@@ -1301,7 +1310,7 @@ getHouwieObj <- function(liks_houwie, pars, phy, data, hOUwie.dat, rate.cat, mse
     ub.ou=ub_continuous_model,
     p=pars, 
     ip=ip,
-    indep_model = NULL,
+    init_model = NULL,
     nSim=nSim, 
     opts=opts,
     quiet=quiet
