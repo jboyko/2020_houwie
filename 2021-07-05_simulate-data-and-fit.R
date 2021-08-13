@@ -18,14 +18,14 @@ require(partitions)
 
 nCores <- 22
 nTip <- 100
-nSim <- 100
-minAlpha = 1
-maxAlpha = 4
-minSigma2 = 1
-maxSigma2 = 4
-minTheta = 10
-maxTheta = 20
-minRate = 0.01
+nSim <- 50
+minAlpha = 1.5
+maxAlpha = 3
+minSigma2 = 0.5
+maxSigma2 = 1
+minTheta = 2
+maxTheta = 4
+minRate = 0.25
 maxRate = 1
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -44,7 +44,7 @@ continuous_models_cd_bmou <- lapply(seq(dim(continuous_models_cd_bmou)[3]), func
 continuous_models_cid_ou <- lapply(seq(dim(continuous_models_cid_ou)[3]), function(x) continuous_models_cid_ou[,,x])
 continuous_models_cid_bm <- lapply(seq(dim(continuous_models_cid_bm)[3]), function(x) continuous_models_cid_bm[,,x])
 continuous_models_cid_bmou <- lapply(1:dim(continuous_models_cid_bmou)[3], function(x) continuous_models_cid_bmou[,,x])
-all_model_structures <- c(continuous_models_cd_bm, continuous_models_cd_bmou, continuous_models_cd_ou, continuous_models_cid_bm[-1], continuous_models_cid_bmou, continuous_models_cid_ou[-1])
+all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1], continuous_models_cd_ou, continuous_models_cid_ou[-1], continuous_models_cd_bmou, continuous_models_cid_bmou)
 
 # the 2 discrete models being evaluated
 discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
@@ -66,10 +66,13 @@ generateParameters <- function(continuous_model, minAlpha, maxAlpha, minSigma2, 
   k.sigma <- length(unique(na.omit(continuous_model[2,])))
   k.theta <- length(unique(na.omit(continuous_model[3,])))
   k.discrete <- max(na.omit(discrete_model))
-  par_alpha <- runif(1, minAlpha, maxAlpha)
-  par_sigma <- runif(1, minSigma2, maxSigma2)
-  par_theta <- runif(1, minTheta, maxTheta)
-  par_rates <- runif(k.discrete, minRate, maxRate)
+  # par_alpha <- runif(k.alpha, minAlpha, maxAlpha)
+  # par_sigma <- runif(k.sigma, minSigma2, maxSigma2)
+  # par_theta <- runif(k.theta, minTheta, maxTheta)
+  par_alpha <- minAlpha* seq_len(k.alpha)
+  par_sigma <- minSigma2 * seq_len(k.sigma)
+  par_theta <- minTheta * seq_len(k.theta)
+  par_rates <- rep(minRate, k.discrete)
   p <- c(par_rates, par_alpha, par_sigma, par_theta)
   return(p)
 }
@@ -141,6 +144,7 @@ singleRun <- function(i, iter){
   # tmp <- singleFit(full_data, all_model_structures[[1]], discrete_model_cd, discrete_model_cid, 10)
   # p = c(0.483848937,  0.007448614,  0.693147181,  0.284018414, 15.829464035)
   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
+  names(out) <- paste0("M", 1:length(all_model_structures))
   save(out, file = file_name_res)
   full_data <- NULL
 }

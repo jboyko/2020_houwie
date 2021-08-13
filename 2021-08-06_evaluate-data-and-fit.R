@@ -1,4 +1,3 @@
-
 setwd("~/2020_hOUwie/")
 
 source("hOUwieNode.R")
@@ -19,9 +18,11 @@ require(reshape)
 files_fits <- dir("sim_fits/", full.names = TRUE)
 files_data <- dir("sim_data/", full.names = TRUE)
 
-CD_models <- paste("M", c(3:12), sep = "")
-CID_models <- paste("M", c(1,2,13,14), sep = "")
-CIDx_models <- paste("M", c(15:24), sep = "")
+model <- "M1"
+
+function(model)
+
+
 
 i = 1
 # for a particular fit file
