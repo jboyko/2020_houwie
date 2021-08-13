@@ -48,7 +48,7 @@ all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1],
 
 # the 2 discrete models being evaluated
 discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
-discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), discrete_model_cd)
+discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
 discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2))
 
 # deciding what tree size we would like to use

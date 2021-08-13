@@ -404,7 +404,7 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   # generate maps
   simmaps <- getMapFromSubstHistory(internode_maps, phy)
   # if there is no character dependence the map has no influence on continuous likleihood
-  character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique) == 1))
+  character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique(x)) == 1))
   if(character_dependence_check){
     llik_continuous <- OUwie.basic(simmaps[[1]], data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr)
   }else{
