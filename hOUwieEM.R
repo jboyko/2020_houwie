@@ -1,28 +1,31 @@
 hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mserr = "none", dual = FALSE, collapse = TRUE, root.station = FALSE, get.root.theta = FALSE, lb.disc = NULL, ub.disc = NULL, lb.cont = NULL, ub.cont = NULL, opts = NULL, niter = 1000, ip = NULL, nodeproposals = 2, tipproposals = 1){
   
-  # source("~/2020_hOUwie/hOUwieEM.R")
-  # require(OUwie)
-  # require(corHMM)
-  # data(tworegime)
-  # phy <- tree
-  # data <- trait
-  # discrete_model <- "ER"
-  # continuous_model <- "OUM"
-  # rate.cat <- 1
-  # mserr <- "none"
-  # dual = FALSE
-  # collapse <- TRUE
-  # root.station <- FALSE
-  # get.root.theta <- FALSE
-  # lb.disc = NULL
-  # ub.disc = NULL
-  # lb.cont = NULL
-  # ub.cont = NULL
-  # opts = NULL
-  # niter = 100
-  # ip = NULL
-  # nodeproposals = 2
-  # tipproposals = 1
+  source("~/2020_hOUwie/hOUwieEM.R")
+  require(OUwie)
+  require(corHMM)
+  data(tworegime)
+  phy <- tree
+  phy <- full_data$simmap[[1]]
+  data <- trait
+  data <- full_data$data
+  discrete_model <- "ER"
+  continuous_model <- "OUM"
+  rate.cat <- 1
+  mserr <- "none"
+  dual = FALSE
+  collapse <- TRUE
+  root.station <- FALSE
+  get.root.theta <- FALSE
+  lb.disc = NULL
+  ub.disc = NULL
+  lb.cont = NULL
+  ub.cont = NULL
+  opts = NULL
+  niter = 500
+  ip = NULL
+  nodeproposals = 2
+  tipproposals = 1
+  
 
   # if the data has negative values, shift it right
   if(mserr == "none"){
@@ -90,7 +93,7 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mse
   
   # default ML search options
   if(is.null(opts)){
-    opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.05)
+    opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10000", "ftol_rel"=.Machine$double.eps^0.1)
   }
 
   # the number of parameters for each process
@@ -140,8 +143,7 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mse
     # }
     stochasticmap <- getStochmapFromNode(phy, disc_tips, disc_nodes, index.disc, ip.disc)
   }
-  
-  
+
   # get OU param estimates | continuous model
   # OUwie_init <- quiet(OUwie(phy = stochasticmap, data = hOUwie.dat$data.ou, model = "OU1", algorithm = "three.point", simmap.tree = TRUE, root.station = root.station, get.root.theta = get.root.theta))
   
@@ -168,10 +170,13 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mse
   # may change from sequence to a tolerance of total likelihood
   for(i in sequence(niter)){
     # add the current reconstruction to the vector of nodes already examined
-    all_nodes[i] <- paste0(c(disc_nodes,disc_tips), collapse = "")
-
+    state_sample <- c(disc_tips, disc_nodes)
+    all_nodes[i] <- paste0(state_sample, collapse = "")
+    state_table <- matrix(c(state_sample[phy$edge[,1]],state_sample[phy$edge[,2]]), dim(phy$edge)[1], dim(index.disc)[1])
+    state_index <- apply(state_table, 1, function(x) matrix(1:4, 2, 2)[x[1],x[2]])
+    
     # discrete_result <- optimize(discrete model given discrete_internal, start at best_model$discrete_params
-    discrete_result <- nloptr(x0=log(ip.disc), eval_f=dev.discretelikelihood, lb=log(lower.disc), ub=log(upper.disc), opts=opts, maps = stochasticmap$maps, index.disc = index.disc)
+    discrete_result <- nloptr(x0=log(ip.disc), eval_f=dev.discretelikelihood, lb=log(lower.disc), ub=log(upper.disc), opts=opts, index.disc = index.disc, state_index = state_index, time_vector = time_vector)
     
     # continuous_result <- optimize(continuous model given discrete_internal, start at best_model$continuous_params)
     continuous_result <- nloptr(x0=log(ip.cont), eval_f=dev.continuouslikelihood, lb=log(lower.cont), ub=log(upper.cont), opts=opts, stochasticmap = stochasticmap, data.ou = hOUwie.dat$data.ou, index.cont = index.cont, tip.paths = tip.paths, mserr = mserr)
@@ -183,6 +188,7 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mse
     # total_likelihood <- discrete_result$likelihood + continuous_result$likelihood
     total_likelihood <- (-discrete_result$objective) + (-continuous_result$objective)
     print(c(LnLik = total_likelihood, LnLikDisc = -discrete_result$objective, LnLikCont =-continuous_result$objective))
+    print(c(exp(discrete_result$solution),exp(continuous_result$solution)))
     
     if(best_model[1] < total_likelihood){
       # track the current best model
@@ -239,14 +245,14 @@ hOUwie.EM <- function(phy, data, discrete_model, continuous_model, rate.cat, mse
   
   obj <- list(
     loglik = best_model[1],
-    Disc_lnLik = best_model[2],
-    Cont_lnLik = best_model[3],
+    DiscLik = best_model[2],
+    ContLik = best_model[3],
     AIC = -2*best_model[1] + 2*param.count,
     AICc = -2*best_model[1]+ 2*param.count*(param.count/(nb.tip-param.count-1)),
     BIC = -2*best_model[1] + log(nb.tip) * param.count,
     param.count = param.count,
-    solution_disc = solution$solution.disc,
-    solution_cont = solution$solution.cont,
+    solution.disc = solution$solution.disc,
+    solution.cont = solution$solution.cont,
     phy = phy,
     best_map = best_map,
     best_nodes = best_disc.nodes,
@@ -323,47 +329,20 @@ dev.continuouslikelihood <- function(pars, stochasticmap, data.ou, index.cont, t
 }
 
 # a wrapper function for the discrete likelihood
-dev.discretelikelihood <- function(pars, maps, index.disc){
+dev.discretelikelihood <- function(pars, index.disc, state_index, time_vector){
   p <- exp(pars)
   Q <- index.disc
   for(i in 1:max(index.disc)){
     Q[Q == i] <- p[i]
   }
   diag(Q) <- -rowSums(Q)
-  discretelikelihood <- getMapProbability(maps, Q)
+  trans_probs <- sapply(time_vector, function(x) expm(Q * x))
+  p_vec <- numeric(dim(trans_probs)[2])
+  for(i in 1:dim(trans_probs)[2]){
+    p_vec[i] <- trans_probs[state_index[i],i]
+  }
+  discretelikelihood <- sum(log(p_vec))
   return(-discretelikelihood)
-}
-
-# gets the probability of a particular painting. limited to a single change at a shift point of 0.5
-getMapProbability <- function(maps, Q){
-  BranchProbs <- lapply(maps, function(x) log(probPath(x, Q)))
-  LnLik_map <- sum(unlist(BranchProbs))
-  return(LnLik_map)
-}
-
-# the probability of a particular path
-probPath <- function(path, Q){
-  nTrans <- length(path)
-  P <- vector("numeric", length(path))
-  for(i in sequence(nTrans-1)){
-    state_i <- as.numeric(names(path)[1])
-    state_j <- as.numeric(names(path)[2])
-    time_i <- as.numeric(path[1])
-    time_j <- as.numeric(sum(path[-1]))
-    rate_i <- abs(Q[state_i,state_j])
-    rate_j <- abs(Q[state_j,state_j])
-    P[i] <- dexp(time_i, rate_i) * (1 - pexp(rate_j, time_j))
-    path <- path[-1]
-  }
-  state_j <- as.numeric(names(path))
-  time_j <- as.numeric(path)
-  rate_j <- abs(Q[state_j,state_j])
-  P[nTrans] <- 1 - pexp(rate_j, time_j)
-  P <- prod(P)
-  if(P == 0){
-    P <- 1e-100
-  }
-  return(P)
 }
 
 # generates a discrete model index if not supplied by the user
@@ -850,20 +829,20 @@ organizeHOUwiePars <- function(pars, index.disc, index.cont){
 
 print.houwie <- function(x, ...){
   ntips <- Ntip(x$phy)
-  output <- data.frame(x$loglik,x$AIC,x$AICc,x$BIC, ntips, x$param.count, row.names="")
-  names(output) <- c("lnL","AIC","AICc","BIC","nTaxa","nPars")
+  output <- data.frame(x$loglik,x$DiscLik, x$ContLik, x$AIC,x$AICc,x$BIC, ntips, x$param.count, row.names="")
+  names(output) <- c("lnLTot","lnLDisc", "lnLCont", "AIC","AICc","BIC","nTaxa","nPars")
   cat("\nFit\n")
   print(output)
   cat("\nLegend\n")
   print(x$legend)
   cat("\nRegime Rate matrix\n")
-  print(x$solution_disc)
+  print(x$solution.disc)
   cat("\nOU Estimates\n")
-  print(x$solution_cont)
+  print(x$solution.cont)
   cat("\n")
-  if(!any(is.na(x$solution_cont[1,]))){
+  if(!any(is.na(x$solution.cont[1,]))){
     cat("\nHalf-life (another way of reporting alpha)\n")
-    print(log(2)/x$solution_cont[1,])
+    print(log(2)/x$solution.cont[1,])
   }
   cat("\nDon't forget: your parameters have units!\n")
 }

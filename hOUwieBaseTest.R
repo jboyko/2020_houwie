@@ -17,7 +17,8 @@ files_data <- dir("sim_data/", full.names = TRUE)
 
 i = 1
 # for a particular fit file
-fit_path <- files_fits[grep("M21-", files_fits)][10]
+#fit_path <- files_fits[grep("M21-", files_fits)][10]
+fit_path <- files_fits[grep("M9-", files_fits)][10]
 
 load(fit_path)
 # load the fit
@@ -54,16 +55,16 @@ res_true_thetas_sigma <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_mo
 p <- tmp$p
 p[c(2,3,4,5)] <- full_data$pars[c(2,3,4,5)]
 res_true_thetas_alpha_sigma <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 50, p = p, recon=FALSE)
-res_true_all <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 500, p = full_data$pars, recon=FALSE) 
+res_true_all <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 50, p = full_data$pars, recon=FALSE) 
 
 
-nodes <- unlist(lapply(full_data$simmap[[1]]$maps[sapply(101:199, function(x) which(x == full_data$simmap[[1]]$edge[,1])[1])], function(y) as.numeric(names(y)[1])))
-tmp_phy <- full_data$simmap[[1]]
-tmp_phy$node.label <- nodes
-test_true_nodes <- OUwie(phy = tmp_phy, data = full_data$data, model = "OUM", algorithm = "three.point", simmap.tree = FALSE)
-test_true_map <- OUwie(phy = full_data$simmap[[1]], data = full_data$data, model = "OUM", algorithm = "three.point", simmap.tree = TRUE)
-OUwie.fixed(phy = tmp_phy, data = full_data$data, model = "OUM", algorithm = "three.point", alpha = rep(full_data$pars[3],4), sigma.sq = rep(full_data$pars[4],4), theta = c(rep(full_data$pars[5],2), rep(full_data$pars[6],2)))
-OUwie.fixed(phy = full_data$simmap[[1]], data = full_data$data, model = "OUM", algorithm = "three.point", simmap.tree = TRUE, alpha = rep(full_data$pars[3],4), sigma.sq = rep(full_data$pars[4],4), theta = c(rep(full_data$pars[5],2), rep(full_data$pars[6],2)))
+# nodes <- unlist(lapply(full_data$simmap[[1]]$maps[sapply(101:199, function(x) which(x == full_data$simmap[[1]]$edge[,1])[1])], function(y) as.numeric(names(y)[1])))
+# tmp_phy <- full_data$simmap[[1]]
+# tmp_phy$node.label <- nodes
+# test_true_nodes <- OUwie(phy = tmp_phy, data = full_data$data, model = "OUM", algorithm = "three.point", simmap.tree = FALSE)
+# test_true_map <- OUwie(phy = full_data$simmap[[1]], data = full_data$data, model = "OUM", algorithm = "three.point", simmap.tree = TRUE)
+# OUwie.fixed(phy = tmp_phy, data = full_data$data, model = "OUM", algorithm = "three.point", alpha = rep(full_data$pars[3],4), sigma.sq = rep(full_data$pars[4],4), theta = c(rep(full_data$pars[5],2), rep(full_data$pars[6],2)))
+# OUwie.fixed(phy = full_data$simmap[[1]], data = full_data$data, model = "OUM", algorithm = "three.point", simmap.tree = TRUE, alpha = rep(full_data$pars[3],4), sigma.sq = rep(full_data$pars[4],4), theta = c(rep(full_data$pars[5],2), rep(full_data$pars[6],2)))
 
 
 tbl <- list(optimized=tmp, 
@@ -78,6 +79,6 @@ tbl <- list(optimized=tmp,
 
 getModelTable(tbl)
 
-res_nlopt <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, discrete_model_cid, tmp$continuous_model, 0.1, 10, recon=FALSE, optimizer = "nlopt", opts = list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5))
+res_nlopt <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 10, recon=FALSE, optimizer = "nlopt", opts = list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5))
 res_sann_rgh <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 0.1, 50, recon=FALSE, optimizer = "sann", opts = list(max.call=10000, smooth=FALSE))
 res_sann_smth <- hOUwie(tmp$phy, tmp$data, tmp$rate.cat, tmp$discrete_model, tmp$continuous_model, 1.1, 50, recon=FALSE, optimizer = "sann", opts = list(max.call=1e4, smooth=TRUE))
