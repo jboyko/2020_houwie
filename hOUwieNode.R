@@ -17,7 +17,7 @@
 #'@param ub_discrete_model upper bound for trans rate. default is 21
 #'#'@param lb_continuous_model designates the lower bounds for alpha, sigma.sq, optima. default is given in code
 #'@param ub_continuous_model designates the upper bounds for alpha, sigma.sq, optima. default is given in code
-#'@param optimizer designates the optimizer. one of "nlopt" for nloptr, "sann" for simulated annealing
+#'@param optimizer designates the optimizer. one of "nlopt_ln" for nloptr local, "nlopt_gn" for nloptr global, "sann" for simulated annealing. nlopt_gn is the default.
 #'@param opts options for nloptr
 #'@param ip "fast" for analytic, "good" for optimized values, or a vector of initial params 
 #'@param p a vector of params to calculate a fixed likelihood
@@ -28,7 +28,7 @@
 #'@param sample_tips a boolean which indicates whether the continuous values should inform the discrete tip values when initializing the stochastic mapping (default is TRUE)
 #'@param n_starts a numeric value specifying how many optimizations are to occur
 #'@param ncores a nunmeric value indicating how many cores are to be used, only useful if n_starts is greater than 2.
-hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=FALSE, nodes="internal", p=NULL, ip="good", optimizer="nlopt", opts=NULL, quiet=FALSE, sample_tips=TRUE, n_starts = 1, ncores = 1){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=FALSE, nodes="internal", p=NULL, ip="fast", optimizer="nlopt_gn", opts=NULL, quiet=FALSE, sample_tips=TRUE, n_starts = 1, ncores = 1){
   start_time <- Sys.time()
   # if the data has negative values, shift it right - we will shift it back later
   if(mserr == "none"){
@@ -135,11 +135,14 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   
   # default MLE search options
   if(is.null(opts)){
-    if(optimizer == "nlopt"){
-      opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000000", "ftol_rel"=.Machine$double.eps^0.5)
+    if(optimizer == "nlopt_ln"){
+      opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10000", "ftol_rel"=.Machine$double.eps^0.5)
+    }
+    if(optimizer == "nlopt_gn"){
+      opts <- list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="10000", "ftol_rel"=.Machine$double.eps^0.5)
     }
     if(optimizer == "sann"){
-      opts <- list(max.call=10000, smooth=FALSE)
+      opts <- list(max.call=1000, smooth=FALSE)
     }
   }
   # p is organized into 2 groups with the first set being corHMM and the second set being OUwie
@@ -194,7 +197,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       }
       if(ip == "good"){
         if(!quiet){
-          cat("Generating an initial parameter estimation point based on independent models.\n This may take some time, but is generally worth it.\n")
+          cat("Generating an initial parameter estimation point based on independent models.\n This may take some time.\n")
         }
         spec_opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
         discrete_init <- silence(corHMM(phy=phy, data=hOUwie.dat$data.cor, rate.cat=rate.cat, rate.mat=index.disc, node.states="joint", opts = spec_opts))
@@ -254,10 +257,10 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   liks_houwie <- hOUwie.dev(p = pars, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=TRUE)
   houwie_obj <- getHouwieObj(liks_houwie, pars=exp(pars), phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
   # adding independent model if included
-  if(is.null(p)){
-    liks_indep <- hOUwie.dev(p = log(starts), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=TRUE)
-    houwie_obj$init_model <- getHouwieObj(liks_indep, pars=starts, phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
-  }
+  # if(is.null(p)){
+  #   liks_indep <- hOUwie.dev(p = log(starts), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=TRUE)
+  #   houwie_obj$init_model <- getHouwieObj(liks_indep, pars=starts, phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
+  # }
   # conducting ancestra state resconstruction
   if(recon){
     houwie_recon <- hOUwieRecon(houwie_obj, nodes)
@@ -266,6 +269,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   end_time <- Sys.time()
   run_time <- end_time - start_time
   houwie_obj$run_time <- run_time
+  units(houwie_obj$run_time) <- "mins"
   return(houwie_obj)
 }
 

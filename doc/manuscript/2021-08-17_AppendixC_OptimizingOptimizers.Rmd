@@ -1,0 +1,107 @@
+---
+title: "2021-08-17_AppendixC_OptimizingOptimizers"
+author: "James D. Boyko"
+date: "17/08/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+source("~/2020_hOUwie/hOUwieNode.R")
+source("~/2020_hOUwie/Utils.R")
+
+require(OUwie)
+require(corHMM)
+require(parallel)
+require(expm)
+require(ggplot2)
+require(reshape2)
+
+summarizeFile <- function(file){
+  load(file)
+  true_pars <- obj$sim$pars
+  model_pars <- obj$fit$p
+  names(true_pars) <- names(model_pars) <- c("rate", "alpha", "sigma_sq", "theta_1", "theta_2")
+  optim_pars <- strsplit(gsub(".Rsave", "", gsub(".*//", "", file)), "-")[[1]]
+  names(optim_pars) <- c("algorithm", "n_starts", "init_pars")
+  run_time <- obj$fit$run_time
+  units(run_time) <- "mins"
+  model_pars
+  rmse <- log(true_pars) - log(model_pars)
+  out <- data.frame(algorithm = optim_pars[1], n_starts_init = paste0(optim_pars[2], "_", optim_pars[3]),
+                    rate = rmse[1], alpha = rmse[2], sigma_sq = rmse[3], theta_1 = rmse[4], theta_2 = rmse[5], 
+                    row.names = NULL)
+  return(out)
+}
+
+summarizeFileB <- function(file){
+  load(file)
+  true_pars <- obj$sim$pars
+  model_pars <- obj$fit$p
+  names(true_pars) <- names(model_pars) <- c("rate", "alpha", "sigma_sq", "theta_1", "theta_2")
+  optim_pars <- strsplit(gsub(".Rsave", "", gsub(".*//", "", file)), "-")[[1]]
+  names(optim_pars) <- c("algorithm", "n_starts", "init_pars")
+  run_time <- obj$fit$run_time
+  units(run_time) <- "mins"
+  model_pars
+  rmse <- log(true_pars) - log(model_pars)
+  out <- data.frame(algorithm = optim_pars[1], n_starts_init = paste0(optim_pars[2], "_", optim_pars[3]),
+                    rate = rmse[1], alpha = rmse[2], sigma_sq = rmse[3], theta_1 = rmse[4], theta_2 = rmse[5],
+                    run_time = as.numeric(run_time), row.names = NULL)
+  return(out)
+}
+
+```
+
+## Which optimizer is optimal?
+
+To test which optimizing protocol is best for hOUwie I simulated 10 datasets under an OUM model which is known to have good results when initializing parameters from corHMM and OUwie. I compared three variables. The simulating parameters were 10 random pure birth trees of 100 taxa. Alpha was 1.5, sigma squared was 0.75, theta_1 was 2, theta_2 was 4, and the discrete rate was 0.5 under an equal rates model. See 2021-08-16_evaluate-alternate-optimizers.R for code.
+
+The optimization algorithm (algorithm): 
+
+nlopt_gn - a global search using nloptr's NLOPT_GN_DIRECT
+
+nlopt_ln - a local search using nloptr's NLOPT_LN_SBPLX
+
+sann - simmulated annealing approach using the R-package GenSA
+
+
+The way initial parameters were generated (init):
+
+fast - all parameters are based on simple calculations (for example alpha is $ln(2)/TreeHeight$)
+
+good - all parameters are based on an optimization of OUwie and corHMM.
+
+
+The number of times the search was conducted (n_starts):
+
+1 - one start was conducted with initial parameters being either good or fast
+
+10 - ten starts were conducted with initial parameters being either good or fast and additional starts being sampled from a log uniform distribution centered on the intial parameters.
+
+
+
+```{r}
+files <- dir("~/2020_hOUwie/optim_test/", full.names = TRUE)
+results <- do.call(rbind, lapply(files, summarizeFile))
+melted_results <- melt(results)
+colnames(melted_results)
+ggplot(melted_results, aes(x = algorithm, y = value, fill = n_starts_init)) + 
+  geom_boxplot() + 
+  ylab("log diff from true") + 
+  facet_wrap(~variable)
+
+```
+
+We choose to use the global optimizer because we cannot always rely on good initial parameters to work well. In this case, the corHMM model works well, but in the case of hidden states depending on continuous traits there is no information to fit a good corHMM model. The global search, however, worked about equally well whether we used informed or uninformed starting parameters.
+
+## Run time for 100 tip phylogeny
+
+I also looked at run time in minutes.
+
+```{r}
+results <- do.call(rbind, lapply(files, summarizeFileB))
+boxplot(results$run_time ~ as.factor(paste0(results$algorithm, "_", results$n_starts_init)), xlab = "algorithm", ylab = "run_time (min)")
+```
+
+I realize the names are cutoff, but the first four are global optimizers, the second four are local optimizers, and the final four are simulated annealing optimization. The majority of the variation is split amongst these three groups and run time is always secondary to how well the optimization procedure worked. As expected, local searches were the fastest, followed by global searches, and finally simulated annealing.
+
