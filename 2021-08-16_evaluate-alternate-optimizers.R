@@ -39,7 +39,8 @@ phy$edge.length <- phy$edge.length/max(branching.times(phy))
 # Functions
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-SingleRun <- function(opt_combo, full_data, iter){
+SingleRun <- function(opt_combo, full_data, phy, iter){
+  data <- full_data$data
   n_starts <- n_cores <- as.numeric(opt_combo[1])
   ip <- as.character(opt_combo[1,2])
   optimizer <- as.character(opt_combo[1,3])
@@ -79,9 +80,9 @@ for(iter in 1:10){
   while(class(full_data) == "try-error"){
     full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   }
-  yee[[iter]] <- mclapply(opimizer_combinations, function(x) SingleRun(x, full_data, iter), mc.cores = 12)
+  yee[[iter]] <- mclapply(opimizer_combinations, function(x) SingleRun(x, full_data, phy, iter), mc.cores = 12)
 }
 
-
+# SingleRun(opimizer_combinations[[12]], full_data, phy, iter)
 
 
