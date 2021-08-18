@@ -96,36 +96,7 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
   return(fit)
 }
 
-
-  
-
-#### #### #### #### #### #### #### #### #### #### #### #### 
-# i is the set of models 
-#### #### #### #### #### #### #### #### #### #### #### #### 
-# for(iter in 1:50){
-# for(i in 1:22){
-#   model_name <- paste0("M", i)
-#   cat("Begining", model_name, "...\n")
-#   # generate data
-#   generating_model <- all_model_structures[[i]]
-#   discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
-#   pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate)
-#   full_data <- try(generateData(phy, discrete_model, generating_model, pars))
-#   while(class(full_data) == "try-error"){
-#     full_data <- try(generateData(phy, discrete_model, generating_model, pars))
-#   }
-#   file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
-#   save(full_data, file = file_name_data)
-#   # mclapply over all model structures
-#   out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-#   # tmp <- singleFit(full_data, all_model_structures[[1]], discrete_model_cd, discrete_model_cid, 10)
-#   # p = c(0.483848937,  0.007448614,  0.693147181,  0.284018414, 15.829464035)
-#   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
-#   save(out, file = file_name_res)
-#   full_data <- NULL
-# }
-# }
-
+# a single iteration
 singleRun <- function(i, iter){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
@@ -140,7 +111,7 @@ singleRun <- function(i, iter){
   file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
   save(full_data, file = file_name_data)
   # mclapply over all model structures
-  out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
+  out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = 22)
   # tmp <- singleFit(full_data, all_model_structures[[1]], discrete_model_cd, discrete_model_cid, 10)
   # p = c(0.483848937,  0.007448614,  0.693147181,  0.284018414, 15.829464035)
   file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
@@ -149,60 +120,13 @@ singleRun <- function(i, iter){
   full_data <- NULL
 }
 
-tmp <- mclapply(1:22, function(x) singleRun(x, 1), mc.cores = 3)
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
-# both models generate
+# run
 #### #### #### #### #### #### #### #### #### #### #### #### 
-for(iter in 1:5){
-for(i in 1:24){
-  model_name <- paste0("M", i)
-  cat("Begining", model_name, "...\n")
-  # generate data
-  generating_model <- all_model_structures[[i]]
-  discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
-  pars <- generateParameters(generating_model, minAlpha, maxAlpha, minSigma2, maxSigma2, minTheta, maxTheta, discrete_model, minRate, maxRate)
-  full_data <- try(generateData(phy, discrete_model, generating_model, pars))
-  while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, discrete_model, generating_model, pars))
-  }
-  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
-  save(full_data, file = file_name_data)
-  # mclapply over all model structures
-  out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim), mc.cores = nCores)
-  file_name_res <- paste0("sim_fits/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
-  save(out, file = file_name_res)
-  full_data <- NULL
+
+for(iter in 1:33){
+  mclapply(1:22, function(x) singleRun(x, iter), mc.cores = 2)
 }
-}
-#### #### #### #### #### #### #### #### #### #### #### #### 
-# ASR was still in log lik mode - this is now corrected, but have fix here
-#### #### #### #### #### #### #### #### #### #### #### #### 
-# 
-# setwd("~/2020_hOUwie/")
-# source("hOUwieNode.R")
-# 
-# files_fits <- dir("sim_fits/", full.names = TRUE)
-# data_fits <-  dir("data_fits/", full.names = TRUE)
-# 
-# for(i in 1:length(files_fits)){
-#   print(i)
-#   load(files_fits[i])
-#   for(j in 1:length(out)){
-#     if(class(out[[j]]) != "houwie"){
-#       next
-#     }
-#     if(mean(rowSums(out[[j]]$recon)) == 1){
-#       next
-#     }
-#     out[[j]]$recon[out[[j]]$recon == 0] <- -Inf
-#     tmp <- t(apply(out[[j]]$recon, 1, function(x) x - max(x)))
-#     out[[j]]$recon <- round(exp(tmp)/rowSums(exp(tmp)), 10)
-#   }
-#   save(out, file = files_fits[i])
-# }
-# 
-# undebug(hOUwieRecon)
-# test <- hOUwieRecon(out[[j]])
 
 

@@ -218,7 +218,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       cat("Starting a thorough search of parameters with", nSim, "simmaps using the", optimizer, "optimization protocol...\n")
     }
     multiple_starts <- generateMultiStarting(starts, index.disc, index.cont, n_starts, exp(lower), exp(upper))
-    if(optimizer == "nlopt"){
+    if(length(grep("nlopt", optimizer)) == 1){
       # out = nloptr(x0=log(starts), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts,
       #              phy=phy, data=hOUwie.dat$data.ou,
       #              rate.cat=rate.cat, mserr=mserr,
@@ -235,7 +235,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       out <- multi_out[[which.min(multi_logliks)]]
       pars <- out$solution
     }
-    if(optimizer == "sann"){
+    if(length(grep("sann", optimizer)) == 1){
       # out = GenSA(par=log(starts), fn=hOUwie.dev, lower=lower, upper=upper, control=opts, 
       #              phy=phy, data=hOUwie.dat$data.ou, 
       #              rate.cat=rate.cat, mserr=mserr, 
