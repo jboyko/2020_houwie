@@ -16,14 +16,13 @@ require(partitions)
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nCores <- 22
 nTip <- 100
 minAlpha = 1.5
 maxAlpha = 3
 minSigma2 = 0.5
 maxSigma2 = 1
-minTheta = 2
-maxTheta = 4
+minTheta = 12
+maxTheta = 14
 minRate = 0.25
 maxRate = 1
 
@@ -50,11 +49,6 @@ discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
 discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
 discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2))
 
-# deciding what tree size we would like to use
-phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
-phy <- drop.extinct(phy)
-phy$edge.length <- phy$edge.length/max(branching.times(phy))
-
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # Functions
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -77,8 +71,10 @@ generateParameters <- function(continuous_model, minAlpha, maxAlpha, minSigma2, 
 }
 
 # a function to fit a single continuous model given the full data
-singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_model_cid, nSim, time_slice){
+singleFit <- function(full_data, phy, continuous_model, discrete_model_cd, discrete_model_cid, houwie_parameters){
   # make hidden states observed
+  time_slice <- houwie_parameters[1,1]
+  nSim <- houwie_parameters[1,2]
   data <- full_data$data
   data[data[,2]==3,2] <- 1
   data[data[,2]==4,2] <- 2
@@ -96,9 +92,13 @@ singleFit <- function(full_data, continuous_model, discrete_model_cd, discrete_m
 }
 
 # a single iteration
-singleRun <- function(i, iter, time_slice, nSim){
+singleRun <- function(i, iter){
   model_name <- paste0("M", i)
   cat("Begining", model_name, "...\n")
+  # deciding what tree size we would like to use
+  phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
+  phy <- drop.extinct(phy)
+  phy$edge.length <- phy$edge.length/max(branching.times(phy))
   # generate data
   generating_model <- all_model_structures[[i]]
   discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
@@ -107,16 +107,16 @@ singleRun <- function(i, iter, time_slice, nSim){
   while(class(full_data) == "try-error"){
     full_data <- try(generateData(phy, discrete_model, generating_model, pars))
   }
-  file_name_data <- paste0("sim_data/", model_name, "-gen_", nTip, "-nTip_", nSim, "-nMap_", iter, "-iter.Rsave")
-  save(full_data, file = file_name_data)
   # mclapply over all model structures
-  out <- mclapply(all_model_structures, function(x) singleFit(full_data, x, discrete_model_cd, discrete_model_cid, nSim, time_slice), mc.cores = 11)
-  # tmp <- singleFit(full_data, all_model_structures[[1]], discrete_model_cd, discrete_model_cid, 10)
-  # p = c(0.483848937,  0.007448614,  0.693147181,  0.284018414, 15.829464035)
-  file_name_res <- paste0("sim_fits/", model_name, "_", time_slice, "_", nSim, "_", iter, ".Rsave")
-  names(out) <- paste0("M", 1:length(all_model_structures))
+  time_slice <- c(0.1, 0.5, 1.1)
+  nSim <- c(50, 100, 200)
+  houwie_parameters <- expand.grid(time_slice, nSim)
+  houwie_parameters <- lapply(seq_len(nrow(houwie_parameters)), function(i) houwie_parameters[i,])
+  model_res <- mclapply(houwie_parameters, function(x) singleFit(full_data, phy, generating_model, discrete_model_cd, discrete_model_cid, x), mc.cores = 9)
+  names(model_res) <- unlist(lapply(houwie_parameters, function(x) paste(x, collapse = "_")))
+  file_name_res <- paste0("nuiss_par_test/", model_name, "_", iter, ".Rsave")
+  out <- list(simulated_data = full_data, model_res = model_res)
   save(out, file = file_name_res)
-  full_data <- NULL
 }
 
 
@@ -124,16 +124,8 @@ singleRun <- function(i, iter, time_slice, nSim){
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-time_slice <- c(0.1, 0.5, 1.1)
-nSim <- c(50, 100, 500)
-houwie_parameters <- expand.grid(time_slice, nSim)
-
-for(iter in 1:33){
-  for(j in 1:dim(houwie_parameters)[1]){
-    time_i <- houwie_parameters[j,1]
-    sim_i <- houwie_parameters[j,2] 
-    mclapply(1:22, function(x) singleRun(x, iter, time_i, sim_i), mc.cores = 7)
-  }
+for(model in 1:22){
+  mclapply(1:9, function(x) singleRun(model, x), mc.cores = 9)
 }
 
 

@@ -136,10 +136,10 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   # default MLE search options
   if(is.null(opts)){
     if(optimizer == "nlopt_ln"){
-      opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="10000", "ftol_rel"=.Machine$double.eps^0.5)
+      opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
     }
     if(optimizer == "nlopt_gn"){
-      opts <- list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="10000", "ftol_rel"=.Machine$double.eps^0.5)
+      opts <- list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
     }
     if(optimizer == "sann"){
       opts <- list(max.call=1000, smooth=FALSE)
