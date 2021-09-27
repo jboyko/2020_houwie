@@ -27,7 +27,7 @@ minRate = 0.25
 maxRate = 1
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
-# the 40 2-state models we want to fit - put into list form
+# the 22 2-state models we want to fit - put into list form
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 continuous_models_cd_ou <- getAllContinuousModelStructures(2, "OU")
@@ -87,7 +87,7 @@ singleFit <- function(full_data, phy, continuous_model, discrete_model_cd, discr
     rate.cat <- 2
   }
   # fit the houwie model
-  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = TRUE, nodes = "all")
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE)
   return(fit)
 }
 
@@ -121,7 +121,7 @@ singleRun <- function(i, iter){
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-for(iter in 1:10){
+for(iter in 11){
   mclapply(1:22, function(x) singleRun(x, iter), mc.cores = 1)
 }
 

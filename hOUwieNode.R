@@ -318,28 +318,28 @@ hOUwieRecon <- function(houwie_obj, nodes="all"){
     }else{
       possible_states <- 1:(nStates*rate.cat)
     }
-    check_unreasonable_recon <- TRUE
-    while(check_unreasonable_recon){
-      for(state_j in 1:(nStates*rate.cat)){
-        if(!state_j %in% possible_states){
-          next
-        }
-        edge_liks_list_i <- edge_liks_list
-        fix_vector <- numeric(nStates * rate.cat)
-        fix_vector[state_j] <- 1
-        for(k in dec_edges_to_fix){
-          edge_liks_list_i[[k]][1,] <- fix_vector
-        }
-        for(k in anc_edges_to_fix){
-          last_row <- dim(edge_liks_list_i[[k]])[1]
-          edge_liks_list_i[[k]][last_row,] <- fix_vector
-        }
-        fixed_loglik <- -hOUwie.dev(p = log(p), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list_i, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=FALSE)
-        recon_matrix[i, state_j] <- fixed_loglik
+    # check_unreasonable_recon <- TRUE
+    # while(check_unreasonable_recon){
+    for(state_j in 1:(nStates*rate.cat)){
+      if(!state_j %in% possible_states){
+        next
       }
-      recon_loglik <- max(recon_matrix[i, ]) + log(sum(exp(recon_matrix[i, ] - max(recon_matrix[i, ]))))
-      check_unreasonable_recon <- recon_loglik < houwie_obj$loglik * 1.05
+      edge_liks_list_i <- edge_liks_list
+      fix_vector <- numeric(nStates * rate.cat)
+      fix_vector[state_j] <- 1
+      for(k in dec_edges_to_fix){
+        edge_liks_list_i[[k]][1,] <- fix_vector
+      }
+      for(k in anc_edges_to_fix){
+        last_row <- dim(edge_liks_list_i[[k]])[1]
+        edge_liks_list_i[[k]][last_row,] <- fix_vector
+      }
+      fixed_loglik <- -hOUwie.dev(p = log(p), phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list_i, nSim=nSim, tip.paths=tip.paths, sample_tips=sample_tips, split.liks=FALSE)
+      recon_matrix[i, state_j] <- fixed_loglik
     }
+    recon_loglik <- max(recon_matrix[i, ]) + log(sum(exp(recon_matrix[i, ] - max(recon_matrix[i, ]))))
+    # check_unreasonable_recon <- recon_loglik < houwie_obj$loglik * 1.05
+    # }
   }
   recon_matrix <- t(apply(recon_matrix, 1, function(x) x - max(x)))
   recon_matrix <- round(exp(recon_matrix)/rowSums(exp(recon_matrix)), 10)
@@ -414,8 +414,13 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   # calculte the discrete probabilities based on the given Q matrix (Pij already calculated)
   discrete_probs <- lapply(internode_samples, function(x) getStateSampleProb(state_sample = x, Pij = internode_maps_and_discrete_probs$Pij, root_liks = root_liks, root_edges = internode_maps_and_discrete_probs$root_edges))
   llik_discrete <- unlist(discrete_probs)
+  failed_maps <- discrete_probs == -Inf
+  llik_discrete <- llik_discrete[!failed_maps]
+  if(length(llik_discrete) == 0){
+    return(1e10)
+  }
   # generate maps
-  simmaps <- getMapFromSubstHistory(internode_maps, phy)
+  simmaps <- getMapFromSubstHistory(internode_maps[!failed_maps], phy)
   # if there is no character dependence the map has no influence on continuous likleihood
   character_dependence_check <- all(apply(index.cont, 1, function(x) length(unique(x)) == 1))
   if(character_dependence_check){
