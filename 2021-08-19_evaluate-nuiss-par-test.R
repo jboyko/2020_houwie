@@ -87,7 +87,7 @@ singleFit <- function(full_data, phy, continuous_model, discrete_model_cd, discr
     rate.cat <- 2
   }
   # fit the houwie model
-  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = TRUE, nodes = "all")
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE)
   return(fit)
 }
 
@@ -125,7 +125,7 @@ singleRun <- function(i, iter){
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 for(model in 1:22){
-  mclapply(1:9, function(x) singleRun(model, x), mc.cores = 9)
+  mclapply(18:20, function(x) singleRun(model, x), mc.cores = 3)
 }
-
+# 3 cores times 9 cores being used
 
