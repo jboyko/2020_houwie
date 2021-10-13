@@ -121,8 +121,8 @@ singleRun <- function(i, iter){
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-for(iter in 11){
-  mclapply(1:22, function(x) singleRun(x, iter), mc.cores = 1)
+for(iter in 21:30){
+  mclapply(1:22, function(x) singleRun(x, iter), mc.cores = 3)
 }
 
 

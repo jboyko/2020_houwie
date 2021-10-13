@@ -118,14 +118,18 @@ all_model_names <- paste0("M", model_numbers, "_")
 all_things <- list()
 for(i in 1:length(all_model_names)){
   results_by_iter <- lapply(model_files[grep(all_model_names[i], model_files)], get_log_error_from_file)
-  plotting_data <- get_log_error_plotting_data(results_by_iter)
+  plotting_data <- melt(results_by_iter)[,-4]
+  plotting_data$par <- as.factor(gsub("*_.*", "", plotting_data$Var1))
+  plotting_data$par_no <- as.factor(gsub(".*_", "", plotting_data$Var1))
+  plotting_data$n_map <- as.factor(gsub(".*_", "", plotting_data$Var2))
+  plotting_data$time_slice <- as.factor(gsub("_.*", "", plotting_data$Var2))
   all_things[[i]] <- cbind(model = gsub("_", "", all_model_names[i]), plotting_data)
 }
 all_plotting_data <- do.call(rbind, all_things)
 all_plotting_data$par <- factor(all_plotting_data$par, levels = c("rate", "alpha", "sigma", "theta"))
 all_plotting_data$model <- factor(all_plotting_data$model, levels = paste0("M", model_numbers))
 
-my_plot <- ggplot(all_plotting_data, aes(y = log_diff, x = par_no, fill = par_no)) +
+my_plot <- ggplot(all_plotting_data, aes(y = value, x = par_no, fill = par_no)) +
   geom_hline(aes(yintercept=0), colour="#C0C0C0", lwd=1, linetype = "dotted") + 
   geom_violin() +
   scale_fill_manual(values = viridis(3)[c(2,3,1)]) + 
@@ -172,14 +176,16 @@ ggplot(data = plot_sign_data_MK, aes(x = variable, y = value, fill = variable)) 
 all_things <- list()
 for(i in 1:length(all_model_names)){
   results_by_iter <- lapply(model_files[grep(all_model_names[i], model_files)], get_log_error_from_file)
-  plotting_data <- get_log_error_plotting_data(results_by_iter)
+  plotting_data <- melt(results_by_iter)[,-4]
+  plotting_data$Var1 <- as.factor(gsub("*_.*", "", plotting_data$Var1))
+  # plotting_data <- do.call(rbind, results_by_iter)
   all_things[[i]] <- cbind(model = gsub("_", "", all_model_names[i]), plotting_data)
 }
 all_plotting_data <- do.call(rbind, all_things)
-all_plotting_data$par <- factor(all_plotting_data$par, levels = c("rate", "alpha", "sigma", "theta"))
+all_plotting_data$Var1 <- factor(all_plotting_data$Var1, levels = c("rate", "alpha", "sigma", "theta"))
 all_plotting_data$model <- factor(all_plotting_data$model, levels = paste0("M", model_numbers))
 
-ggplot(all_plotting_data, aes(y = log_diff, x = par)) +
+ggplot(all_plotting_data, aes(y = Var2, x = Var1)) +
   geom_violin() +
   ylab("log diff est from true") +
   facet_wrap(~model) +

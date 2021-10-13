@@ -342,12 +342,9 @@ generateStartingValues.houwie <- function(starting.vals, data.houwie, index.ou, 
   return(start.vals)
 }
 
-
-
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
 ## Model evaluation functions
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
-
 
 g_legend<-function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
@@ -553,7 +550,6 @@ getAICParamTablefromRsave<- function(Rsave){
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
 ## Plotting functions
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
-
 
 plotRSME <- function(in.obj, n.obj, type = "RMSE"){
   g <- list()
@@ -762,11 +758,167 @@ getPVecFromModel <- function(hOUwie.model){
   return(c(p.mk, p.ou))
 }
 
-
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
-## Utility functions for running the empirical dataset
+## Utility functions for testing power of the models 
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## 
 
+load_model <- function(model, model_files){
+  files_to_load <- model_files[grep(model, model_files)]
+  model_res <- list()
+  for(i in 1:length(files_to_load)){
+    load(files_to_load[i])
+    model_res[[i]] <- out
+  }
+  names(model_res) <- files_to_load
+  return(model_res)
+}
+
+get_parameter_names_discrete <- function(discrete_index, continuous_index){
+  all_names <- c("rate", "alpha", "sigma", "theta")
+  n_p_disc <- max(discrete_index, na.rm = TRUE)
+  n_p_alpha <- length(unique(na.omit(continuous_index[1,])))
+  n_p_sigma <- length(unique(na.omit(continuous_index[2,])))
+  n_p_theta <- length(unique(na.omit(continuous_index[3,])))
+  tmp_names <- c(rep("rate", n_p_disc), rep("alpha", n_p_alpha), rep("sigma", n_p_sigma), rep("theta", n_p_theta))
+  out_names <- tmp_names
+  for(i in 1:4){
+    out_names[tmp_names %in% all_names[i]] <- paste0(all_names[i], "_", seq_len(length(which(tmp_names %in% all_names[i]))))
+  }
+  return(out_names)
+}
+
+getSignError <- function(model_list_iter){
+  true_pars <- model_list_iter$simulated_data$pars
+  if(all(unlist(lapply(model_list_iter$model_res, function(x) x$loglik)) > 1e5)){
+    return(c(NA, NA, NA))
+  }
+  best_fit <- model_list_iter$model_res[[which.max(unlist(lapply(model_list_iter$model_res, function(x) x$loglik))[unlist(lapply(model_list_iter$model_res, function(x) x$loglik)) < 1e5])]]
+  est_pars <- best_fit$p
+  par_names <- get_parameter_names_discrete(best_fit$index.disc, best_fit$index.cont)
+  alpha_index <- grep("alpha", par_names)
+  sigma_index <- grep("sigma", par_names)
+  theta_index <- grep("theta", par_names)
+  if(length(alpha_index) > 1){
+    alpha <- diff(est_pars[alpha_index]) > 0
+  }else{
+    alpha <- NA
+  }
+  if(length(sigma_index) > 1){
+    sigma <- diff(est_pars[sigma_index]) > 0
+  }else{
+    sigma <- NA
+  }
+  if(length(theta_index) > 1){
+    theta <- diff(est_pars[theta_index]) > 0
+  }else{
+    theta <- NA
+  }
+  error_vector <- c(alpha_correct=alpha, sigma_correct=sigma, theta_correct=theta)
+  return(error_vector)
+}
+
+getSignErrorList <- function(model_list){
+  tmp_table <- do.call(rbind, lapply(model_list, function(x) getSignError(x)))
+  new_tmp_table <- tmp_table[!apply(tmp_table, 1, function(x) all(is.na(x))),]
+  if(dim(new_tmp_table)[1] == 0){
+    return(c(alpha_correct=NA, sigma_correct=NA, theta_correct=NA))
+  }else{
+    return(colSums(new_tmp_table)/dim(new_tmp_table)[1])
+  }
+}
+
+getRMSE <- function(model_list_iter){
+  true_pars <- model_list_iter$simulated_data$pars
+  if(all(unlist(lapply(model_list_iter$model_res, function(x) x$loglik)) > 1e5)){
+    return(c(NA, NA, NA))
+  }
+  best_fit <- model_list_iter$model_res[[which.max(unlist(lapply(model_list_iter$model_res, function(x) x$loglik))[unlist(lapply(model_list_iter$model_res, function(x) x$loglik)) < 1e5])]]
+  is_HMM <- dim(model_list_iter$simulated_data$index.cor)[2]==4
+  est_pars <- best_fit$p
+  par_names <- get_parameter_names_discrete(best_fit$index.disc, best_fit$index.cont)
+  alpha_index <- grep("alpha", par_names)
+  sigma_index <- grep("sigma", par_names)
+  theta_index <- grep("theta", par_names)
+  if(length(alpha_index) > 0){
+    if(is_HMM){
+      alpha <- sum((sort(true_pars[alpha_index]) - sort(est_pars[alpha_index]))^2)
+    }else{
+      alpha <- sum((true_pars[alpha_index] - est_pars[alpha_index])^2)
+    }
+  }else{
+    alpha <- NA
+  }
+  if(length(sigma_index) > 0){
+    if(is_HMM){
+      sigma <- sum((sort(true_pars[sigma_index]) - sort(est_pars[sigma_index]))^2)
+    }else{
+      sigma <- sum((true_pars[sigma_index] - est_pars[sigma_index])^2)
+    }
+  }else{
+    sigma <- NA
+  }
+  if(length(theta_index) > 0){
+    if(is_HMM){
+      theta <- sum((sort(true_pars[theta_index]) - sort(est_pars[theta_index]))^2)
+    }else{
+      theta <- sum((true_pars[theta_index] - est_pars[theta_index])^2)
+    }
+  }else{
+    theta <- NA
+  }
+  error_vector <- c(alpha_se=alpha, sigma_se=sigma, theta_se=theta)
+  return(error_vector)
+}
+
+getRMSEList <- function(model_list){
+  tmp_table <- do.call(rbind, lapply(model_list, function(x) getRMSE(x)))
+  new_tmp_table <- tmp_table[!apply(tmp_table, 1, function(x) all(is.na(x))),]
+  if(dim(new_tmp_table)[1] == 0){
+    return(c(alpha_correct=NA, sigma_correct=NA, theta_correct=NA))
+  }else{
+    return(sqrt(colSums(new_tmp_table)/dim(new_tmp_table)[1]))
+  }
+}
+
+getPowerMeasures <- function(model_iter, focal_model, cd_vector){
+  model_names <- paste0("M", 1:22)
+  power_table <- getModelTable(model_iter$model_res)
+  rownames(power_table) <- model_names
+  if(any(power_table$lnLik > 1e5)){
+    new_model_names <- model_names[!power_table$lnLik > 1e5]
+    new_cd_vector <- cd_vector[!power_table$lnLik > 1e5]
+    new_model_res <- model_iter$model_res[!power_table$lnLik > 1e5]
+    new_power_table <- getModelTable(new_model_res)
+    rownames(new_power_table) <- new_model_names
+  }else{
+    new_model_res <- model_iter$model_res
+    new_power_table <- power_table
+    rownames(new_power_table) <- model_names
+    new_cd_vector <- cd_vector
+  }
+  focal_row <- new_power_table[rownames(new_power_table) == focal_model,]
+  if(dim(focal_row)[1] == 0){
+    return(c(NA, NA, NA))
+  }else{
+    obj <- data.frame(best = focal_row$dAIC == 0, dAIC = focal_row$AICwt, best_type = new_cd_vector[which.min(new_power_table$dAIC)])
+    return(obj)
+  }
+}
+
+getRootState <- function(simmap){
+  nTip <- length(simmap$tip.label)
+  root_state <- as.numeric(names(simmap$maps[[which(simmap$edge[,1] == nTip+1)[1]]]))[1]
+  return(root_state)
+}
+
+getBestModel <- function(model_set){
+  best_fit <- model_set[[which.max(unlist(lapply(model_set, function(x) x$loglik))[unlist(lapply(model_set, function(x) x$loglik)) < 1e5])]]
+  return(best_fit)
+}
+
+#### #### #### #### #### #### #### #### #### #### #### #### 
+# functions for the empirical dataset
+#### #### #### #### #### #### #### #### #### #### #### #### 
 getCSVs <- function(wd){
   CSVs <- dir(paste0(wd, "/trait_data/"))
   CSVs <- CSVs[grep("niche", CSVs)]
@@ -806,3 +958,19 @@ getData <- function(csv){
   ))
 }
 
+quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_model_cd){
+  if(dim(continuous_model)[2] == 2){
+    discrete_model <- discrete_model_cd
+    rate.cat <- 1
+  }else{
+    discrete_model <- discrete_model_cid
+    rate.cat <- 2
+  }
+  if(dim(data)[2] == 4){
+    mserr <- "known"
+  }else{
+    mserr <- "none"
+  }
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = 50, time_slice = 20, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, mserr = mserr)
+  return(fit)
+}
