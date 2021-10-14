@@ -958,7 +958,7 @@ getData <- function(csv){
   ))
 }
 
-quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_model_cd){
+quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_model_cd, nSim=50, time_slice=20){
   if(dim(continuous_model)[2] == 2){
     discrete_model <- discrete_model_cd
     rate.cat <- 1
@@ -971,6 +971,6 @@ quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_m
   }else{
     mserr <- "none"
   }
-  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = 50, time_slice = 20, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, mserr = mserr)
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, mserr = mserr)
   return(fit)
 }

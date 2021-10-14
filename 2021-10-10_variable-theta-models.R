@@ -59,7 +59,7 @@ expected_data <- lapply(model_fits, function(x) cbind(reg=x$data[,2], x=x$expect
 cols <- c("#e6550d", "#756bb1")
 
 # subset data to be state 1 or 2
-root_state <- 2
+root_state <- 1
 sim_dat <- simulated_data[unlist(root_states) == root_state]
 model_fit <- model_fits[unlist(root_states) == root_state]
 exp_dat <- expected_data[unlist(root_states) == root_state]
