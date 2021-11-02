@@ -1225,9 +1225,40 @@ getAllJointProbs<- function(phy, data, rate.cat, time_slice, Q, alpha, sigma.sq,
   if(!quiet){
     cat("\n")
   }
+  simmap_list <- lapply(simmap_list, correct_map_edges)
   class(simmap_list) <- c("multiSimmap", "multiPhylo")
   return(list(joint_probability_table=joint_probability_table, simmap_list=simmap_list, all_combinations=all_combinations))
 }
+
+# a function for correcting edge labels to be plotted when using get all joint probs
+correct_map_edges <- function(simmap){
+  simmap$maps <- lapply(simmap$maps, correct_edge)
+  return(simmap)
+}
+
+correct_edge <- function(edge){
+  edge_names <- names(edge)
+  count <- 1
+  edge_merge <- numeric(length(edge))
+  edge_merge[1] <- count
+  for(i in 2:length(edge)){
+    if(edge_names[i-1] == edge_names[i]){
+      edge_merge[i] <- count
+    }else{
+      count <- count + 1
+      edge_merge[i] <- count
+    }
+  }
+  new_edge_lengths <- vector("numeric", length(unique(edge_merge)))
+  new_edge_names <- vector("character", length(unique(edge_merge)))
+  for(j in unique(edge_merge)){
+    new_edge_lengths[j] <- sum(edge[edge_merge %in% j])
+    new_edge_names[j] <- names(edge)[edge_merge %in% j][1]
+  }
+  names(new_edge_lengths) <- new_edge_names
+  return(new_edge_lengths)
+}
+
 
 # print a houwie object
 print.houwie <- function(x, ...){

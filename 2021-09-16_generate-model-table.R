@@ -42,7 +42,7 @@ all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1],
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 # the model table will have a row for every model (of which there are 22), and 12 columns (model, type, k, par_a, par_s, par_t, err_a, err_s, err_t, power_1, power_2, power_3)
-model_table <- as.data.frame(matrix(data = NA, nrow=22, ncol=15, dimnames = list(paste0("M", 1:22), c("type_1","type_2", "k","alpha_free","sigma_free","theta_free","alpha_sign_error","sigma_sign_error","theta_sign_error","alpha_rmse","sigma_rmse","theta_rmse", "prop_best","avg_AICwt","prop_CD"))))
+model_table <- as.data.frame(matrix(data = NA, nrow=22, ncol=17, dimnames = list(paste0("M", 1:22), c("type_1","type_2", "k","alpha_free","sigma_free","theta_free","alpha_sign_error","sigma_sign_error","theta_sign_error","alpha_rmse","sigma_rmse","theta_rmse", "prop_best","avg_AICwt","prop_CD", "mean_obs_exp", "sd_obs_exp"))))
 
 # fill out the first column of the table, the type_1 is either BM, OU, or mixed
 model_table[,1] <- c("OU", "mixed", "BM")[(unlist(lapply(all_model_structures, function(x) sum(is.na(x[1,]))/length(x[1,])))*2)+1]
@@ -102,12 +102,16 @@ for(i in model_numbers){
 }
 model_table[,13:15] <- round(do.call(rbind, model_power_list), 3)
 
-# fill out the 16 column. measures of expected value error 
-param_model_res$M1[[1]]$simulated_data$data[,3]
-
-
-
-
+# fill out the 16,17 column. measures of expected value error 
+for(i in model_numbers){
+  focal_model <- paste0("M", i)
+  mean_list_diff <- lapply(param_model_res[[i]], getObsExpDiff)
+  mean_list_diff <- mean_list_diff[!unlist(lapply(mean_list_diff, class)) == "try-error"]
+  mean_sp_diff <- colMeans(do.call(rbind, mean_list_diff))
+  mean_diff <- mean(mean_sp_diff)
+  sd_diff <- sd(mean_sp_diff)
+  model_table[i,c(16,17)] <- round(c(mean_diff, sd_diff), 3)
+}
 
 write.csv(model_table, file = "~/Desktop/houwie_model_table.csv")
 

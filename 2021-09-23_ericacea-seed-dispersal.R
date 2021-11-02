@@ -51,9 +51,33 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2))
 data <- d$dat.arid.se
 phy <- keep.tip(t, data$sp)
 
-eric_results <- vector("list", length(d))
-for(i in 1:length(d)){
-  eric_results[[i]] <- mclapply(all_model_structures, function(x) quickRun(d[[i]], phy, x, discrete_model_cid, discrete_model_cd), mc.cores = 22)
+time_slice <- c(20, 60, 120)
+nSim <- c(50, 100, 200)
+houwie_parameters <- expand.grid(time_slice, nSim)
+houwie_parameters[1,1]
+
+eric_results <- vector("list", dim(houwie_parameters)[1])
+for(i in 1:dim(houwie_parameters)[1]){
+  eric_results[[i]] <- mclapply(all_model_structures, function(x) quickRun(data, phy, x, discrete_model_cid, discrete_model_cd, nSim = houwie_parameters[i,2], time_slice = houwie_parameters[i,1]), mc.cores = 22)
 }
+
+# evaluating hybrid models
+eric_results_hmm <- vector("list", dim(houwie_parameters)[1])
+hybrid_model_structures <- list(getOUParamStructure("BMS", "three.point", FALSE, FALSE, 4),
+                                getOUParamStructure("OUM", "three.point", FALSE, FALSE, 4),
+                                getOUParamStructure("OUMV", "three.point", FALSE, FALSE, 4),
+                                getOUParamStructure("OUMA", "three.point", FALSE, FALSE, 4),
+                                getOUParamStructure("OUMVA", "three.point", FALSE, FALSE, 4))
+
+eric_results_hmm <- mclapply(hybrid_model_structures, function(x) quickRun(data, phy, x, discrete_model_cid, discrete_model_cd, nSim = 10, time_slice = 120, n_starts=10), mc.cores = 5)
+
+# for(i in 1:dim(houwie_parameters)[1]){
+#   eric_results_hmm[[i]] <- mclapply(hybrid_model_structures, function(x) quickRun(data, phy, x, discrete_model_cd_hmm, discrete_model_cd, nSim = houwie_parameters[i,2], time_slice = houwie_parameters[i,1]), mc.cores = 22)
+# }
+
+# fit <- hOUwie(phy = phy, data = data, rate.cat = 2, nSim = 10, time_slice = 120, discrete_model = discrete_model_cid, continuous_model = hybrid_model_structures[[2]], recon = FALSE, mserr = "known")
+
+
+
 
 

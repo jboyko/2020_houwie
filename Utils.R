@@ -916,6 +916,18 @@ getBestModel <- function(model_set){
   return(best_fit)
 }
 
+getExpectedValues <- function(model_set){
+  best_model <- getBestModel(model_set)
+  expected_vals <- best_model$expected_vals
+  return(expected_vals)
+}
+
+getObsExpDiff <- function(param_model_res){
+  observed_values <- param_model_res$simulated_data$data[,3]
+  expected_values <- try(getExpectedValues(param_model_res$model_res))
+  return(try(observed_values -  expected_values))
+}
+
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # functions for the empirical dataset
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -958,7 +970,7 @@ getData <- function(csv){
   ))
 }
 
-quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_model_cd, nSim=50, time_slice=20){
+quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_model_cd, nSim=50, time_slice=20, n_starts=1){
   if(dim(continuous_model)[2] == 2){
     discrete_model <- discrete_model_cd
     rate.cat <- 1
@@ -971,6 +983,6 @@ quickRun <- function(data, phy, continuous_model, discrete_model_cid, discrete_m
   }else{
     mserr <- "none"
   }
-  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, mserr = mserr)
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, mserr = mserr, n_starts = n_starts)
   return(fit)
 }
