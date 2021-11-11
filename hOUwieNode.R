@@ -443,21 +443,6 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   return(-llik_houwie)
 }
 
-getModelParams <- function(houwie_obj){
-  if(class(houwie_obj) != "houwie"){
-    stop("Object must be of class houwie.")
-  }
-  if(is.null(houwie_obj$recon)){
-    stop("hOUwie object must include a state reconstruction for model averaged parameters.")
-  }
-  parameter_matrix <- houwie_obj$solution.cont
-  parameter_matrix[is.na(parameter_matrix)] <- 1e-10
-  diag(houwie_obj$solution.disc) <- NA
-  parameter_matrix <- rbind(parameter_matrix, wait.times = 1/rowSums(houwie_obj$solution.disc, na.rm = TRUE))
-  parameters_by_node <- t(apply(houwie_obj$recon, 1, function(x) colSums(x * t(parameter_matrix))))
-  return(parameters_by_node)
-}
-
 getEdgeLiks <- function(phy, data, n.traits, rate.cat, time_slice){
   edge_liks_list <- vector("list", dim(phy$edge)[1])
   nTip <- length(phy$tip.label)
@@ -1131,9 +1116,80 @@ getModelTable <- function(model.list, type="AIC"){
   dAIC <- AIC - min(AIC)
   AICwt <- exp(-0.5 * dAIC)/sum(exp(-0.5 * dAIC))
   LogLik <- simplify2array(lapply(model.list, "[[", "loglik"))
-  out <- data.frame(np = ParCount, lnLik = LogLik, AIC = AIC, dAIC = dAIC, AICwt = AICwt)
+  DiscLik <- simplify2array(lapply(model.list, "[[", "DiscLik"))
+  ContLik <- simplify2array(lapply(model.list, "[[", "ContLik"))
+  out <- data.frame(np = ParCount, lnLik = LogLik, DiscLik=DiscLik, ContLik=ContLik, AIC = AIC, dAIC = dAIC, AICwt = AICwt)
   colnames(out) <- gsub("AIC", type, colnames(out))
   return(out)
+}
+
+getModelAvgParams <- function(houwie_obj, BM_alpha_treatment="zero", force=TRUE){
+  if(class(houwie_obj) != "list" | length(houwie_obj) < 2){
+    stop("getModelAvgParams requires multiple houwie model objects to be input as a list.", call. = FALSE)
+  }
+  rate_cats <- simplify2array(lapply(houwie_obj, "[[", "rate.cat"))
+  n_states <- simplify2array(lapply(houwie_obj, function(x) dim(x$index.disc)[1]))
+  if(any(rate_cats > 1)){
+    stop("Model averaging in this way only works for models with a single rate category. Try getModelAvgTipParams or see details.", call. = FALSE)
+  }
+  n_obs <- unique(n_states/rate_cats)
+
+  # name the models
+  if(!is.null(names(houwie_obj))){
+    mod_names <- paste0("M", 1:length(houwie_obj))
+    names(houwie_obj) <- mod_names
+  }else{
+    mod_names <- names(houwie_obj)
+  }
+  
+  # pull the aic weights
+  mods_table <- getModelTable(houwie_obj)
+  if(diff(range(mods_table$AIC)) > 1e10){
+    if(!force){
+      max_aic <- max(mods_table$AIC)
+      houwie_obj <- houwie_obj[abs(mods_table$AIC - max_aic)  < 1e10]
+      mods_table <- getModelTable(houwie_obj)
+      mod_names <- names(houwie_obj)
+    }else{
+      warning("It is possible that one or more of your models failed to converge. The AIC between the best and worst models exceeds 1e10. Set force=FALSE to automatically remove potentially failed runs.")
+    }
+  }
+  AICwts <- mods_table$AICwt
+  
+  # pull out the solutions from each model
+  solution_disc <- lapply(houwie_obj, "[[", "solution.disc")
+  dim_disc <- dim(solution_disc[[1]])
+  dim_names_disc <- colnames(solution_disc[[1]])
+  names(solution_disc) <- mod_names
+  
+  solution_cont <- lapply(houwie_obj, "[[", "solution.cont")
+  dim_cont <- dim(solution_cont[[1]])
+  dim_names_cont <- list(rownames(solution_cont[[1]]), colnames(solution_cont[[1]]))
+  names(solution_cont) <- mod_names
+  
+  solution_expc <- lapply(houwie_obj, "[[", "expected_vals")
+  names_expc <- names(solution_expc[[1]])
+  names(solution_expc) <- mod_names
+  
+  # conduct the model averaging
+  solution_disc_table <- do.call(rbind, lapply(solution_disc, c))
+  mod_avg_disc_vector <- colSums(solution_disc_table * AICwts)
+  
+  solution_cont_table <- do.call(rbind, lapply(solution_cont, c))
+  if(BM_alpha_treatment == "zero"){
+    solution_cont_table[is.na(solution_cont_table)] <- 0
+    mod_avg_cont_vector <- colSums(solution_cont_table * AICwts)
+  }
+  
+  solution_expc_table <- do.call(rbind, solution_expc)
+  mod_avg_expc <- colSums(solution_expc_table * AICwts)
+  
+  # organize the parameter vectors back into matrix form
+  mod_avg_disc <- matrix(mod_avg_disc_vector, dim_disc[1], dim_disc[2], dimnames = list(dim_names_disc, dim_names_disc))
+  mod_avg_cont <- matrix(mod_avg_cont_vector, dim_cont[1], dim_cont[2], dimnames = list(dim_names_cont[[1]], dim_names_cont[[2]]))
+  
+  
+  return(list(mod_avg_disc=mod_avg_disc, mod_avg_cont=mod_avg_cont, mod_avg_expc=mod_avg_expc))
 }
 
 # script for generating all the possible underlying mappings and looking at joint probablity. using this we can look at the bias produced by looking only at the discrete mappings.

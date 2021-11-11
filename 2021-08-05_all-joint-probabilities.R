@@ -81,7 +81,7 @@ i <- 1
 for(i in 1:8){
   stochastic_map <- out_CD$simmap_list[[i]]
   
-  cols<-setNames(RColorBrewer::brewer.pal(6, "BrBG")[c(1,3)], c("1","2"))
+  cols<-setNames(c("#d73027", "#fdae61"), c("1","2"))
   g <- as.grob(~plotSimmap(stochastic_map, color=cols, fsize = 1e-10, lwd = 5, ylim=c(-0.25,4.5), outline = TRUE))
   data$reg <- as.factor(data$reg)
   data$x <- as.numeric(data$x)
@@ -97,7 +97,7 @@ for(i in 1:8){
     theme_classic() +
     theme(axis.line.y=element_blank(), axis.text.y=element_blank(),axis.ticks.y=element_blank(),
           axis.title.y=element_blank(),legend.position="none") +
-    scale_fill_manual(values = RColorBrewer::brewer.pal(6, "BrBG")[c(6,4)]) +
+    scale_fill_manual(values = c("#4575b4", "#abd9e9")) +
     scale_y_continuous(n.breaks = 3) +
     labs(y=xlab)
   
@@ -116,7 +116,7 @@ for(i in 1:8){
   g_bar <- ggplot(new_dat, aes(fill=Var2, y=value, x = Var1)) +
     geom_bar(position="stack", stat="identity", color="black") +
     coord_flip() +
-    scale_fill_manual(values = RColorBrewer::brewer.pal(6, "BrBG")[c(5,2)]) +
+    scale_fill_manual(values = c("#74add1", "#f46d43")) +
     ylab(ylab) + 
     xlab("") +
     ylim(c(0,50)) +
@@ -130,72 +130,71 @@ for(i in 1:8){
 A <- grid.arrange(out[[1]], out[[2]], out[[3]], out[[4]], 
              out[[5]], out[[6]], out[[7]], out[[8]],
              ncol=4)
-
+grid.arrange(A, C, ncol=2, widths=c(2,1))
 #### figure b
 
-out_CD <- full_joint_res[[5]]
-poss_disc <- possible_discrete[,5]
-data <- data.frame(sp = c("S1", "S2", "S3", "S4"), reg = poss_disc, x = c(5,10)[poss_disc + 1])
-out <- vector("list", 8)
-
-for(i in 1:8){
-  stochastic_map <- out_CD$simmap_list[[i]]
-  
-  cols<-setNames(RColorBrewer::brewer.pal(6, "BrBG")[c(1,3)], c("1","2"))
-  g <- as.grob(~plotSimmap(stochastic_map, color=cols, fsize = 1e-10, lwd = 5, ylim=c(-0.25,4.5), outline = TRUE))
-  data$reg <- as.factor(data$reg)
-  data$x <- as.numeric(data$x)
-  if(i < 5){
-    xlab = ""
-  }else{
-    xlab = "Cont. Value"
-  }
-  
-  p <- ggplot(data, aes(x=sp, y=x, fill = reg)) + 
-    geom_bar(stat="identity", colour="black") + 
-    coord_flip() + 
-    theme_classic() +
-    theme(axis.line.y=element_blank(), axis.text.y=element_blank(),axis.ticks.y=element_blank(),
-          axis.title.y=element_blank(),legend.position="none") +
-    scale_fill_manual(values = RColorBrewer::brewer.pal(6, "BrBG")[c(6,4)]) +
-    scale_y_continuous(n.breaks = 3) +
-    labs(y=xlab)
-  
-  g_phy <- grid.arrange(g, p, ncol=2, widths=c(2,1))
-  
-  if(i < 5){
-    ylab = ""
-  }else{
-    ylab = "Total -Ln(Likelihood)"
-  }
-  
-  stacked_dat <- melt(-out_CD$joint_probability_table[,c(1,2)])
-  stacked_dat$Var1 <- as.factor(stacked_dat$Var1)
-  stacked_dat$Var2 <- factor(stacked_dat$Var2, levels = c("cont", "disc"))
-  new_dat <- stacked_dat[stacked_dat$Var1 == i,]
-  g_bar <- ggplot(new_dat, aes(fill=Var2, y=value, x = Var1)) +
-    geom_bar(position="stack", stat="identity", color="black") +
-    coord_flip() +
-    scale_fill_manual(values = RColorBrewer::brewer.pal(6, "BrBG")[c(5,2)]) +
-    ylab(ylab) + 
-    xlab("") +
-    ylim(c(0,50)) +
-    theme_classic() +
-    theme(axis.line.y=element_blank(), axis.text.y=element_blank(),axis.ticks.y=element_blank(),
-          axis.title.y=element_blank(),legend.position="none")
-  
-  out[[i]] <- grid.arrange(g_phy, g_bar, ncol=1, heights=c(3,1))
-}
-
-B <- grid.arrange(out[[1]], out[[2]], out[[3]], out[[4]], 
-                  out[[5]], out[[6]], out[[7]], out[[8]],
-                  ncol=4)
-
-
-
-A <- grid.arrange(A, B, ncol=2)
-grid.arrange(A, C, ncol=2)
-grid.arrange(B, C, ncol=2)
-
-
-
+# out_CD <- full_joint_res[[5]]
+# poss_disc <- possible_discrete[,5]
+# data <- data.frame(sp = c("S1", "S2", "S3", "S4"), reg = poss_disc, x = c(5,10)[poss_disc + 1])
+# out <- vector("list", 8)
+# 
+# for(i in 1:8){
+#   stochastic_map <- out_CD$simmap_list[[i]]
+#   
+#   cols<-setNames(RColorBrewer::brewer.pal(6, "BrBG")[c(1,3)], c("1","2"))
+#   g <- as.grob(~plotSimmap(stochastic_map, color=cols, fsize = 1e-10, lwd = 5, ylim=c(-0.25,4.5), outline = TRUE))
+#   data$reg <- as.factor(data$reg)
+#   data$x <- as.numeric(data$x)
+#   if(i < 5){
+#     xlab = ""
+#   }else{
+#     xlab = "Cont. Value"
+#   }
+#   
+#   p <- ggplot(data, aes(x=sp, y=x, fill = reg)) + 
+#     geom_bar(stat="identity", colour="black") + 
+#     coord_flip() + 
+#     theme_classic() +
+#     theme(axis.line.y=element_blank(), axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+#           axis.title.y=element_blank(),legend.position="none") +
+#     scale_fill_manual(values = RColorBrewer::brewer.pal(6, "BrBG")[c(6,4)]) +
+#     scale_y_continuous(n.breaks = 3) +
+#     labs(y=xlab)
+#   
+#   g_phy <- grid.arrange(g, p, ncol=2, widths=c(2,1))
+#   
+#   if(i < 5){
+#     ylab = ""
+#   }else{
+#     ylab = "Total -Ln(Likelihood)"
+#   }
+#   
+#   stacked_dat <- melt(-out_CD$joint_probability_table[,c(1,2)])
+#   stacked_dat$Var1 <- as.factor(stacked_dat$Var1)
+#   stacked_dat$Var2 <- factor(stacked_dat$Var2, levels = c("cont", "disc"))
+#   new_dat <- stacked_dat[stacked_dat$Var1 == i,]
+#   g_bar <- ggplot(new_dat, aes(fill=Var2, y=value, x = Var1)) +
+#     geom_bar(position="stack", stat="identity", color="black") +
+#     coord_flip() +
+#     scale_fill_manual(values = RColorBrewer::brewer.pal(6, "BrBG")[c(5,2)]) +
+#     ylab(ylab) + 
+#     xlab("") +
+#     ylim(c(0,50)) +
+#     theme_classic() +
+#     theme(axis.line.y=element_blank(), axis.text.y=element_blank(),axis.ticks.y=element_blank(),
+#           axis.title.y=element_blank(),legend.position="none")
+#   
+#   out[[i]] <- grid.arrange(g_phy, g_bar, ncol=1, heights=c(3,1))
+# }
+# 
+# B <- grid.arrange(out[[1]], out[[2]], out[[3]], out[[4]], 
+#                   out[[5]], out[[6]], out[[7]], out[[8]],
+#                   ncol=4)
+# 
+# 
+# 
+# A <- grid.arrange(A, B, ncol=2)
+# grid.arrange(B, C, ncol=2)
+# 
+# 
+# 
