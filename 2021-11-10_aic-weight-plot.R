@@ -81,6 +81,20 @@ getdAIC_table <- function(obj){
   dAIC_table <- data.frame(model_class=model_class[model_index], model_number = model_index, dAIC=obj$dAIC)
   return(dAIC_table)
 }
+
+getAICwt_table <- function(dAIC_table){
+  aic_wt <- exp(-2 * dAIC_table[,3])/sum(exp(-2 * dAIC_table[,3]))
+  dAIC_table[,3] <- aic_wt
+  names(dAIC_table)[3] <- "aic_wt"
+  aic_vec <- numeric(length(unique(dAIC_table$model_class)))
+  count <- 1
+  for(class_i in unique(dAIC_table$model_class)){
+    aic_vec[count] <- sum(dAIC_table[dAIC_table$model_class == class_i, 3])
+    count <- count + 1
+  }
+  names(aic_vec) <- unique(dAIC_table$model_class)
+  return(aic_vec)
+}
 # mod_table_list <- lapply(param_model_res$M1, getAdjustedModTable)
 # obj <- mod_table_list[[1]]
 # getdAIC_table(obj)
@@ -90,33 +104,85 @@ model_index <- c(1,2,1,1, rep(2, 7), rep(3, 7), 2, 2, 3, 3)
 model_class <- c("CID", "CD", "CID+")[model_index]
 
 # for each model
-aic_list <- list()
+wt_list <- aic_list <- list()
 for(i in 1:length(param_model_res)){
   mod_table_list <- lapply(param_model_res[[i]], getAdjustedModTable)
   AIC_table_list <- lapply(mod_table_list, getdAIC_table)
+  AIC_wt_list <- lapply(AIC_table_list, getAICwt_table)
+  aic_wt_table <- as.data.frame(melt(as.data.frame(do.call(rbind, AIC_wt_list))))
+  names(aic_wt_table) <- c("fit_model", "aicwt")
   aic_table <- do.call(rbind, AIC_table_list)
-  aic_table$simulating_model <- model_class[i]
-  aic_table$simulating_model_number <- i
+  aic_wt_table$simulating_model <- aic_table$simulating_model <- model_class[i]
+  aic_wt_table$simulating_model_number <- aic_table$simulating_model_number <- i
   aic_list[[i]] <- aic_table
+  wt_list[[i]] <- aic_wt_table
 }
 
 full_aic_table <- do.call(rbind, aic_list)
+full_aic_wt_table <- do.call(rbind, wt_list)
 
 ggplot(full_aic_table, aes(x = model_class, y = dAIC)) +
   geom_boxplot() +
   coord_cartesian(ylim=c(0, 25)) + 
   facet_wrap(~simulating_model)
 
+cols <- c("#1b9e77", "#d95f02", "#7570b3")
+ggplot(full_aic_wt_table, aes(x = fit_model, y = aicwt)) +
+  scale_fill_brewer() + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(color="black", size=0.8, alpha=0.5) +
+  coord_cartesian(ylim=c(0, 1)) + 
+  theme_bw() +
+  facet_wrap(~simulating_model)
+
+
 # finding the proportion best for each scenario
 # CD simulating 
-cd_table <- full_aic_table[full_aic_table$simulating_model == "CD",]
+cd_table <- full_aic_wt_table[full_aic_wt_table$simulating_model == "CD",]
 summary(as.factor(cd_table$model_class[cd_table$dAIC == 0]))
 # CID simulating
-cid_table <- full_aic_table[full_aic_table$simulating_model == "CID",]
+cid_table <- full_aic_wt_table[full_aic_wt_table$simulating_model == "CID",]
 summary(as.factor(cid_table$model_class[cid_table$dAIC == 0]))
 # CID+ simulating
-cid2_table <- full_aic_table[full_aic_table$simulating_model == "CID+",]
+cid2_table <- full_aic_wt_table[full_aic_wt_table$simulating_model == "CID+",]
 summary(as.factor(cid2_table$model_class[cid2_table$dAIC == 0]))
+
+
+cols <- c("#1b9e77", "#d95f02", "#7570b3")
+p_cd <- ggplot(cd_table, aes(x = fit_model, y = aicwt, fill = fit_model)) +
+  scale_fill_manual(values = cols) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(color="black", size=0.8, alpha=0.5) +
+  coord_cartesian(ylim=c(0, 1)) + 
+  ggtitle("a) Generating model: CD") +
+  theme_bw() +
+  ylab("Cumulative AICwt") + 
+  xlab("Fitting model class") +
+  theme(legend.position = "none")
+
+p_cid <- ggplot(cid_table, aes(x = fit_model, y = aicwt, fill = fit_model)) +
+  scale_fill_manual(values = cols) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(color="black", size=0.8, alpha=0.5) +
+  coord_cartesian(ylim=c(0, 1)) + 
+  ggtitle("a) Generating model: CID") +
+  theme_bw() +
+  ylab("") + 
+  xlab("Fitting model class") +
+  theme(legend.position = "none")
+
+p_cid2 <- ggplot(cid2_table, aes(x = fit_model, y = aicwt, fill = fit_model)) +
+  scale_fill_manual(values = cols) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(color="black", size=0.8, alpha=0.5) +
+  coord_cartesian(ylim=c(0, 1)) + 
+  ggtitle("a) Generating model: CID+") +
+  theme_bw() +
+  ylab("") + 
+  xlab("Fitting model class") +
+  theme(legend.position = "none")
+
+grid.arrange(p_cd, p_cid, p_cid2, nrow=1)
 
 # single example model
 # # define the non hmm models

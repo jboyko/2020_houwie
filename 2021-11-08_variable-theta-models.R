@@ -161,28 +161,60 @@ getModDf <- function(res){
   return(out)
 }
 
+getThetaEst <- function(res){
+  mod_avg_pars <- lapply(res, function(x) getModelAvgParams(x[[2]][non_hmm_models], force=FALSE)) 
+  mod_avg_theta <- lapply(mod_avg_pars, function(x) x$mod_avg_cont[3,])
+  root_states <- lapply(res, function(x) getRootState(x$simulated_data$simmap[[1]]))
+  theta_est_table <- do.call(rbind, mod_avg_theta)
+  out <- cbind(theta_est_table, root_state=unlist(root_states))
+  rownames(out) <- NULL
+  return(out)
+}
+
+
 non_hmm_models <- c(1,2,4,5,6,7,8,9,10,11,19,20)
-df_1 <- do.call(rbind, lapply(param_model_res[8:11], getModDf))
-df_1$reg <- as.factor(df_1$reg)
-cart_max <-  30
+df <- do.call(rbind, lapply(param_model_res[8:11], getModDf))
+df$reg <- as.factor(df$reg)
+xlim_1 <-  c(10,35)
+xlim_2 <-  c(0,25)
 cols <- c("#377eb8", "#e41a1c")
 
-hist_obs <- ggplot(df_1, aes(x=x, fill = reg)) +
+# making the plots
+# sepearate data based on root state 
+df_1 <- df[df$root_state == 1,]
+df_2 <- df[df$root_state == 2,]
+
+# observed data histograms
+# root state 1 
+hist_obs_1 <- ggplot(df_1, aes(x=x, fill = reg)) +
   scale_fill_manual(values = cols) + 
   geom_histogram(color="black", bins = 20) +
-  coord_cartesian(xlim=c(0, cart_max)) +
+  coord_cartesian(xlim=xlim_1) +
   theme_classic() +
   theme(legend.position = "none", 
         axis.title.y=element_blank(),axis.line.y = element_blank(),axis.ticks.y=element_blank(),axis.text.y=element_blank(),
         axis.title.x=element_blank(), axis.text.x = element_text(color="white")) +
   ggtitle("b) Observed data") +
-  facet_wrap(~root_state) +
+  theme(strip.background = element_blank(),strip.text.x = element_blank())
+# root state 2 
+hist_obs_2 <- ggplot(df_2, aes(x=x, fill = reg)) +
+  scale_fill_manual(values = cols) + 
+  geom_histogram(color="black", bins = 20) +
+  coord_cartesian(xlim=xlim_2) +
+  theme_classic() +
+  theme(legend.position = "none", 
+        axis.title.y=element_blank(),axis.line.y = element_blank(),axis.ticks.y=element_blank(),axis.text.y=element_blank(),
+        axis.title.x=element_blank(), axis.text.x = element_text(color="white")) +
+  ggtitle("") +
   theme(strip.background = element_blank(),strip.text.x = element_blank())
 
-hist_exp <- ggplot(df_1, aes(x=xx, fill = reg)) +
+
+# expected data histograms
+# root state 1
+hist_exp_1 <- ggplot(df_1, aes(x=xx, fill = reg)) +
   scale_fill_manual(values = cols) + 
   geom_histogram(color="black", bins = 30) +
-  coord_cartesian(xlim=c(0, cart_max)) +
+  coord_cartesian(xlim=xlim_1) +
   theme_classic() +
   theme(legend.position = "none", 
         axis.title.y=element_blank(),axis.line.y = element_blank(),axis.ticks.y=element_blank(),axis.text.y=element_blank()) +
@@ -190,28 +222,54 @@ hist_exp <- ggplot(df_1, aes(x=xx, fill = reg)) +
   ggtitle("c) Model expectation") +
   facet_wrap(~root_state) +
   theme(strip.background = element_blank(),strip.text.x = element_blank())
+# root state 2
+hist_exp_2 <- ggplot(df_2, aes(x=xx, fill = reg)) +
+  scale_fill_manual(values = cols) + 
+  geom_histogram(color="black", bins = 30) +
+  coord_cartesian(xlim=xlim_2) +
+  theme_classic() +
+  theme(legend.position = "none", 
+        axis.title.y=element_blank(),axis.line.y = element_blank(),axis.ticks.y=element_blank(),axis.text.y=element_blank()) +
+  xlab("Continuous trait value") +
+  ggtitle("") +
+  facet_wrap(~root_state) +
+  theme(strip.background = element_blank(),strip.text.x = element_blank())
 
 
 # plotting the distribution of theta estimates
-theta_estimates <- melt(df_1[,5:6])
-theta_estimates$root_state <- as.factor(rep(df_1[,4], 2))
+theta_estimates <- as.data.frame(do.call(rbind, lapply(param_model_res[8:11], getThetaEst)))
+theta_estimates_1 <- melt(theta_estimates[theta_estimates$root_state == 1, c(1,2)])
+theta_estimates_2 <- melt(theta_estimates[theta_estimates$root_state == 2, c(1,2)])
 # theta_estimates <- melt(df_1[,5:6][df_1[,4]==1,])
 # plot boxplot
-bp <- ggplot(theta_estimates, aes(y = value, fill = variable)) +
+# root state 1
+bp_1 <- ggplot(theta_estimates_1, aes(y = value, fill = variable)) +
   scale_fill_manual(values = cols) + 
   geom_hline(yintercept=12, linetype="dashed", color = cols[1]) +
   geom_hline(yintercept=24, linetype="dashed", color = cols[2]) + 
   geom_boxplot() + 
-  coord_flip(ylim=c(0, cart_max)) +
+  coord_flip(ylim=xlim_1) +
   theme_classic() +
   theme(legend.position = "none",
         axis.title.y=element_blank(),axis.line.y = element_blank(),axis.ticks.y=element_blank(),axis.text.y=element_blank(), 
         axis.text.x = element_text(color="white"), axis.title.x=element_blank()) +
   ggtitle("a) Model averaged theta estimate") +
-  facet_wrap(~root_state) +
+  theme(strip.background = element_blank(),strip.text.x = element_blank())
+# root state 2
+bp_2 <- ggplot(theta_estimates_2, aes(y = value, fill = variable)) +
+  scale_fill_manual(values = cols) + 
+  geom_hline(yintercept=12, linetype="dashed", color = cols[1]) +
+  geom_hline(yintercept=24, linetype="dashed", color = cols[2]) + 
+  geom_boxplot() + 
+  coord_flip(ylim=xlim_2) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title.y=element_blank(),axis.line.y = element_blank(),axis.ticks.y=element_blank(),axis.text.y=element_blank(), 
+        axis.text.x = element_text(color="white"), axis.title.x=element_blank()) +
+  ggtitle("") +
   theme(strip.background = element_blank(),strip.text.x = element_blank())
 
-grid.arrange(bp, hist_obs, hist_exp, heights=c(2,3,3))
+grid.arrange(bp_1, bp_2, hist_obs_1, hist_obs_2, hist_exp_1, hist_exp_2)
 
 
 

@@ -67,12 +67,12 @@ C <- ggplot(all_joint_probs, aes(x = disc, y = cont, color = total)) +
 out_CD <- full_joint_res[[3]]
 poss_disc <- possible_discrete[,3]
 data <- data.frame(sp = c("S1", "S2", "S3", "S4"), reg = poss_disc, x = c(5,10)[poss_disc + 1])
-# out_CD <- getAllJointProbs(pectinate_tree, data, 1, time_slice, Q1, alpha[1:2], sigma.sq[1:2], theta[2:3])
+out_CD <- getAllJointProbs(pectinate_tree, data, 1, time_slice, Q1, alpha[1:2], sigma.sq[1:2], theta[2:3])
+out_CIDx <- getAllJointProbs(pectinate_tree, data, 2, time_slice, Q2, alpha, sigma.sq, theta)
+log(sum(exp(out_CD$joint_probability_table[,3])))
+log(sum(exp(out_CIDx$joint_probability_table[,3])))
 # out_CID <- getAllJointProbs(pectinate_tree, data, 1, time_slice, Q1, alpha[1:2], sigma.sq[1:2], c(7.5,7.5))
-# out_CIDx <- getAllJointProbs(pectinate_tree, data, 2, time_slice, Q2, alpha, sigma.sq, theta)
-# log(sum(exp(out_CD$joint_probability_table[,3])))
 # log(sum(exp(out_CID$joint_probability_table[,3])))
-# log(sum(exp(out_CIDx$joint_probability_table[,3])))
 
 
 out <- vector("list", 8)
@@ -198,3 +198,23 @@ grid.arrange(A, C, ncol=2, widths=c(2,1))
 # 
 # 
 # 
+
+# dataset consistent with CD
+poss_disc <- possible_discrete[,3]
+data <- data.frame(sp = c("S1", "S2", "S3", "S4"), reg = poss_disc, x = c(5,10)[poss_disc + 1])
+out_CD <- getAllJointProbs(pectinate_tree, data, 1, time_slice, Q1, alpha[1:2], sigma.sq[1:2], theta[2:3])
+out_CIDx <- getAllJointProbs(pectinate_tree, data, 2, time_slice, Q2, alpha, sigma.sq, theta)
+log(sum(exp(out_CD$joint_probability_table[,3])))
+log(sum(exp(out_CIDx$joint_probability_table[,3])))
+
+# dataset consistent with CD]
+poss_disc <- possible_discrete[,3]
+data <- data.frame(sp = c("S1", "S2", "S3", "S4"), reg = poss_disc, x = c(5,10,5,10))
+out_CD <- getAllJointProbs(pectinate_tree, data, 1, time_slice, Q1, alpha[1:2], sigma.sq[1:2], theta[2:3])
+out_CIDx <- getAllJointProbs(pectinate_tree, data, 2, time_slice, Q2, alpha, sigma.sq, theta)
+log(sum(exp(out_CD$joint_probability_table[,3])))
+log(sum(exp(out_CIDx$joint_probability_table[,3])))
+
+
+
+
