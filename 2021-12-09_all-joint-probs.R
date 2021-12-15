@@ -97,9 +97,24 @@ p = c(1, 10, 5, 5, 10)
 
 dat_cd <- data.frame(sp = dat.ou$Genus_species, reg = c(2,1,2,1), x = dat.ou$X)
 p = c(1, 10, 5, 5, 10)
-opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.01)
+opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.1)
 cd_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 1)
 cid_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 2)
+
+cont_model_cd <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, 2)
+cont_model_cid <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, 4)
+cont_model_cid[3,] <- c(3,3,4,4)
+discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
+discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
+discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1:4))
+
+cd_res <- hOUwie(pectinate_tree, dat_cd, rate.cat = 1, discrete_model_cd, cont_model_cd, nSim = 10, time_slice = 0.5, optimizer = "nlopt_ln", opts=opts, sample_nodes = TRUE)
+cid_res <- hOUwie(pectinate_tree, dat_cd, rate.cat = 2, discrete_model_cid, cont_model_cid, nSim = 200, time_slice = 0.5, optimizer = "nlopt_ln", opts=opts, sample_nodes = TRUE)
+
+
+
+
+
 
 # data is consistent with character independence
 regime_mapping_cid <- full_joint_res[[3]]$simmap_list[[5]]
