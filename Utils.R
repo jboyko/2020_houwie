@@ -273,7 +273,7 @@ generateData <- function(phy, index.cor, index.ou, pars, type ="CD", root.p="sam
   Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[1])
   Q[] <- c(p.mk, 0)[index.cor]
   diag(Q) <- -rowSums(Q)
-  if(root.p="sample"){
+  if(root.p=="sample"){
     root.p = rep(0, dim(Q)[1]) # we will sample the root with equal probability of either state
     root.p[sample(1:dim(Q)[1], 1)] <- 1
   }else{
