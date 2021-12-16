@@ -16,11 +16,11 @@ require(partitions)
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nTip <- 100
-alpha <- c(10,10)
+nTip <- 200
+alpha <- c(5,5)
 sigma2 <- alpha/2
 theta <- c(12,24)
-rate <- c(0.1, 1, 0.5, 0.5)
+rate <- 1
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # the 22 2-state models we want to fit - put into list form
@@ -43,7 +43,7 @@ all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1],
 # the 2 discrete models being evaluated
 discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
 discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
-# discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2))
+discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # Functions
@@ -54,7 +54,7 @@ generateParameters <- function(continuous_model, alpha, sigma2, theta, discrete_
   k.alpha <- length(unique(na.omit(continuous_model[1,])))
   k.sigma <- length(unique(na.omit(continuous_model[2,])))
   k.theta <- length(unique(na.omit(continuous_model[3,])))
-  k.discrete <- max(na.omit(discrete_model))
+  k.discrete <- max(discrete_model, na.rm=TRUE)
   # par_alpha <- runif(k.alpha, minAlpha, maxAlpha)
   # par_sigma <- runif(k.sigma, minSigma2, maxSigma2)
   # par_theta <- runif(k.theta, minTheta, maxTheta)
@@ -139,10 +139,11 @@ run_hmm_help <- function(nSim=100){
   houwie_dat[,2][houwie_dat[,2] == 4] <- 2
   phy <- sim_dat$simmap[[1]]
   print("running hidden state")
-  out_1 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 2, nSim = nSim, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = hidden_state_OUM, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
+  out_1 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 2, nSim = nSim, time_slice = .5, discrete_model = discrete_model_cid, continuous_model = hidden_state_OUM, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
   print("running observed state")
-  out_2 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 1, nSim = nSim, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = OUM_classic, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
-  return(list(out, out2))
+  out_2 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 1, nSim = nSim, time_slice = .5, discrete_model = discrete_model_cd, continuous_model = OUM_classic, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
+  out <- list(out_1, out_2)
+  return(out)
 }
 
 nmap_100 <- mclapply(1:20, function(x) run_hmm_help(100), mc.cores = 20)

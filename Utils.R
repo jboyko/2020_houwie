@@ -255,7 +255,7 @@ SingleModelTestRunParsimony <- function(phy, index.cor, index.ou, model.cor, mod
 
 
 # a function that given a model structure and params, generates a hOUwie dataset.
-generateData <- function(phy, index.cor, index.ou, pars, type ="CD", quiet=FALSE){
+generateData <- function(phy, index.cor, index.ou, pars, type ="CD", root.p="sampple", quiet=FALSE){
   phy$edge.length <- phy$edge.length/max(branching.times(phy)) # ensure tree height is 1
   k.cor <- max(index.cor, na.rm = TRUE) # number of corhmm params
   k.ou <- max(index.ou, na.rm = TRUE) # number of ouwie params
@@ -273,9 +273,13 @@ generateData <- function(phy, index.cor, index.ou, pars, type ="CD", quiet=FALSE
   Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[1])
   Q[] <- c(p.mk, 0)[index.cor]
   diag(Q) <- -rowSums(Q)
-  root.p = rep(0, dim(Q)[1]) # we will sample the root with equal probability of either state
-  root.p[sample(1:dim(Q)[1], 1)] <- 1
-  
+  if(root.p="sample"){
+    root.p = rep(0, dim(Q)[1]) # we will sample the root with equal probability of either state
+    root.p[sample(1:dim(Q)[1], 1)] <- 1
+  }else{
+    root.p = rep(0, dim(Q)[1])
+    root.p[1] <- 1
+  }
   # organize ou params
   Rate.mat <- matrix(1, 3, dim(index.cor)[2])
   index.ou[is.na(index.ou)] <- max(index.ou, na.rm = TRUE) + 1
