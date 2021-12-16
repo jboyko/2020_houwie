@@ -130,6 +130,7 @@ singleRun <- function(i, iter, nSim){
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 hidden_state_OUM <- all_model_structures[[15]]
+OUM_classic <- all_model_structures[[8]]
 
 run_hmm_help <- function(nSim=100){
   sim_dat <- makeData(nTip, hidden_state_OUM, discrete_model_cid, alpha, sigma2, theta, rate)
@@ -137,8 +138,11 @@ run_hmm_help <- function(nSim=100){
   houwie_dat[,2][houwie_dat[,2] == 3] <- 1
   houwie_dat[,2][houwie_dat[,2] == 4] <- 2
   phy <- sim_dat$simmap[[1]]
-  out <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 2, nSim = nSim, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = hidden_state_OUM, recon = FALSE, sample_tips = TRUE)
-  return(out)
+  print("running hidden state")
+  out_1 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 2, nSim = nSim, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = hidden_state_OUM, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
+  print("running observed state")
+  out_2 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 1, nSim = nSim, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = OUM_classic, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
+  return(list(out, out2))
 }
 
 nmap_100 <- mclapply(1:20, function(x) run_hmm_help(100), mc.cores = 20)

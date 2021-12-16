@@ -370,14 +370,14 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   }
   # initial sample
   # sample mappings based on the conditional probabilites (also calculating some time saving probabilities from transitions to and from particular states)
-  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, root_liks, nSim, check_vector = NA, max.attempts=nSim*10)
+  internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, root_liks, nSim, check_vector = NA, max.attempts=nSim*2)
   internode_maps <- internode_maps_and_discrete_probs$maps
   internode_samples <- internode_maps_and_discrete_probs$state_samples
   # if additional samples are needed (didn't reach nSim), they are taken ~randomly
   if(length(internode_samples) < nSim){
     additional_sims <- nSim - length(internode_samples)
     check_vector <- unlist(lapply(internode_samples, function(x) paste0(unlist(x), collapse="")))
-    random_internode_maps_and_discrete_probs <- getInternodeMap(phy, Q * 100, edge_liks_list, conditional_probs$root_state, root_liks, additional_sims, check_vector = check_vector, max.attempts=nSim*1000)
+    random_internode_maps_and_discrete_probs <- getInternodeMap(phy, Q * 100, edge_liks_list, conditional_probs$root_state, root_liks, additional_sims, check_vector = check_vector, max.attempts=nSim*10)
     internode_maps <- c(internode_maps, random_internode_maps_and_discrete_probs$maps)
     internode_samples <- c(internode_samples, random_internode_maps_and_discrete_probs$state_samples)
   }
