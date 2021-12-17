@@ -112,9 +112,9 @@ singleRun <- function(i, iter, nSim){
   discrete_model <- list(discrete_model_cd, discrete_model_cid)[[ifelse(dim(generating_model)[2] == 2, 1, 2)]]
   discrete_model[is.na(discrete_model)] <- 0
   pars <- generateParameters(generating_model, alpha, sigma2, theta, discrete_model, rate)
-  full_data <- try(generateData(phy, discrete_model, generating_model, pars, ))
+  full_data <- try(generateData(phy, discrete_model, generating_model, pars, root.p = "1"))
   while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, discrete_model, generating_model, pars))
+    full_data <- try(generateData(phy, discrete_model, generating_model, pars, root.p = "1"))
   }
   # mclapply over all model structures
   houwie_parameters <- matrix(c(1.1, nSim), 1, 2)
@@ -139,14 +139,16 @@ run_hmm_help <- function(nSim=100){
   houwie_dat[,2][houwie_dat[,2] == 4] <- 2
   phy <- sim_dat$simmap[[1]]
   print("running hidden state")
-  out_1 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 2, nSim = nSim, time_slice = .5, discrete_model = discrete_model_cid, continuous_model = hidden_state_OUM, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
+  out_1 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 2, nSim = nSim, time_slice = .5, discrete_model = discrete_model_cid, continuous_model = hidden_state_OUM, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE, optimizer = "nlopt_ln")
   print("running observed state")
-  out_2 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 1, nSim = nSim, time_slice = .5, discrete_model = discrete_model_cd, continuous_model = OUM_classic, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE)
+  out_2 <- hOUwie(phy = phy, data = houwie_dat, rate.cat = 1, nSim = nSim, time_slice = .5, discrete_model = discrete_model_cd, continuous_model = OUM_classic, recon = FALSE, sample_tips = TRUE, sample_nodes = TRUE, optimizer = "nlopt_ln")
   out <- list(CD=out_2, CID=out_1)
   return(out)
 }
 
 nmap_100 <- mclapply(1:20, function(x) run_hmm_help(100), mc.cores = 20)
+nmap_200 <- mclapply(1:20, function(x) run_hmm_help(200), mc.cores = 20)
+
 nmap_1000 <- mclapply(1:20, function(x) run_hmm_help(1000), mc.cores = 20)
 nmap_10000 <- mclapply(1:20, function(x) run_hmm_help(10000), mc.cores = 20)
 
