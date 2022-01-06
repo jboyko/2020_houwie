@@ -1,3 +1,7 @@
+#### #### #### #### #### #### #### #### #### #### #### #### 
+# imports
+#### #### #### #### #### #### #### #### #### #### #### #### 
+
 setwd("~/2020_hOUwie/")
 
 source("hOUwieNode.R")
@@ -11,39 +15,6 @@ require(expm)
 require(POUMM)
 require(geiger)
 require(partitions)
-
-#### #### #### #### #### #### #### #### #### #### #### #### 
-# prerequisites
-#### #### #### #### #### #### #### #### #### #### #### #### 
-
-nTip <- 200
-alpha <- c(5,5)
-sigma2 <- alpha/5
-theta <- c(12,24)
-rate <- .1
-
-#### #### #### #### #### #### #### #### #### #### #### #### 
-# the 22 2-state models we want to fit - put into list form
-#### #### #### #### #### #### #### #### #### #### #### #### 
-
-continuous_models_cd_ou <- getAllContinuousModelStructures(2, "OU")
-continuous_models_cd_bm <- getAllContinuousModelStructures(2, "BM")
-continuous_models_cd_bmou <- getAllContinuousModelStructures(2, "BMOU")
-continuous_models_cid_ou <- continuous_models_cd_ou[,c(1,1,2,2),]
-continuous_models_cid_bm <- continuous_models_cd_bm[,c(1,1,2,2),]
-continuous_models_cid_bmou <- continuous_models_cd_bmou[,c(1,1,2,2),]
-continuous_models_cd_ou <- lapply(seq(dim(continuous_models_cd_ou)[3]), function(x) continuous_models_cd_ou[,,x])
-continuous_models_cd_bm <- lapply(seq(dim(continuous_models_cd_bm)[3]), function(x) continuous_models_cd_bm[,,x])
-continuous_models_cd_bmou <- lapply(seq(dim(continuous_models_cd_bmou)[3]), function(x) continuous_models_cd_bmou[,,x])
-continuous_models_cid_ou <- lapply(seq(dim(continuous_models_cid_ou)[3]), function(x) continuous_models_cid_ou[,,x])
-continuous_models_cid_bm <- lapply(seq(dim(continuous_models_cid_bm)[3]), function(x) continuous_models_cid_bm[,,x])
-continuous_models_cid_bmou <- lapply(1:dim(continuous_models_cid_bmou)[3], function(x) continuous_models_cid_bmou[,,x])
-all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1], continuous_models_cd_ou, continuous_models_cid_ou[-1], continuous_models_cd_bmou, continuous_models_cid_bmou)
-
-# the 2 discrete models being evaluated
-discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
-discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
-discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # Functions
@@ -67,25 +38,25 @@ generateParameters <- function(continuous_model, alpha, sigma2, theta, discrete_
 }
 
 # a function to fit a single continuous model given the full data
-  singleFit <- function(full_data, phy, continuous_model, discrete_model_cd, discrete_model_cid, houwie_parameters){
-    # make hidden states observed
-    time_slice <- houwie_parameters[1,1]
-    nSim <- houwie_parameters[1,2]
-    data <- full_data$data
-    data[data[,2]==3,2] <- 1
-    data[data[,2]==4,2] <- 2
-    # determine if the model includes hidden states or not
-    if(dim(continuous_model)[2] == 2){
-      discrete_model <- discrete_model_cd
-      rate.cat <- 1
-    }else{
-      discrete_model <- discrete_model_cid
-      rate.cat <- 2
-    }
-    # fit the houwie model
-    fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, sample_tips = FALSE)
-    return(fit)
+singleFit <- function(full_data, phy, continuous_model, discrete_model_cd, discrete_model_cid, houwie_parameters){
+  # make hidden states observed
+  time_slice <- houwie_parameters[1,1]
+  nSim <- houwie_parameters[1,2]
+  data <- full_data$data
+  data[data[,2]==3,2] <- 1
+  data[data[,2]==4,2] <- 2
+  # determine if the model includes hidden states or not
+  if(dim(continuous_model)[2] == 2){
+    discrete_model <- discrete_model_cd
+    rate.cat <- 1
+  }else{
+    discrete_model <- discrete_model_cid
+    rate.cat <- 2
   }
+  # fit the houwie model
+  fit <- hOUwie(phy = phy, data = data, rate.cat = rate.cat, nSim = nSim, time_slice = time_slice, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, sample_tips = FALSE)
+  return(fit)
+}
 
 makeData <- function(nTip, continuous_model, discrete_model, alpha, sigma2, theta, rate){
   phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
@@ -125,6 +96,39 @@ singleRun <- function(i, iter, nSim){
   save(out, file = file_name_res)
 }
 
+
+#### #### #### #### #### #### #### #### #### #### #### #### 
+# prerequisites
+#### #### #### #### #### #### #### #### #### #### #### #### 
+
+nTip <- 200
+alpha <- c(5,5)
+sigma2 <- alpha/5
+theta <- c(12,24)
+rate <- .1
+
+#### #### #### #### #### #### #### #### #### #### #### #### 
+# the 22 2-state models we want to fit - put into list form
+#### #### #### #### #### #### #### #### #### #### #### #### 
+
+continuous_models_cd_ou <- getAllContinuousModelStructures(2, "OU")
+continuous_models_cd_bm <- getAllContinuousModelStructures(2, "BM")
+continuous_models_cd_bmou <- getAllContinuousModelStructures(2, "BMOU")
+continuous_models_cid_ou <- continuous_models_cd_ou[,c(1,1,2,2),]
+continuous_models_cid_bm <- continuous_models_cd_bm[,c(1,1,2,2),]
+continuous_models_cid_bmou <- continuous_models_cd_bmou[,c(1,1,2,2),]
+continuous_models_cd_ou <- lapply(seq(dim(continuous_models_cd_ou)[3]), function(x) continuous_models_cd_ou[,,x])
+continuous_models_cd_bm <- lapply(seq(dim(continuous_models_cd_bm)[3]), function(x) continuous_models_cd_bm[,,x])
+continuous_models_cd_bmou <- lapply(seq(dim(continuous_models_cd_bmou)[3]), function(x) continuous_models_cd_bmou[,,x])
+continuous_models_cid_ou <- lapply(seq(dim(continuous_models_cid_ou)[3]), function(x) continuous_models_cid_ou[,,x])
+continuous_models_cid_bm <- lapply(seq(dim(continuous_models_cid_bm)[3]), function(x) continuous_models_cid_bm[,,x])
+continuous_models_cid_bmou <- lapply(1:dim(continuous_models_cid_bmou)[3], function(x) continuous_models_cid_bmou[,,x])
+all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1], continuous_models_cd_ou, continuous_models_cid_ou[-1], continuous_models_cd_bmou, continuous_models_cid_bmou)
+
+# the 2 discrete models being evaluated
+discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
+discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
+discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # run

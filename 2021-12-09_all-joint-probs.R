@@ -1,5 +1,6 @@
 setwd("~/2020_houwie/")
 require(geiger)
+require(parallel)
 require(corHMM)
 require(OUwie)
 require(partitions)
