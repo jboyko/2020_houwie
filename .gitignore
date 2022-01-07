@@ -3,8 +3,8 @@ nuiss_par_test/
 model_power_test/
 optim_test/
 empirical/
-#sim_fits/
-#sim_data/
+simulated_fits/
+simulated_data/
 old/
 .Rproj.user
 .Rhistory
