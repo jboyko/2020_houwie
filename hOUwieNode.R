@@ -93,8 +93,12 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     # the lower limit of alpha is defined as a halflife of 10000% of the max tree height
     # the lower limit of sigma is defined 10 times less than alpha
     # the lower limit of optim is defined 10 times lower than the minimum observation
-    lb.alpha = 1e-10
-    lb.sigma = lb.alpha/10
+    if(any(is.na(lb_continuous_model[1,]))){
+      lb.alpha = 1e-10
+    }else{
+      lb.alpha = 1e-10
+    }
+    lb.sigma = 1e-10
     lb.optim = min(data[, 1+nCol+1])/10 
     lb_continuous_model=c(lb.alpha,lb.sigma,lb.optim)
   }
@@ -103,7 +107,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     # the upper limit of sigma is defined 10 times more than alpha
     # the upper limit of optim is defined 10 times more than the maximum observation
     ub.alpha = log(2)/(0.01 * Tmax)
-    ub.sigma = 10 * ub.alpha
+    ub.sigma = ub.alpha
     ub.optim = max(data[, 1+nCol+1])*10 
     ub_continuous_model=c(ub.alpha,ub.sigma,ub.optim)
   }
@@ -263,6 +267,8 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     houwie_recon <- hOUwieRecon(houwie_obj, nodes)
     houwie_obj$recon <- houwie_recon
   }
+  houwie_obj$all_disc_liks <- liks_houwie$llik_discrete
+  houwie_obj$all_cont_liks <- liks_houwie$llik_continuous
   end_time <- Sys.time()
   run_time <- end_time - start_time
   houwie_obj$run_time <- run_time
@@ -308,17 +314,22 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
         # j = 1
         # tips which contain j are shown here
         tips_from_anc <- which(unlist(lapply(tip.paths, function(x) node_edges[j] %in% x)))
-        tip_sampled <- sample(c(tips_from_anc, tips_from_anc), 1)
-        tip_index <- phy$edge[,2] == tip_sampled
-        possible_external <- which(dec_liks[tip_index,] == 1)
+        # tip_sampled <- sample(c(tips_from_anc, tips_from_anc), 1)
+        tip_sampled <- tips_from_anc
+        # tip_index <- phy$edge[,2] == tip_sampled # relative to the edge matrix
+        # possible_external <- which(dec_liks[tip_index,] == 1)
         P_mat <- expm(Q * bl)
-        tip_value <- data[data$sp == phy$tip.label[tip_sampled],3]
-        branch_matrix <- getJointBranchMatrix(possible_internal, possible_external, tip_value, Rate.mat, bl, P_mat)
+        tip_value <- mean(data[data$sp %in% phy$tip.label[tip_sampled],3])
+        # branch_matrix <- getJointBranchMatrix(possible_internal, possible_external, tip_value, Rate.mat, bl, P_mat)
+        branch_matrix <- getJointBranchMatrix(possible_internal, possible_internal, tip_value, Rate.mat, bl, P_mat)
+        
+        # the likelihood that the rootward state led to the known tip ward state
         node_state_liks <- apply(branch_matrix, 1, sum_lliks)
         node_state_probs <- exp(node_state_liks - max(node_state_liks))/sum( exp(node_state_liks - max(node_state_liks)))
         node_mat[j,] <- node_state_probs
       }
       # once that node has finished calculating it's conditional probabilitity of each state, we combine the two dec tips
+      node_mat[node_mat == 0] <- 1e-10
       node_cond_prob <- apply(node_mat, 2, prod)
       # this gets place in the edge matrix
       anc_index <- which(phy$edge[,1] %in% anc[i])
@@ -402,14 +413,14 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   # combine probabilities being careful to avoid underflow
   llik_houwies <- llik_discrete + llik_continuous
   llik_houwie <- max(llik_houwies) + log(sum(exp(llik_houwies - max(llik_houwies))))
-  llik_discrete <- max(llik_discrete) + log(sum(exp(llik_discrete - max(llik_discrete))))
-  llik_continuous <- max(llik_continuous) + log(sum(exp(llik_continuous - max(llik_continuous))))
+  llik_discrete_summed <- max(llik_discrete) + log(sum(exp(llik_discrete - max(llik_discrete))))
+  llik_continuous_summed <- max(llik_continuous) + log(sum(exp(llik_continuous - max(llik_continuous))))
   if(split.liks){
     expected_vals <- lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr,return.expected.vals=TRUE))
     expected_vals <- colSums(do.call(rbind, expected_vals) * exp(llik_houwies - max(llik_houwies))/sum(exp(llik_houwies - max(llik_houwies))))
-      return(list(TotalLik = llik_houwie, DiscLik = llik_discrete, ContLik = llik_continuous, expected_vals = expected_vals))
+      return(list(TotalLik = llik_houwie, DiscLik = llik_discrete_summed, ContLik = llik_continuous_summed, expected_vals = expected_vals, llik_discrete=llik_discrete, llik_continuous=llik_continuous))
   }
-  print(c(llik_houwie, llik_discrete, llik_continuous))
+  print(c(llik_houwie, llik_discrete_summed, llik_continuous_summed))
   print(p)
   return(-llik_houwie)
 }
@@ -1134,22 +1145,27 @@ simCharacterHistory <- function(phy, Q, root.freqs, Q2 = NA, NoI = NA){
 }
 
 # simulate a hOUwie model
-hOUwie.sim <- function(phy, Q, root.freqs, alpha, sig2, theta0, theta, nMap=1){
-  # simulate an Mk dataset
-  dat.cor <- simCharacterHistory(phy, Q, root.freqs)$TipStates
-  while(!all(1:dim(Q)[1] %in% dat.cor)){
-    dat.cor <- simCharacterHistory(phy, Q, root.freqs)$TipStates
+hOUwie.sim <- function(phy, Q, root.freqs, alpha, sigma.sq, theta0, theta, time_slice="max"){
+  if(time_slice != "max"){
+    stop("Time slice must be set to 'max' for total value. Internodes are currently not supported in simulation.")
   }
-  dat.cor <- data.frame(sp=names(dat.cor), d=dat.cor)
+  # simulate an Mk dataset
+  dat.cor <- simCharacterHistory(phy, Q, root.freqs)
+  while(!all(1:dim(Q)[1] %in% dat.cor$TipStates)){
+    dat.cor <- simCharacterHistory(phy, Q, root.freqs)
+  }
+  map <- OUwie:::getMapFromNode(phy, dat.cor$TipStates, dat.cor$NodeStates, 0.5)
+  simmap <- getMapFromSubstHistory(list(map), phy)[[1]]
+  # dat.cor <- data.frame(sp=names(dat.cor), d=dat.cor)
   # simulate a stochastic map with true Q
-  simmap <- corHMM:::makeSimmap(phy, dat.cor, Q, 1, nSim=nMap)
+  # simmap <- corHMM:::makeSimmap(phy, dat.cor, Q, 1, nSim=nMap)
   # lik <- corHMM:::getSimmapLik(simmap, Q)
   # simulate the ou dataset
-  dat.ou <- lapply(simmap, function(x) OUwie.sim(x, simmap.tree = TRUE, alpha = alpha, sigma.sq = sig2, theta0 = theta0, theta = theta)[,2])
-  dat.ou <- colMeans(do.call(rbind, dat.ou))
+  dat.ou <- OUwie.sim(simmap, simmap.tree = TRUE, alpha = alpha, sigma.sq = sigma.sq, theta0 = theta0, theta = theta)
   # dat.ou <- OUwie.sim(simmap, simmap.tree = TRUE, alpha = alpha, sigma.sq = sig2, theta0 = theta0, theta = theta)
   # return true params and data
-  data <- data.frame(sp = phy$tip.label, reg = dat.cor[,2], x = dat.ou)
+  data <- data.frame(sp = phy$tip.label, reg = dat.cor$TipStates, x = dat.ou$X)
+  rownames(data) <- NULL
   return(list(data = data, simmap = simmap))
 }
 

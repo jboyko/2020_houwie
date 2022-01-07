@@ -19,91 +19,45 @@ require(partitions)
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 # a function which generates a parameter set given a continuous model
-generateParameters <- function(continuous_model, alpha, sigma2, theta, discrete_model, rate){
-  k.alpha <- length(unique(na.omit(continuous_model[1,])))
-  k.sigma <- length(unique(na.omit(continuous_model[2,])))
-  k.theta <- length(unique(na.omit(continuous_model[3,])))
+generateParameters <- function(continuous_model, alpha, sigma.sq, theta, discrete_model, rate){
+  par_alpha <- alpha[continuous_model[1,]]
+  par_alpha[is.na(par_alpha)] <- 1e-10
+  par_sigma <- sigma.sq[continuous_model[2,] - min(continuous_model[2,]) + 1]
+  par_sigma[is.na(par_sigma)] <- 1e-10
+  par_theta <- theta[continuous_model[3,] - min(continuous_model[3,]) + 1]
+  par_theta[is.na(par_theta)] <- 1e-10
   k.discrete <- max(discrete_model, na.rm=TRUE)
-  # par_alpha <- runif(k.alpha, minAlpha, maxAlpha)
-  # par_sigma <- runif(k.sigma, minSigma2, maxSigma2)
-  # par_theta <- runif(k.theta, minTheta, maxTheta)
-  par_alpha <- alpha[1:k.alpha]
-  par_sigma <- sigma2[1:k.sigma]
-  par_theta <- theta[1:k.theta]
-  par_rates <- rate[1:k.discrete]
-  p <- c(par_rates, par_alpha, par_sigma, par_theta)
+  par_rates <- rate[seq_len(k.discrete)]
+  discrete_model[discrete_model == 0] <- NA
+  discrete_model[is.na(discrete_model)] <- max(discrete_model, na.rm = TRUE) + 1
+  Q <- matrix(0, dim(discrete_model)[1], dim(discrete_model)[1])
+  Q[] <- c(par_rates, 0)[discrete_model]
+  diag(Q) <- -rowSums(Q)
+  p <- list(alpha = par_alpha, sigma.sq = par_sigma, theta = par_theta, Q = Q)
   return(p)
 }
 
-makeData <- function(nTip, continuous_model, discrete_model, alpha, sigma2, theta, rate){
+
+generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p){
   phy <- sim.bdtree(b = 1, d = 0, stop = "taxa", n = nTip) 
   phy <- drop.extinct(phy)
   phy$edge.length <- phy$edge.length/max(branching.times(phy))
-  pars <- generateParameters(continuous_model, alpha, sigma2, theta, discrete_model, rate)
-  full_data <- try(generateData(phy, discrete_model, continuous_model, pars))
-  while(class(full_data) == "try-error"){
-    full_data <- try(generateData(phy, discrete_model, continuous_model, pars))
-  }
-  return(full_data)
-}
-
-generateData <- function(phy, index.cor, index.ou, pars, type ="CD", root.p="yee", quiet=FALSE){
-  phy$edge.length <- phy$edge.length/max(branching.times(phy)) # ensure tree height is 1
-  k.cor <- max(index.cor, na.rm = TRUE) # number of corhmm params
-  k.ou <- max(index.ou, na.rm = TRUE) # number of ouwie params
-  
-  if((k.cor + k.ou) != length(pars)){
-    stop("Length of pars does not match index matrices.", call. = FALSE)
-  }
-  
-  p.mk <- pars[1:k.cor]
-  p.ou <- pars[(k.cor+1):length(pars)]
-  
-  # organize corhmm params
-  index.cor[index.cor == 0] <- NA
-  index.cor[is.na(index.cor)] <- max(index.cor, na.rm = TRUE) + 1
-  Q <- matrix(0, dim(index.cor)[1], dim(index.cor)[1])
-  Q[] <- c(p.mk, 0)[index.cor]
-  diag(Q) <- -rowSums(Q)
-  if(root.p=="sample"){
-    root.p = rep(0, dim(Q)[1]) # we will sample the root with equal probability of either state
-    root.p[sample(1:dim(Q)[1], 1)] <- 1
-  }else{
-    root.p = rep(0, dim(Q)[1])
-    root.p[1] <- 1
-  }
-  # organize ou params
-  Rate.mat <- matrix(1, 3, dim(index.cor)[2])
-  index.ou[is.na(index.ou)] <- max(index.ou, na.rm = TRUE) + 1
-  Rate.mat[] <- c(p.ou, 1e-10)[index.ou]
-  alpha = Rate.mat[1,]
-  sigma.sq = Rate.mat[2,]
-  theta = Rate.mat[3,]
-  theta0 = theta[which(root.p == 1)]
-  full.data <- hOUwie.sim(phy, Q, root.p, alpha, sigma.sq, theta0, theta)
-  obs.no.trans <- sum(unlist(lapply(full.data$simmap[[1]]$maps, function(x) length(x) - 1)))
-  if(!quiet){
-    cat("The observed number of transitions was found to be", obs.no.trans, "\n")
-  }
-  simulators <- list(index.cor = index.cor, index.ou = index.ou, pars = pars)
-  return(c(full.data, simulators))
-}
-
-generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma2, theta, rate){
   # generate a dataset for CD
-  dat_cd <- makeData(nTip, continuous_model_cd, discrete_model_cd, alpha, sigma2, theta, rate)
+  cd_pars <- generateParameters(continuous_model_cd, alpha, sigma.sq, theta, discrete_model_cd, rate)
+  dat_cd <- hOUwie.sim(phy, cd_pars$Q, root.p[1:2], cd_pars$alpha, cd_pars$sigma.sq, cd_pars$theta[1], cd_pars$theta)
   # ensure sampling of both observed states
   tip_count <- length(which(dat_cd$data[,2] == 2))
   while(!(tip_count > nTip*0.25 & tip_count < nTip*.75)){
-    dat_cd <- makeData(nTip, continuous_model_cd, discrete_model_cd, alpha, sigma2, theta, rate)
+    dat_cd <- hOUwie.sim(phy, cd_pars$Q, root.p[1:2], cd_pars$alpha, cd_pars$sigma.sq, cd_pars$theta[1], cd_pars$theta)
     tip_count <- length(which(dat_cd$data[,2] == 2))
   }
   # generate a dataset for CID
-  dat_cid <- makeData(nTip, continuous_model_cid, discrete_model_cid, alpha, sigma2, theta, rate)
+  cid_pars <- generateParameters(continuous_model_cid, alpha, sigma.sq, theta, discrete_model_cid, rate)
+  dat_cid <- hOUwie.sim(phy, cid_pars$Q, root.p, cid_pars$alpha, cid_pars$sigma.sq, cid_pars$theta[1], cid_pars$theta)
   # ensure sampling of both hidden states
   tip_count <- length(which(dat_cid$data[,2] == 3 | dat_cid$data[,2] == 4))
-  while(tip_count > nTip*0.25 & tip_count < nTip*.75){
-    dat_cid <- makeData(nTip, continuous_model_cid, discrete_model_cid, alpha, sigma2, theta, rate)
+  while(!(tip_count > nTip*0.25 & tip_count < nTip*.75)){
+    dat_cid <- hOUwie.sim(phy, cid_pars$Q, root.p, cid_pars$alpha, cid_pars$sigma.sq, cid_pars$theta[1], cid_pars$theta)
     tip_count <- length(which(dat_cid$data[,2] == 3 | dat_cid$data[,2] == 4))
   }
   out <- list(dat_cd=dat_cd, dat_cid=dat_cid)
@@ -116,10 +70,13 @@ generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, dis
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 nTip <- 25
-alpha <- c(10,10)
-sigma2 <- alpha/5
+alpha <- c(5, 10)
+sigma.sq <- alpha/2
 theta <- c(12,24)
+root.p <- c(1,0,0,0)
+theta0 <- theta[1]
 rate <- .1
+
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # the 22 2-state models we want to fit - put into list form
@@ -164,8 +121,48 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 # models 19 and 21 pair as OUBM1
 # models 20 and 22 pair as OUBMV
 
-# for each model pair i want to generate a dataset consistent with the CD and one consistent with CID+
-generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma2, theta, rate)
+# for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
+model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
+# for each number of tips
+ntips <- c(25, 100, 250)
+# for a certain number of datasets
+iter <- 10
+
+for(i in 1:length(model_types)){
+  print(i)
+  focal_model_type <- model_types[i]
+  focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
+  continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
+  continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
+  for(j in 1:length(ntips)){
+    nTip <- ntips[j]
+    for(k in 1:iter){
+      focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
+      file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
+      save(focal_dat, file = file_name)
+    }
+  }
+}
+
+# visualizing the data for each model type
+# model_type_list <- list()
+for(i in 1:length(model_types)){
+  focal_model_type <- model_types[i]
+  for(j in 1:length(ntips)){
+    nTip <- ntips[j]
+    # iter_list <- list()
+    for(k in 1:iter){
+      file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
+      load(file_name)
+      dat_cd <- focal_dat$dat_cd$data
+      dat_cid <- focal_dat$dat_cid$data
+      # iter_list <- c(iter_list, list(dat_cd=dat_cd, dat_cid=dat_cid))
+    }
+  }
+}
+
+dat_cd <- focal_dat$dat_cd$data
+dat_cid <- focal_dat$dat_cid$data
 
 
 
