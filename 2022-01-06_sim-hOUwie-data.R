@@ -69,7 +69,7 @@ generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, dis
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-nTip <- 25
+nTip <- 100
 alpha <- c(5, 10)
 sigma.sq <- alpha/2
 theta <- c(12,24)
@@ -124,9 +124,9 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
 model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
 # for each number of tips
-ntips <- c(25, 100, 250)
+ntips <- c(100)
 # for a certain number of datasets
-iter <- 10
+iter <- 11
 
 for(i in 1:length(model_types)){
   print(i)
