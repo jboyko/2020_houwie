@@ -66,7 +66,7 @@ plothOUwieData <- function(phy, data){
 # Model specification
 #### #### #### #### #### #### #### #### #### #### #### #### 
 focal_model_type <- c("OUM")
-nTip <- 100
+nTip <- 25
 nmap <- 25
 focal_dir <- paste0("simulated_fit/", focal_model_type, "/", nTip)
 fit_files <- dir(focal_dir, full.names = TRUE)
@@ -77,7 +77,7 @@ fit_files <- fit_files[grep(paste0("nmap=", nmap, ".Rsave"), fit_files)]
 # Typical dataset
 #### #### #### #### #### #### #### #### #### #### #### #### 
 data_list <- lapply(fit_files, quickloadData)
-i = 2
+i = 3
 load(fit_files[i])
 getModelTable(out$cid_out)
 focal_cd_dat <- data_list[[i]]$cd_dat
@@ -92,10 +92,10 @@ cid_fit <- out$cid_out$cid_fit
 getModelTable(out$cid_out)
 # plothOUwieData(focal_phy, focal_cid_dat)
 # sort(cid_fit$all_cont_liks)
-res_discrete <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = FALSE, sample_tips = FALSE)
-res_tips <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = FALSE, sample_tips = TRUE)
-res_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 100, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = FALSE); res_cherry$AICc
-res_tips_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = TRUE)
+# res_discrete <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = FALSE, sample_tips = FALSE)
+# res_tips <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = FALSE, sample_tips = TRUE)
+res_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = FALSE); res_cherry$AIC
+# res_tips_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = TRUE)
 
 xlim <- range(c(res_discrete$all_disc_liks + res_discrete$all_cont_liks, res_tips$all_disc_liks + res_tips$all_cont_liks, res_cherry$all_disc_liks + res_cherry$all_cont_liks, res_tips_cherry$all_disc_liks + res_tips_cherry$all_cont_liks))
 
@@ -116,11 +116,13 @@ plot(x = joint_liks[!to_remove], y = unlist(distance_from_best[!to_remove]), xla
 
 getPropDiff(res_cherry$simmaps[[1]], res_cherry$simmaps[[1]])
 
-joint_liks[best_mappings_index[1000]]
+joint_liks[best_mappings_index[1]]
 
+bins <- matrix(res_cherry$all_disc_liks + res_cherry$all_cont_liks, 50, 5)
+quartz(); par(mfrow=c(1,5))
+apply(bins, 2, function(x) hist(x, xlim=range(bins), main = round(log(sum(exp(x))), 2) ))
 
-
-
+log(sum(exp(bins)))
 map_1 <- correct_map_edges(res_cherry$simmaps[best_mappings_index[1]][[1]])
 map_2 <- correct_map_edges(res_cherry$simmaps[best_mappings_index[2]][[1]])
 map_3 <- correct_map_edges(res_cherry$simmaps[best_mappings_index[3]][[1]])

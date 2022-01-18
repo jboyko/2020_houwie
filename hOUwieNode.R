@@ -384,6 +384,7 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   # initial sample
   # sample mappings based on the conditional probabilites (also calculating some time saving probabilities from transitions to and from particular states)
   internode_maps_and_discrete_probs <- getInternodeMap(phy, Q, conditional_probs$edge_liks_list, conditional_probs$root_state, root_liks, nSim, check_vector = NA, max.attempts=nSim*2)
+  print("first set generated")
   internode_maps <- internode_maps_and_discrete_probs$maps
   internode_samples <- internode_maps_and_discrete_probs$state_samples
   # if additional samples are needed (didn't reach nSim), they are taken ~randomly
@@ -393,6 +394,7 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     random_internode_maps_and_discrete_probs <- getInternodeMap(phy, Q * 100, edge_liks_list, conditional_probs$root_state, root_liks, additional_sims, check_vector = check_vector, max.attempts=nSim*10)
     internode_maps <- c(internode_maps, random_internode_maps_and_discrete_probs$maps)
     internode_samples <- c(internode_samples, random_internode_maps_and_discrete_probs$state_samples)
+    print("second set generated")
   }
   # calculte the discrete probabilities based on the given Q matrix (Pij already calculated)
   discrete_probs <- lapply(internode_samples, function(x) getStateSampleProb(state_sample = x, Pij = internode_maps_and_discrete_probs$Pij, root_liks = root_liks, root_edges = internode_maps_and_discrete_probs$root_edges))
