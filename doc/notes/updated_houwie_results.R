@@ -66,7 +66,7 @@ plothOUwieData <- function(phy, data){
 # Model specification
 #### #### #### #### #### #### #### #### #### #### #### #### 
 focal_model_type <- c("OUM")
-nTip <- 25
+nTip <- 250
 nmap <- 25
 focal_dir <- paste0("simulated_fit/", focal_model_type, "/", nTip)
 fit_files <- dir(focal_dir, full.names = TRUE)
@@ -94,7 +94,7 @@ getModelTable(out$cid_out)
 # sort(cid_fit$all_cont_liks)
 # res_discrete <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = FALSE, sample_tips = FALSE)
 # res_tips <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = FALSE, sample_tips = TRUE)
-res_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = FALSE); res_cherry$AIC
+res_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 1000, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = FALSE); res_cherry$AIC
 # res_tips_cherry <- hOUwie(focal_phy, focal_cid_dat,2, discrete_model = cid_fit$discrete_model, continuous_model = cid_fit$continuous_model, time_slice = 1.1, nSim = 500, p = c(0.1, 5, 2.5, 12, 24), sample_nodes = TRUE, sample_tips = TRUE)
 
 xlim <- range(c(res_discrete$all_disc_liks + res_discrete$all_cont_liks, res_tips$all_disc_liks + res_tips$all_cont_liks, res_cherry$all_disc_liks + res_cherry$all_cont_liks, res_tips_cherry$all_disc_liks + res_tips_cherry$all_cont_liks))
@@ -118,9 +118,14 @@ getPropDiff(res_cherry$simmaps[[1]], res_cherry$simmaps[[1]])
 
 joint_liks[best_mappings_index[1]]
 
-bins <- matrix(res_cherry$all_disc_liks + res_cherry$all_cont_liks, 50, 5)
-quartz(); par(mfrow=c(1,5))
+bins <- matrix(res_cherry$all_disc_liks + res_cherry$all_cont_liks, 100, 10)
+quartz(); par(mfrow=c(2,5))
 apply(bins, 2, function(x) hist(x, xlim=range(bins), main = round(log(sum(exp(x))), 2) ))
+
+joint_liks <- res_cherry$all_disc_liks + res_cherry$all_cont_liks
+
+new_thing <- sapply(1:1000, function(x) log(sum(exp(joint_liks[1:x]))))
+plot(x = 1:1000, y = new_thing, xlab = "no. of maps", ylab = "llik")
 
 log(sum(exp(bins)))
 map_1 <- correct_map_edges(res_cherry$simmaps[best_mappings_index[1]][[1]])

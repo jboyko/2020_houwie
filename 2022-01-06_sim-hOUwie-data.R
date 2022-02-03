@@ -55,9 +55,13 @@ generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, dis
   cid_pars <- generateParameters(continuous_model_cid, alpha, sigma.sq, theta, discrete_model_cid, rate)
   dat_cid <- hOUwie.sim(phy, cid_pars$Q, root.p, cid_pars$alpha, cid_pars$sigma.sq, cid_pars$theta[1], cid_pars$theta)
   # ensure sampling of both hidden states
-  tip_count <- length(which(dat_cid$data[,2] == 3 | dat_cid$data[,2] == 4))
-  while(!(tip_count > nTip*0.25 & tip_count < nTip*.75)){
+  tip_count_1b <- length(which(dat_cid$data[,2] == 3))
+  tip_count_2b <- length(which(dat_cid$data[,2] == 4))
+  tip_count  <- length(which(dat_cid$data[,2] == 3 | dat_cid$data[,2] == 4))
+  while(!(tip_count > nTip*0.25 & tip_count < nTip*.75 & tip_count_1b > nTip*0.05 & tip_count_2b > nTip*0.05)){
     dat_cid <- hOUwie.sim(phy, cid_pars$Q, root.p, cid_pars$alpha, cid_pars$sigma.sq, cid_pars$theta[1], cid_pars$theta)
+    tip_count_1b <- length(which(dat_cid$data[,2] == 3))
+    tip_count_2b <- length(which(dat_cid$data[,2] == 4))
     tip_count <- length(which(dat_cid$data[,2] == 3 | dat_cid$data[,2] == 4))
   }
   out <- list(dat_cd=dat_cd, dat_cid=dat_cid)
@@ -68,11 +72,11 @@ generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, dis
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
-
+# maybe adjust houwie data
 nTip <- 100
 alpha <- c(5, 10)
-sigma.sq <- alpha/2
-theta <- c(12,24)
+sigma.sq <- c(.1, 10)
+theta <- c(10, 20)
 root.p <- c(1,0,0,0)
 theta0 <- theta[1]
 rate <- .1
@@ -123,8 +127,9 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
 model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
+model_types <- c("BMV", "OUV", "OUM", "OUMV")
 # for each number of tips
-ntips <- c(100)
+ntips <- c(25, 100, 250)
 # for a certain number of datasets
 iter <- 11
 
@@ -136,8 +141,9 @@ for(i in 1:length(model_types)){
   continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
   for(j in 1:length(ntips)){
     nTip <- ntips[j]
+    focal_dat_list <- mclapply(1:iter, function(x) generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p), mc.cores = 11)
     for(k in 1:iter){
-      focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
+      focal_dat <- focal_dat_list[[k]]
       file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
       save(focal_dat, file = file_name)
     }

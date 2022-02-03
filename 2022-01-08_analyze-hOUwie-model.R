@@ -67,10 +67,11 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
-model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
+# model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
+model_types <- c("BMV","OUV", "OUM", "OUMV")
 # for each number of tips
-ntips <- c(250)
-nmap <- 25
+ntips <- c(25)
+nmap <- 100
 
 # the dataests come from a particular structure and modeling results will also follow the same saving protocol
 model_type_list <- list()
@@ -142,9 +143,9 @@ grid.arrange(p_25, p_100, p_250)
 # big_df <- do.call(rbind, model_type_list)
 # big_df$gen_model <- gsub("\\..*", "", rownames(big_df))
 
-
-nTip <- c(25)
-nmap <- 25
+focal_model_type <- "OUM"
+nTip <- 25
+nmap <- 100
 focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
 continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
 continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
@@ -154,23 +155,32 @@ fit_files <- fit_files[grep(paste0("nmap=", nmap, ".Rsave"), fit_files)]
 data_files <- dir(paste0("simulated_data/", focal_model_type, "/", nTip), full.names = TRUE)
 
 
-
-
-load(fit_files[1]); getModelTable(out$cid_out)
+load(fit_files[1]); getModelTable(out$cd_out)
 load(data_files[1]); plot(focal_dat$dat_cid$simmap)
 table_cd <- getModelTable(out$cd_out)
 table_cid <- getModelTable(out$cid_out)
 
+out$cd_out$cd_fit
+res_basic_1 <- hOUwie(focal_dat$dat_cd$simmap, focal_dat$dat_cd$data, 1, discrete_model = discrete_model_cd, continuous_model = all_model_structures$CD_OUM, time_slice = 1.1, nSim = 10, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE)
+res_basic_2 <- hOUwie(focal_dat$dat_cd$simmap, focal_dat$dat_cd$data, 1, discrete_model = discrete_model_cd, continuous_model = all_model_structures$CD_OUM, time_slice = 1.1, nSim = 10, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = FALSE)
+
+
 
 cid_dat <- focal_dat$dat_cid$data
-cid_dat[cid_dat$reg == 2, 2] <- 1
-cid_dat[(cid_dat$reg == 3 | cid_dat$reg == 4), 2] <- 2
+cid_dat[cid_dat$reg == 3, 2] <- 1
+cid_dat[cid_dat$reg == 4, 2] <- 2
 phy <- reorder(focal_dat$dat_cid$simmap, "pruningwise")
 
+p_1 <- out$cid_out$cid_fit$p
+p_2 <- c(.1, 2.5, 5, 12)
+res_basic_1 <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_BMV`, time_slice = 1.1, nSim = 100, sample_tips = FALSE, sample_nodes = FALSE, adaptive_sampling = FALSE, p = p_1)
+res_basic_2 <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_BMV`, time_slice = 1.1, nSim = 100, sample_tips = FALSE, sample_nodes = FALSE, adaptive_sampling = FALSE, p = p_2)
+res_nodes_1 <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_BMV`, time_slice = 1.1, nSim = 100, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = FALSE, p = p_1)
+res_nodes_2 <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_BMV`, time_slice = 1.1, nSim = 100, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = FALSE, p = p_2)
+res_adap_1 <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_BMV`, time_slice = 1.1, nSim = 100, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, p = p_1)
+res_adap_2 <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_BMV`, time_slice = 1.1, nSim = 100, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, p = p_2)
 
-p <- out$cid_out$cid_fit$p
-p <- c(.1, 5, 2.5, 12, 24)
-res <- hOUwie(phy, cid_dat, 2, discrete_model = discrete_model_cid, continuous_model = all_model_structures$`CID+_OUM`, time_slice = 1.1, nSim = 100, p = p); res$loglik
+
 res$simmaps <- lapply(res$simmaps, correct_map_edges)
 class(res$simmaps) <- c("multiSimmap", "multiPhylo")
 
