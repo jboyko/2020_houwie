@@ -68,15 +68,31 @@ generateDataset <- function(nTip, continuous_model_cd, continuous_model_cid, dis
   return(out)
 }
 
+save_datasets <- function(focal_model_type, model_names, all_model_structures, iter, nTip){
+  dir_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/")
+  dat_name <- paste0("dataset_", iter, ".Rsave")
+  if(dat_name %in% dir(dir_name)){
+    print("already a dataset with this name.")
+    return(NULL)
+  }else{
+    print(paste0(dat_name, " is on its way..."))
+  }
+  focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
+  continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
+  continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
+  focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
+  file_name <- paste0(dir_name, dat_name)
+  save(focal_dat, file = file_name)
+}
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # maybe adjust houwie data
 nTip <- 100
-alpha <- c(5, 10)
-sigma.sq <- c(.1, 10)
-theta <- c(10, 20)
+alpha <- c(3, 1.5)
+sigma.sq <- c(0.35, 1)
+theta <- c(2, 0.75)
 root.p <- c(1,0,0,0)
 theta0 <- theta[1]
 rate <- .1
@@ -127,61 +143,73 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
 model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
-model_types <- c("BMV", "OUV", "OUM", "OUMV")
+# model_types <- c("BMV", "OUV", "OUM", "OUMV")
 # for each number of tips
 ntips <- c(25, 100, 250)
 # for a certain number of datasets
-iter <- 11
-
+ntips <- 250
 for(i in 1:length(model_types)){
-  print(i)
-  focal_model_type <- model_types[i]
-  focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
-  continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
-  continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
-  for(j in 1:length(ntips)){
-    nTip <- ntips[j]
-    focal_dat_list <- mclapply(1:iter, function(x) generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p), mc.cores = 11)
-    for(k in 1:iter){
-      focal_dat <- focal_dat_list[[k]]
-      file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
-      save(focal_dat, file = file_name)
-    }
-  }
+  sapply(1:50, function(x) save_datasets(model_types[i], model_names, all_model_structures, x, ntips))
 }
 
-# visualizing the data for each model type
-# model_type_list <- list()
-for(i in 1:length(model_types)){
-  focal_model_type <- model_types[i]
-  for(j in 1:length(ntips)){
-    nTip <- ntips[j]
-    # iter_list <- list()
-    for(k in 1:iter){
-      file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
-      load(file_name)
-      dat_cd <- focal_dat$dat_cd$data
-      dat_cid <- focal_dat$dat_cid$data
-      # iter_list <- c(iter_list, list(dat_cd=dat_cd, dat_cid=dat_cid))
-    }
-  }
-}
-
-dat_cd <- focal_dat$dat_cd$data
-dat_cid <- focal_dat$dat_cid$data
+focal_model_type <- "OUA"
+focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
+continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
+continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
+focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
 
 
 
-continuous_model_cd <- all_model_structures[[8]]
-continuous_model_cid <- all_model_structures[[15]]
-OU1_classic <- all_model_structures[[4]]
-
-out <- list()
-map_number <- c(100, 250, 500, 1000)
-for(i in 1:length(map_number)){
-  nmaps <- map_number[i]
-  out[[i]] <- mclapply(1:20, function(x) run_hmm_help(nmaps), mc.cores = 5)
-}
+# 
+# for(i in 1:length(model_types)){
+#   print(i)
+#   focal_model_type <- model_types[i]
+#   focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
+#   continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
+#   continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
+#   for(j in 1:length(ntips)){
+#     nTip <- ntips[j]
+#     focal_dat_list <- mclapply(1:iter, function(x) generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p), mc.cores = 11)
+#     for(k in 1:iter){
+#       focal_dat <- focal_dat_list[[k]]
+#       file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
+#       save(focal_dat, file = file_name)
+#     }
+#   }
+# }
+# 
+# # visualizing the data for each model type
+# # model_type_list <- list()
+# for(i in 1:length(model_types)){
+#   focal_model_type <- model_types[i]
+#   for(j in 1:length(ntips)){
+#     nTip <- ntips[j]
+#     # iter_list <- list()
+#     for(k in 1:iter){
+#       file_name <- paste0("simulated_data/", focal_model_type, "/", nTip, "/", "dataset_", k, ".Rsave")
+#       load(file_name)
+#       dat_cd <- focal_dat$dat_cd$data
+#       dat_cid <- focal_dat$dat_cid$data
+#       # iter_list <- c(iter_list, list(dat_cd=dat_cd, dat_cid=dat_cid))
+#     }
+#   }
+# }
+# 
+# dat_cd <- focal_dat$dat_cd$data
+# dat_cid <- focal_dat$dat_cid$data
+# 
+# 
+# 
+# continuous_model_cd <- all_model_structures[[8]]
+# continuous_model_cid <- all_model_structures[[15]]
+# OU1_classic <- all_model_structures[[4]]
+# 
+# out <- list()
+# map_number <- c(100, 250, 500, 1000)
+# for(i in 1:length(map_number)){
+#   nmaps <- map_number[i]
+#   out[[i]] <- mclapply(1:20, function(x) run_hmm_help(nmaps), mc.cores = 5)
+# }
 
 # nmap_100 <- mclapply(1:20, function(x) run_hmm_help(100), mc.cores = 5)
 # nmap_200 <- mclapply(1:20, function(x) run_hmm_help(200), mc.cores = 5)

@@ -70,7 +70,7 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 # model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
 model_types <- c("BMV","OUV", "OUM", "OUMV")
 # for each number of tips
-ntips <- c(25)
+ntips <- c(250)
 nmap <- 100
 
 # the dataests come from a particular structure and modeling results will also follow the same saving protocol
@@ -97,7 +97,7 @@ big_df$gen_model <- gsub("\\..*", "", rownames(big_df))
 ggplot(big_df, aes(x = X2, y = value)) +
   geom_boxplot(outlier.shape = NA) +
   theme_bw() +
-  ylab("AICwt") + 
+  ylab("dAIC") + 
   xlab("Alternative model structures") +
   theme(legend.position = "none") +
   facet_wrap(~gen_model + X1, ncol = 4)
@@ -134,11 +134,11 @@ getPlotQuick <- function(nTip, nmap){
   return(my_plot)
 }
 
-p_25 <- getPlotQuick(25, 25)
-p_100 <- getPlotQuick(25, 100)
+p_25 <- getPlotQuick(100, 25)
+p_100 <- getPlotQuick(100, 100)
 p_250 <- getPlotQuick(25, 250)
 
-grid.arrange(p_25, p_100, p_250)
+grid.arrange(p_25, p_100)
 
 # big_df <- do.call(rbind, model_type_list)
 # big_df$gen_model <- gsub("\\..*", "", rownames(big_df))
