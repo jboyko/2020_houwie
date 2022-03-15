@@ -87,12 +87,13 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
-model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
-model_types <- c("BMV","OUV", "OUM", "OUMV")
+model_types <- c("BMV", "OUV", "OUM", "OUMV", "OUA", "OUVA", "OUMA", "OUMVA", "OUBM1", "OUBMV")
+# model_types <- c("BMV", "OUV", "OUM", "OUMV")
 # model_types <- c("OUM")
 
 # for each number of tips
 ntips <- c(25, 100, 250)
+# ntips <- c(100, 250)
 
 bm1_model <- all_model_structures[[1]]
 ou1_model <- all_model_structures[[4]]
@@ -107,7 +108,7 @@ for(j in 1:length(ntips)){
     nTip <- ntips[j]
     focal_dir <- paste0("simulated_data/", focal_model_type, "/", nTip)
     dataset_files <- dir(focal_dir, full.names = TRUE)
-    mclapply(dataset_files, function(x) singleRun(x, 250, continuous_model_cd, continuous_model_cid, n_starts = 5, n_cores = 5), mc.cores = 11)
+    mclapply(dataset_files, function(x) singleRun(x, 250, continuous_model_cd, continuous_model_cid, n_starts = 1, n_cores = 1), mc.cores = 50)
   }
 }
 
