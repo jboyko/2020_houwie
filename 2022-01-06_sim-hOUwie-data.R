@@ -73,7 +73,7 @@ save_datasets <- function(focal_model_type, model_names, all_model_structures, i
   dat_name <- paste0("dataset_", iter, ".Rsave")
   if(dat_name %in% dir(dir_name)){
     print("already a dataset with this name.")
-    return(NULL)
+    # return(NULL)
   }else{
     print(paste0(dat_name, " is on its way..."))
   }
@@ -83,13 +83,14 @@ save_datasets <- function(focal_model_type, model_names, all_model_structures, i
   focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
   file_name <- paste0(dir_name, dat_name)
   save(focal_dat, file = file_name)
+  print("data overwritten")
 }
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # prerequisites
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # maybe adjust houwie data
-nTip <- 100
+# nTip <- 100
 alpha <- c(3, 1.5)
 sigma.sq <- c(0.35, 1)
 theta <- c(2, 0.75)
@@ -142,23 +143,23 @@ discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1,2,3,4))
 # models 20 and 22 pair as OUBMV
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
-model_types <- c("BMV", "OUA", "OUV", "OUVA", "OUM", "OUMA", "OUMV", "OUMVA", "OUBM1", "OUBMV")
+model_types <- c("BMV", "OUV", "OUM", "OUMV", "OUA", "OUVA", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 # model_types <- c("BMV", "OUV", "OUM", "OUMV")
 # for each number of tips
 ntips <- c(25, 100, 250)
 # for a certain number of datasets
-ntips <- 250
+ntips <- 100
 for(i in 1:length(model_types)){
-  sapply(1:50, function(x) save_datasets(model_types[i], model_names, all_model_structures, x, ntips))
+  mclapply(1:50, function(x) save_datasets(model_types[i], model_names, all_model_structures, x, ntips), mc.cores = 50)
 }
 
-focal_model_type <- "OUA"
+focal_model_type <- "OUM"
 focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
 continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
 continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
 focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
 
-
+tmp <- hOUwie(phy = focal_dat$dat_cd$simmap, data = focal_dat$dat_cd$data, rate.cat = 1, "ER", "OUM", 1.1, 10, sample_nodes = TRUE, adaptive_sampling = TRUE)
 
 # 
 # for(i in 1:length(model_types)){

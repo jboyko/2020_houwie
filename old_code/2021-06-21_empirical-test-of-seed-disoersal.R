@@ -1,4 +1,4 @@
-source("~/2020_hOUwie/hOUwieSimmap.R")
+source("~/2020_hOUwie/hOUwieNode.R")
 source("~/2020_hOUwie/Utils.R")
 
 # source("/space_2/jamesboyko/2020_hOUwie/hOUwieSimmap.R")
