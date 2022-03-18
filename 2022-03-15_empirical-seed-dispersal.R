@@ -88,6 +88,9 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
   return(fit)
 }
 
+for(i in 1:24){
+  singleRun(phy, dat, i, all_model_structures, discrete_model_cd, discrete_model_cid)
+}
 
 out <- lapply(1:24, function(x) singleRun(phy, dat, x, all_model_structures, discrete_model_cd, discrete_model_cid))
 

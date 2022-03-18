@@ -134,6 +134,9 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   n_p_sigma <- length(unique(na.omit(index.cont[2,])))
   n_p_theta <- length(unique(na.omit(index.cont[3,])))
   
+  # a global matrix to contain likelihoods so that identical parameters return identical likelihoods
+  global_liks_mat <<- matrix(c(NA, rep(NA, n_p_trans), rep(NA, n_p_alpha), rep(NA, n_p_sigma), rep(NA, n_p_theta)), nrow = 1)
+  
   # an internal data structure (internodes liks matrix) for the dev function
   edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
   
@@ -285,6 +288,17 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
                        adaptive_sampling=FALSE, split.liks=FALSE){
   tip.paths <- all.paths[1:length(phy$tip.label)]
   p <- exp(p)
+  # check if these parameters exist in the global matrix
+  liks_match_vector <- colSums(t(global_liks_mat[,-1]) - p) == 0
+  if(!split.liks){
+    if(any(liks_match_vector, na.rm = TRUE)){
+      llik_houwie <- global_liks_mat[which(liks_match_vector), 1]
+      print(llik_houwie)
+      print(p)
+      return(-llik_houwie)
+    }
+  }
+  
   k <- max(index.disc, na.rm = TRUE)
   p.mk <- p[1:k]
   p.ou <- p[(k+1):length(p)] 
@@ -394,7 +408,6 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
       llik_houwies <- llik_discrete + llik_continuous
       # return to the initial step if some criteria has not been met, else done.
       if(adaptive_count > 5){
-        print("reached 5")
         adaptive_criteria <- TRUE
       }
     }
@@ -412,8 +425,10 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   if(split.liks){
     expected_vals <- lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr,return.expected.vals=TRUE))
     expected_vals <- colSums(do.call(rbind, expected_vals) * exp(llik_houwies - max(llik_houwies))/sum(exp(llik_houwies - max(llik_houwies))))
+    llik_houwie <- global_liks_mat[which(liks_match_vector), 1]
       return(list(TotalLik = llik_houwie, DiscLik = llik_discrete_summed, ContLik = llik_continuous_summed, expected_vals = expected_vals, llik_discrete=llik_discrete, llik_continuous=llik_continuous, simmaps=simmaps))
   }
+  global_liks_mat <<- rbind(global_liks_mat, c(llik_houwie, p))
   print(c(llik_houwie, llik_discrete_summed, llik_continuous_summed))
   print(p)
   return(-llik_houwie)
@@ -1562,8 +1577,8 @@ getJointBranchMatrix <- function(possible_internal, possible_external, tip_value
 # a function for getting OU expectations per node and tip: both variance and means
 getOUExpectations <- function(simmap, Rate.mat, tip.paths=NULL){
   # phy must be of class simmap
+  nTip <- length(simmap$tip.label)
   if(is.null(tip.paths)){
-    nTip <- length(simmap$tip.label)
     tip.paths <- lapply(1:(nTip*2-1), function(x) OUwie:::getPathToRoot(simmap, x))
   }
   # find the root state and its theta value
