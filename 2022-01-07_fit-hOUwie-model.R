@@ -20,7 +20,7 @@ require(partitions)
 # Functions
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
-singleRun <- function(dataset_file, nmap=25, continuous_model_cd, continuous_model_cid, n_starts=5, n_cores=5){
+singleRun <- function(dataset_file, nmap=25, continuous_model_cd, continuous_model_cid, n_starts=5, n_cores=5, save_file=TRUE){
   load(dataset_file)
   phy <- focal_dat$dat_cd$simmap
   dat_cd <- focal_dat$dat_cd$data
@@ -52,8 +52,11 @@ singleRun <- function(dataset_file, nmap=25, continuous_model_cd, continuous_mod
   out <- list(cd_out = cd_out, cid_out = cid_out)
   modelres_file <- gsub("simulated_data/", "simulated_fit/", dataset_file)
   modelres_file <- gsub(".Rsave", paste0("_nmap=", nmap, ".Rsave"), modelres_file)
-  save(out, file = modelres_file)
-  # return(out)
+  if(save_file){
+    save(out, file = modelres_file)
+  }else{
+    return(out)
+  }
 }
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -112,5 +115,26 @@ for(j in 1:length(ntips)){
   }
 }
 
+# comparison
+nTip <- 100
+nMap <- 100
+focal_model_type <- model_types[8]
+focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
+continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
+continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
+focal_dir <- paste0("simulated_data/", focal_model_type, "/", nTip)
+dataset_files <- dir(focal_dir, full.names = TRUE)
+to_compare_res <- list()
+for(i in 1:5){
+  to_compare_res[[i]] <- singleRun(dataset_files[i], 100, continuous_model_cd, continuous_model_cid, n_starts = 1, n_cores = 1, save_file = FALSE)
+}
+
+
+original_files <- dataset_files[1:5]
+original_files <- sapply(original_files, function(x) gsub("simulated_data/", "simulated_fit/", x))
+original_files <- sapply(original_files, function(x) gsub(".Rsave", paste0("_nmap=", nMap, ".Rsave"), x))
+load(original_files[5])
+lapply(out$cid_out, "[[", "AIC")
+lapply(to_compare_res[[5]]$cid_out, "[[", "AIC")
 
 

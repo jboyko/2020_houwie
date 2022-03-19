@@ -1639,6 +1639,7 @@ getCherryConditionals <- function(phy, data, Rate.mat,  Q, edge_liks_list,tip.pa
     node_edges <- which(phy$edge[,1] == anc[i])
     bl <- node_ages[names(node_ages) == anc[i]]
     node_mat <- matrix(NA, length(node_edges), dim(Q)[1])
+    P_mat <- expm(Q * bl)
     for(j in 1:length(node_edges)){
       # j = 1
       # tips which contain j are shown here
@@ -1647,13 +1648,16 @@ getCherryConditionals <- function(phy, data, Rate.mat,  Q, edge_liks_list,tip.pa
       tip_sampled <- tips_from_anc
       # tip_index <- phy$edge[,2] == tip_sampled # relative to the edge matrix
       # possible_external <- which(dec_liks[tip_index,] == 1)
-      P_mat <- expm(Q * bl)
-      tip_value <- mean(data[data$sp %in% phy$tip.label[tip_sampled],3])
+      # tip_value <- mean(data[data$sp %in% phy$tip.label[tip_sampled],3])
+      tip_values <- c(data[data$sp %in% phy$tip.label[tip_sampled],3])
       # branch_matrix <- getJointBranchMatrix(possible_internal, possible_external, tip_value, Rate.mat, bl, P_mat)
-      branch_matrix <- getJointBranchMatrix(possible_internal, possible_internal, tip_value, Rate.mat, bl, P_mat)
+      branch_matrices <- lapply(tip_values, function(x) getJointBranchMatrix(possible_internal, possible_internal, x, Rate.mat, bl, P_mat))
+      # branch_matrix <- getJointBranchMatrix(possible_internal, possible_internal, tip_value, Rate.mat, bl, P_mat)
       # the likelihood that the rootward state led to the known tip ward state
-      node_state_liks <- apply(branch_matrix, 1, sum_lliks)
-      node_state_probs <- exp(node_state_liks - max(node_state_liks))/sum( exp(node_state_liks - max(node_state_liks)))
+      node_state_liks_list <- lapply(branch_matrices, function(x) apply(x, 1, sum_lliks))
+      node_state_liks <- Reduce("+", node_state_liks_list)
+      # node_state_liks <- apply(branch_matrix, 1, sum_lliks)
+      node_state_probs <- exp(node_state_liks - max(node_state_liks))/sum(exp(node_state_liks - max(node_state_liks)))
       node_mat[j,] <- node_state_probs
     }
     # once that node has finished calculating it's conditional probabilitity of each state, we combine the two dec tips
@@ -1698,11 +1702,15 @@ getAdaptiveConditionals <- function(phy, data, Rate.mat,  Q, edge_liks_list, tip
       # tip_index <- phy$edge[,2] == tip_sampled # relative to the edge matrix
       # possible_external <- which(dec_liks[tip_index,] == 1)
       P_mat <- expm(Q * bl)
-      tip_value <- mean(data[data$sp %in% phy$tip.label[tip_sampled],3])
+      # tip_value <- mean(data[data$sp %in% phy$tip.label[tip_sampled],3])
+      tip_values <- c(data[data$sp %in% phy$tip.label[tip_sampled],3])
       # branch_matrix <- getJointBranchMatrix(possible_internal, possible_external, tip_value, Rate.mat, bl, P_mat)
-      branch_matrix <- getJointBranchMatrix(possible_internal, possible_internal, tip_value, Rate.mat, bl, P_mat, init_value = anc_value, init_var = anc_var)
+      branch_matrices <- lapply(tip_values, function(x) getJointBranchMatrix(possible_internal, possible_internal, x, Rate.mat, bl, P_mat))
+      # branch_matrix <- getJointBranchMatrix(possible_internal, possible_internal, tip_value, Rate.mat, bl, P_mat, init_value = anc_value, init_var = anc_var)
       # the likelihood that the rootward state led to the known tip ward state
-      node_state_liks <- apply(branch_matrix, 1, sum_lliks)
+      node_state_liks_list <- lapply(branch_matrices, function(x) apply(x, 1, sum_lliks))
+      node_state_liks <- Reduce("+", node_state_liks_list)
+      # node_state_liks <- apply(branch_matrix, 1, sum_lliks)
       node_state_probs <- exp(node_state_liks - max(node_state_liks))/sum( exp(node_state_liks - max(node_state_liks)))
       node_mat[j,] <- node_state_probs
     }

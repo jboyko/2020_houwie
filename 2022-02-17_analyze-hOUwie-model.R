@@ -80,6 +80,20 @@ getError <- function(table_row, par_table){
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
+
+### testing
+focal_files <- getFocalFiles("BMV", 100, 25)
+load(focal_files[10])
+lapply(out$cd_out, "[[", "AIC")
+lapply(out$cid_out, "[[", "AIC")
+
+phy <- out$cid_out$bm1_fit$phy
+dat <- out$cid_out$bm1_fit$dat
+discrete_model <- out$cid_out$cid_fit$discrete_model
+continuous_model <- out$cid_out$cid_fit$continuous_model
+
+new_fit <- hOUwie(phy = phy, data = dat, rate.cat = 2, nSim = 100, time_slice = 1.1, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln")
+
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
 # model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 # 
