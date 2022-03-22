@@ -133,9 +133,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   n_p_alpha <- length(unique(na.omit(index.cont[1,])))
   n_p_sigma <- length(unique(na.omit(index.cont[2,])))
   n_p_theta <- length(unique(na.omit(index.cont[3,])))
-  
-  # a global matrix to contain likelihoods so that identical parameters return identical likelihoods
-  global_liks_mat <<- matrix(c(NA, rep(NA, n_p_trans), rep(NA, n_p_alpha), rep(NA, n_p_sigma), rep(NA, n_p_theta)), nrow = 1)
+  n_p <- n_p_trans + n_p_alpha + n_p_sigma + n_p_theta
   
   # an internal data structure (internodes liks matrix) for the dev function
   edge_liks_list <- getEdgeLiks(phy, hOUwie.dat$data.cor, nStates, rate.cat, time_slice)
@@ -143,15 +141,25 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   # default MLE search options
   if(is.null(opts)){
     if(optimizer == "nlopt_ln"){
-      opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.25)
+      opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
     }
     if(optimizer == "nlopt_gn"){
-      opts <- list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.25)
+      opts <- list("algorithm"="NLOPT_GN_DIRECT_L", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
     }
     if(optimizer == "sann"){
       opts <- list(max.call=1000, smooth=FALSE)
     }
   }
+  # a global matrix to contain likelihoods so that identical parameters return identical likelihoods
+  if(is.null(opts$maxeval) | is.null(opts$max.call)){
+    max.its <- 1000
+  }else{
+    max.its <- as.numeric(opts$maxeval)
+  }
+  setDTthreads(threads=1)
+  tmp.df <- data.frame(matrix(c(0, rep(1e5, n_p)), byrow = TRUE, ncol = n_p+1, nrow = max.its))
+  global_liks_mat <- as.data.table(tmp.df)
+  
   # p is organized into 2 groups with the first set being corHMM and the second set being OUwie
   # organized as c(trans.rt, alpha, sigma.sq, theta)
   # evaluate likelihood
@@ -219,7 +227,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       starts <- ip
     }
     if(!quiet){
-      cat("Starting a thorough search of parameters with", nSim, "simmaps using the", optimizer, "optimization protocol...\n")
+      cat("Starting a thorough search with", nSim, "simmaps using the", optimizer, "optimization protocol...\n")
     }
     multiple_starts <- generateMultiStarting(starts, index.disc, index.cont, n_starts, exp(lower), exp(upper))
     if(length(grep("nlopt", optimizer)) == 1){
@@ -229,7 +237,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       #              index.disc=index.disc, index.cont=index.cont, root.p=root.p,
       #              edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths,
       #              sample_tips=sample_tips, split.liks=FALSE)
-      multi_out <- mclapply(multiple_starts, function(x) nloptr(x0=log(x), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr,index.disc=index.disc, index.cont=index.cont, root.p=root.p,edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=FALSE), mc.cores = ncores)
+      multi_out <- mclapply(multiple_starts, function(x) nloptr(x0=log(x), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr,index.disc=index.disc, index.cont=index.cont, root.p=root.p,edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=FALSE, global_liks_mat=global_liks_mat), mc.cores = ncores)
       multi_logliks <- unlist(lapply(multi_out, function(x) x$objective))
       search_summary <- c(best_loglik = -min(multi_logliks), mean_loglik = -log(mean(exp(multi_logliks))), sd_logliks = log(sd(exp(multi_logliks))))
       if(!quiet){
@@ -246,7 +254,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       #              index.disc=index.disc, index.cont=index.cont, root.p=root.p,
       #              edge_liks_list=edge_liks_list, nSim=nSim, tip.paths=tip.paths, 
       #              sample_tips=sample_tips, split.liks=FALSE)
-      multi_out <- mclapply(multiple_starts, function(x) GenSA(par=log(x), fn=hOUwie.dev, lower=lower, upper=upper, control=opts, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=FALSE), mc.cores = ncores)
+      multi_out <- mclapply(multiple_starts, function(x) GenSA(par=log(x), fn=hOUwie.dev, lower=lower, upper=upper, control=opts, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=FALSE), global_liks_mat=global_liks_mat, mc.cores = ncores)
       multi_logliks <- unlist(lapply(multi_out, function(x) x$value))
       search_summary <- c(best_loglik = -min(multi_logliks), mean_loglik = -mean(multi_logliks), sd_logliks = sd(multi_logliks))
       if(!quiet){
@@ -258,7 +266,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     }
   }
   # preparing output
-  liks_houwie <- hOUwie.dev(p = pars, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=TRUE)
+  liks_houwie <- hOUwie.dev(p = pars, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=TRUE, global_liks_mat=global_liks_mat)
   houwie_obj <- getHouwieObj(liks_houwie, pars=exp(pars), phy=phy, data=data, hOUwie.dat=hOUwie.dat, rate.cat=rate.cat, mserr=mserr, index.disc=index.disc, index.cont=index.cont, root.p=root.p, nSim=nSim, sample_tips=sample_tips, nStates=nStates, discrete_model=discrete_model, continuous_model=continuous_model, time_slice=time_slice, root.station=root.station, get.root.theta=get.root.theta,lb_discrete_model,ub_discrete_model,lb_continuous_model,ub_continuous_model, ip=ip, opts=opts, quiet=quiet)
   # adding independent model if included
   # if(is.null(p)){
@@ -285,14 +293,16 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
                        index.disc, index.cont, root.p, 
                        edge_liks_list, nSim, all.paths=NULL, 
                        sample_tips=FALSE, sample_nodes=FALSE,
-                       adaptive_sampling=FALSE, split.liks=FALSE){
+                       adaptive_sampling=FALSE, split.liks=FALSE, 
+                       global_liks_mat=global_liks_mat){
   tip.paths <- all.paths[1:length(phy$tip.label)]
   p <- exp(p)
   # check if these parameters exist in the global matrix
+  # set(global_liks_mat, i = as.integer(1),  j = 1:4, value=as.list(c(0, p)))
   liks_match_vector <- colSums(t(global_liks_mat[,-1]) - p) == 0
   if(!split.liks){
     if(any(liks_match_vector, na.rm = TRUE)){
-      llik_houwie <- global_liks_mat[which(liks_match_vector), 1]
+      llik_houwie <- as.numeric(global_liks_mat[which(liks_match_vector), 1])
       print(llik_houwie)
       print(p)
       return(-llik_houwie)
@@ -425,10 +435,11 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
   if(split.liks){
     expected_vals <- lapply(simmaps, function(x) OUwie.basic(x, data, simmap.tree=TRUE, scaleHeight=FALSE, alpha=alpha, sigma.sq=sigma.sq, theta=theta, algorithm="three.point", tip.paths=tip.paths, mserr=mserr,return.expected.vals=TRUE))
     expected_vals <- colSums(do.call(rbind, expected_vals) * exp(llik_houwies - max(llik_houwies))/sum(exp(llik_houwies - max(llik_houwies))))
-    llik_houwie <- global_liks_mat[which(liks_match_vector), 1]
+    llik_houwie <- as.numeric(global_liks_mat[which(liks_match_vector), 1])
       return(list(TotalLik = llik_houwie, DiscLik = llik_discrete_summed, ContLik = llik_continuous_summed, expected_vals = expected_vals, llik_discrete=llik_discrete, llik_continuous=llik_continuous, simmaps=simmaps))
   }
-  global_liks_mat <<- rbind(global_liks_mat, c(llik_houwie, p))
+  new_row <- which(global_liks_mat$X1 == 0)[1]
+  set(global_liks_mat, as.integer(new_row), names(global_liks_mat), as.list(c(llik_houwie, p)))
   print(c(llik_houwie, llik_discrete_summed, llik_continuous_summed))
   print(p)
   return(-llik_houwie)

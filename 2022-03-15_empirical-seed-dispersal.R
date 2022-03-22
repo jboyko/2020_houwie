@@ -64,11 +64,13 @@ continuous_models_cid_bm <- lapply(seq(dim(continuous_models_cid_bm)[3]), functi
 continuous_models_cid_bmou <- lapply(1:dim(continuous_models_cid_bmou)[3], function(x) continuous_models_cid_bmou[,,x])
 HYBBMS <- getOUParamStructure("BMS", "three.point", FALSE, FALSE, 4)
 HYBOUM <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, 4)
-all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1], continuous_models_cd_ou, continuous_models_cid_ou[-1], continuous_models_cd_bmou, continuous_models_cid_bmou, list(HYBBMS), list(HYBOUM))
+HYBOUMVA <- getOUParamStructure("OUMVA", "three.point", FALSE, FALSE, 4)
+all_model_structures <- c(continuous_models_cd_bm, continuous_models_cid_bm[-1], continuous_models_cd_ou, continuous_models_cid_ou[-1], continuous_models_cd_bmou, continuous_models_cid_bmou, list(HYBBMS), list(HYBOUM), list(HYBOUMVA))
 
 model_names <- c("CID_BM1", "CD_BMV", "CID+_BMV", "CID_OU1", "CD_OUA", "CD_OUV", "CD_OUVA", "CD_OUM",
                  "CD_OUMA", "CD_OUMV", "CD_OUMVA", "CID+_OUA", "CID+_OUV", "CID+_OUVA", "CID+_OUM", "CID+_OUMA",
-                 "CID+_OUMV", "CID+_OUMVA", "CD_OUBM1", "CD_OUBMV", "CID+_OUBM1", "CID+_OUBMV", "HYB_BMS", "HYB_OUM")
+                 "CID+_OUMV", "CID+_OUMVA", "CD_OUBM1", "CD_OUBMV", "CID+_OUBM1", "CID+_OUBMV", 
+                 "HYB_BMS", "HYB_OUM", "HYB_OUMVA")
 names(all_model_structures) <- model_names
 
 
@@ -82,14 +84,15 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
     disc_model <- discrete_model_cid
     rate.cat <- 2
   }
-  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 100, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 1, ncores = 1)
+  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 50, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 1, ncores = 1)
   model.name <- names(all_model_structures)[[index]]
   save(fit, file = paste0("empirical_fit/FitSD=", model.name, ".Rsave"))
   return(fit)
 }
 
-for(i in 1:24){
-  singleRun(phy, dat, i, all_model_structures, discrete_model_cd, discrete_model_cid)
+model_list <- list()
+for(i in 1:25){
+  model_list[[i]] <- singleRun(phy, dat, i, all_model_structures, discrete_model_cd, discrete_model_cid)
 }
 
 out <- lapply(1:24, function(x) singleRun(phy, dat, x, all_model_structures, discrete_model_cd, discrete_model_cid))
