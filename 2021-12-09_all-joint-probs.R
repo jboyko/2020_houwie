@@ -12,6 +12,7 @@ require(ggplot2)
 require(reshape2)
 require(gridExtra)
 require(ggplotify)
+require(data.table)
 source("hOUwieNode.R")
 source("Utils.R")
 
@@ -96,12 +97,10 @@ dat.ou <- OUwie.sim(regime_mapping_cd, simmap.tree = TRUE, alpha = c(10,10), sig
 dat_cd <- data.frame(sp = dat.ou$Genus_species, reg = c(2,1,2,1), x = dat.ou$X)
 p = c(1, 10, 5, 5, 10)
 
-dat_cd <- data.frame(sp = dat.ou$Genus_species, reg = c(2,1,2,1), x = dat.ou$X)
-p = c(1, 10, 5, 5, 10)
-opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.1)
-cd_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 1)
-cid_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 2)
-
+# opts <- list("algorithm"="NLOPT_LN_SBPLX", "maxeval"="1000", "ftol_rel"=.Machine$double.eps^0.5)
+# cd_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 1)
+# cid_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 2)
+# 
 cont_model_cd <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, 2)
 cont_model_cid <- getOUParamStructure("OUM", "three.point", FALSE, FALSE, 4)
 cont_model_cid[3,] <- c(3,3,4,4)
@@ -109,11 +108,20 @@ discrete_model_cd <- equateStateMatPars(getRateCatMat(2), 1:2)
 discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
 discrete_model_cid <- equateStateMatPars(discrete_model_cid, c(1:4))
 
-cd_res <- hOUwie(pectinate_tree, dat_cd, rate.cat = 1, discrete_model_cd, cont_model_cd, nSim = 10, time_slice = 0.5, optimizer = "nlopt_ln", opts=opts, sample_nodes = TRUE)
-cid_res <- hOUwie(pectinate_tree, dat_cd, rate.cat = 2, discrete_model_cid, cont_model_cid, nSim = 200, time_slice = 0.5, optimizer = "nlopt_ln", opts=opts, sample_nodes = TRUE)
+cd_res_a <- hOUwie(pectinate_tree, dat_cd, rate.cat = 1, discrete_model_cd, cont_model_cd, nSim = 8, time_slice = 1.1, optimizer = "nlopt_ln", sample_nodes = FALSE)
+cid_res_a <- hOUwie(pectinate_tree, dat_cd, rate.cat = 2, discrete_model_cid, cont_model_cid, nSim = 512, time_slice = 1.1, optimizer = "nlopt_ln", sample_nodes = FALSE)
+
+dat_cid <- data.frame(sp = dat.ou$Genus_species, reg = c(2,2,1,1), x = dat.ou$X)
+
+cd_res_b <- hOUwie(pectinate_tree, dat_cid, rate.cat = 1, discrete_model_cd, cont_model_cd, nSim = 8, time_slice = 1.1, optimizer = "nlopt_ln", sample_nodes = FALSE)
+cid_res_b <- hOUwie(pectinate_tree, dat_cid, rate.cat = 2, discrete_model_cid, cont_model_cid, nSim = 512, time_slice = 1.1, optimizer = "nlopt_ln", sample_nodes = FALSE)
 
 
+cd_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 1)
+cid_optimized_cd_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cd, rate.cat = 2)
 
+cd_optimized_cid_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cid, rate.cat = 1)
+cid_optimized_cid_dat <- nloptr(x0 = p, eval_f = fitAllJoint, lb=rep(0, length(p)), ub=rep(50, length(p)), opts=opts, phy = pectinate_tree, dat = dat_cid, rate.cat = 2)
 
 
 

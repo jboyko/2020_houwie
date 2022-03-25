@@ -76,14 +76,34 @@ getError <- function(table_row, par_table){
   return(error)
 }
 
+reconstructCIDFits <- function(focal_file){
+  load(focal_file)
+  if(is.null(out$cd_out$cid_fit$recon) | is.null(out$cid_out$cid_fit$recon)){
+    cid_fit_cd <- out$cd_out$cid_fit
+    cid_fit_cid <- out$cid_out$cid_fit
+    cid_fit_cid$sample_nodes <- cid_fit_cd$sample_nodes <- TRUE
+    cid_fit_cid$adaptive_sampling <- cid_fit_cd$adaptive_sampling <- TRUE
+    cid_recon_cd <- hOUwieRecon(cid_fit_cd, nodes = "external")
+    cid_recon_cid <- hOUwieRecon(cid_fit_cid, nodes = "external")
+    out$cd_out$cid_fit$recon <- cid_recon_cd
+    out$cid_out$cid_fit$recon <- cid_recon_cid
+    save(out, file = focal_file)
+  }else{
+    print("already reconstructed.")
+    return(NULL)
+  }
+}
 
 #### #### #### #### #### #### #### #### #### #### #### #### 
 # run
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 ### testing
-focal_files <- getFocalFiles("BMV", 100, 25)
+focal_files <- getFocalFiles("BMV", 25, 25)
+focal_file <- focal_files[10]
+reconstructCIDFits(focal_files[10])
 load(focal_files[10])
+
 lapply(out$cd_out, "[[", "AIC")
 lapply(out$cid_out, "[[", "AIC")
 
@@ -93,6 +113,20 @@ discrete_model <- out$cid_out$cid_fit$discrete_model
 continuous_model <- out$cid_out$cid_fit$continuous_model
 
 new_fit <- hOUwie(phy = phy, data = dat, rate.cat = 2, nSim = 100, time_slice = 1.1, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln")
+
+houwie_res <- out$cd_out$cid_fit
+houwie_res$adaptive_sampling <- TRUE
+houwie_res$sample_nodes <- TRUE
+test <- hOUwieRecon(houwie_res, "external")
+
+out$cd_out$cd_fit
+colSums(t(test) * houwie_res$solution.cont[2,])
+
+
+debug(hOUwieRecon)
+
+
+getModelAvgParams(houwie_res)
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
 # model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
