@@ -30,24 +30,25 @@ singleRun <- function(dataset_file, nmap=25, continuous_model_cd, continuous_mod
   dat_cid[dat_cid[,2] == 4,2] <- 2
   ## CD data
   # run a bm1
-  bm1_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = bm1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
-  # run an ou1
-  ou1_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = ou1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
-  # run a cd 
-  cd_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = continuous_model_cd, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
-  # run a cid + 
-  cid_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 2, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = continuous_model_cid, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
+  bm1_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = bm1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
+  # # run an ou1
+  ou1_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = ou1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
+  # # run a cd
+  cd_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = continuous_model_cd, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
+  # # run a cid +
+  cid_fit <- hOUwie(phy = phy, data = dat_cd, rate.cat = 2, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = continuous_model_cid, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
   cd_out <- list(bm1_fit=bm1_fit, ou1_fit=ou1_fit, cd_fit=cd_fit, cid_fit=cid_fit)
-  
-  ## CID data
-  # run a bm1
-  bm1_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = bm1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
-  # run an ou1
-  ou1_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = ou1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
+  # 
+  # ## CID data
+  # # run a bm1
+  bm1_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = bm1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
+  # # run an ou1
+  ou1_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = ou1_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
   # run a cd 
-  cd_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = continuous_model_cd, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
+  cd_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 1, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cd, continuous_model = continuous_model_cd, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
   # run a cid + 
-  cid_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 2, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = continuous_model_cid, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores)
+  cid_fit <- hOUwie(phy = phy, data = dat_cid, rate.cat = 2, nSim = nmap, time_slice = 1.1, discrete_model = discrete_model_cid, continuous_model = continuous_model_cid, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = n_starts, ncores = n_cores, ub_continuous_model = c(10, 100, 100))
+  return(list(cd_fit, cid_fit))
   cid_out <- list(bm1_fit=bm1_fit, ou1_fit=ou1_fit, cd_fit=cd_fit, cid_fit=cid_fit)
   
   out <- list(cd_out = cd_out, cid_out = cid_out)
@@ -96,7 +97,7 @@ model_types <- c("BMV", "OUV", "OUM", "OUMV", "OUA", "OUVA", "OUMA", "OUMVA", "O
 # model_types <- c("OUM")
 
 # for each number of tips
-ntips <- c(25, 100, 250)
+ntips <- c(100, 250)
 # ntips <- c(100, 250)
 
 bm1_model <- all_model_structures[[1]]
@@ -134,7 +135,12 @@ original_files <- dataset_files[1:5]
 original_files <- sapply(original_files, function(x) gsub("simulated_data/", "simulated_fit/", x))
 original_files <- sapply(original_files, function(x) gsub(".Rsave", paste0("_nmap=", nMap, ".Rsave"), x))
 load(original_files[5])
-lapply(out$cid_out, "[[", "AIC")
+lapply(out$cd_out, "[[", "AIC")
+
+try_new <- hOUwie(out$cd_out$cd_fit$phy, out$cd_out$cd_fit$data, 1, out$cd_out$cd_fit$discrete_model, out$cd_out$cd_fit$continuous_model, 1.1, 100, adaptive_sampling = TRUE)
+
+
+
 lapply(to_compare_res[[5]]$cid_out, "[[", "AIC")
 
 load(original_files[4])

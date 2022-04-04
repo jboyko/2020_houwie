@@ -99,46 +99,51 @@ reconstructCIDFits <- function(focal_file){
 #### #### #### #### #### #### #### #### #### #### #### #### 
 
 ### testing
-focal_files <- getFocalFiles("BMV", 25, 25)
-focal_file <- focal_files[10]
-reconstructCIDFits(focal_files[10])
-load(focal_files[10])
-
-lapply(out$cd_out, "[[", "AIC")
-lapply(out$cid_out, "[[", "AIC")
-
-phy <- out$cid_out$bm1_fit$phy
-dat <- out$cid_out$bm1_fit$dat
-discrete_model <- out$cid_out$cid_fit$discrete_model
-continuous_model <- out$cid_out$cid_fit$continuous_model
-
-new_fit <- hOUwie(phy = phy, data = dat, rate.cat = 2, nSim = 100, time_slice = 1.1, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln")
-
-houwie_res <- out$cd_out$cid_fit
-houwie_res$adaptive_sampling <- TRUE
-houwie_res$sample_nodes <- TRUE
-test <- hOUwieRecon(houwie_res, "external")
-
-out$cd_out$cd_fit
-colSums(t(test) * houwie_res$solution.cont[2,])
-
-
-debug(hOUwieRecon)
-
-
-getModelAvgParams(houwie_res)
+# model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
+# for(model_i in model_types){
+#   print(model_i)
+#   focal_files <- getFocalFiles(model_i, 100, 25)
+#   sapply(focal_files, reconstructCIDFits)
+# }
+# focal_files <- getFocalFiles("OUM", 25, 25)
+# focal_file <- focal_files[10]
+# # reconstructCIDFits(focal_files[10])
+# load(focal_files[10])
+# lapply(out$cd_out, "[[", "AIC")
+# lapply(out$cid_out, "[[", "AIC")
+# 
+# phy <- out$cid_out$bm1_fit$phy
+# dat <- out$cid_out$bm1_fit$dat
+# discrete_model <- out$cid_out$cid_fit$discrete_model
+# continuous_model <- out$cid_out$cid_fit$continuous_model
+# 
+# new_fit <- hOUwie(phy = phy, data = dat, rate.cat = 2, nSim = 100, time_slice = 1.1, discrete_model = discrete_model, continuous_model = continuous_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln")
+# 
+# houwie_res <- out$cd_out$cid_fit
+# houwie_res$adaptive_sampling <- TRUE
+# houwie_res$sample_nodes <- TRUE
+# test <- hOUwieRecon(houwie_res, "external")
+# 
+# out$cd_out$cd_fit
+# colSums(t(test) * houwie_res$solution.cont[2,])
+# 
+# 
+# debug(hOUwieRecon)
+# 
+# 
+# getModelAvgParams(houwie_res)
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
 # model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 # 
 # ntips <- c(25, 100, 250)
-# nmaps <- c(25, 100)
-# 
-# # model_type <- "OUA"
-# # ntip <- 25
-# # nmap <- 25
-# # 
-# 
+# nmaps <- c(25, 100, 250)
+
+# model_type <- "OUA"
+# ntip <- 25
+# nmap <- 25
+#
+
 # bigger_table <- list()
 # count <- 1
 # for(k in 1:length(nmaps)){
@@ -163,7 +168,7 @@ getModelAvgParams(houwie_res)
 #     }
 #   }
 # }
-# 
+
 # biggest_table <- do.call(rbind, bigger_table)
 # rownames(biggest_table) <- NULL
 
@@ -194,8 +199,18 @@ for(i in 1:nrow(biggest_table)){
   focal_par_index <- par_index_table[,biggest_table[i,1] == colnames(par_index_table)]
   start_col <- which(names(biggest_table[i,]) == "rate")
   end_col <- length(names(biggest_table[i,]))
+  if(biggest_table[i, 2] == "CID"){
+    biggest_table[i, 10:11] <- sort(biggest_table[i, 10:11], na.last = TRUE)
+    biggest_table[i, 12:13] <- sort(biggest_table[i, 12:13])
+    biggest_table[i, 14:15] <- sort(biggest_table[i, 14:15], decreasing = TRUE)
+  }
   biggest_table[i, start_col:end_col] <- biggest_table[i, start_col:end_col] * focal_par_index
+  if(biggest_table[i,6] > 1e10){
+    biggest_table[i,] <- NA
+  }
 }
+# remove failed optimizations
+biggest_table <- biggest_table[!apply(biggest_table, 1, function(x) all(is.na(x))),]
 
 # working with an error table
 error_table <- biggest_table
@@ -232,30 +247,43 @@ a <- ggplot(plot_table, aes(x = variable, y = value, fill = variable)) +
   scale_fill_manual(values = par_cols) + 
   ggtitle("a) Model Type") + 
   ylab("Log10 diff from sim pars") + 
+  facet_wrap(~model_class) +
+  theme_classic() +
+  geom_hline(yintercept = 0) +
   coord_cartesian(ylim=c(-2,2))
 
-b <- ggplot(plot_table, aes(x = model_class, y = value, fill = variable)) +
+b <- ggplot(plot_table, aes(x = model_type, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) +
-  ggtitle("b) Model Class") + 
+  ggtitle("a) Model Type") + 
   ylab("Log10 diff from sim pars") + 
+  facet_wrap(~model_class) +
+  theme_classic() +
+  geom_hline(yintercept = 0) +
   coord_cartesian(ylim=c(-2,2))
 
 c <- ggplot(plot_table, aes(x = nTip, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) +
-  ggtitle("c) Number of Taxa") + 
+  ggtitle("b) Number of Taxa") + 
   ylab("Log10 diff from sim pars") + 
+  facet_wrap(~model_class) +
+  theme_classic() +
+  geom_hline(yintercept = 0) +
   coord_cartesian(ylim=c(-2,2))
 
 d <- ggplot(plot_table, aes(x = nMap, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) +
-  ggtitle("d) Number of maps per iteration") + 
+  ggtitle("c) Number of maps per iteration") + 
   ylab("Log10 diff from sim pars") + 
+  facet_wrap(~model_class) +
+  theme_classic() +
+  geom_hline(yintercept = 0) +
   coord_cartesian(ylim=c(-2,2))
 
-grid.arrange(a,b,c,d, nrow=2)
+final_plot <- grid.arrange(b,c,d, nrow=3)
+ggsave(filename = "figures/raw/model_error_rates.png", plot = final_plot, height = 8, width = 12, units = "in")
 
 # ggplot(plot_table, aes(x = variable, y = value)) +
 #   geom_boxplot() +

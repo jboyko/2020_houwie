@@ -5,9 +5,13 @@ require(corHMM)
 require(OUwie)
 require(parallel)
 require(geiger)
+require(expm)
+require(data.table)
+
+source("~/2020_houwie/hOUwieNode.R")
 
 # generate data consistent with Revell (2011)
-nSim <- 100
+nSim <- 10
 p.mk <- 8
 nTip <- 100
 root.p = c(1, 0)
@@ -22,21 +26,19 @@ phy$edge.length <- phy$edge.length/max(branching.times(phy))
 Q = matrix(c(-p.mk,p.mk,p.mk,-p.mk), 2, 2)
 
 singleRun <- function(){
-  data <- OUwie:::hOUwie.sim(phy, Q, root.p, alpha, sig2, theta0, theta, 1)
-  TrueMap <- data[[2]][[1]]
-  data <- data[[1]]
+  data <- hOUwie.sim(phy, Q, root.p, alpha, sig2, theta0, theta)
+  TrueMap <- data$simmap
+  data <- data$data
   # fit the data to corHMM then OUwie and then hOUwie
   fitMK <- corHMM(phy, data[,c(1,2)], 1, model = "ER")
   fitOU_tru <- OUwie(TrueMap, data, model = "BMS", simmap.tree = TRUE, scaleHeight = FALSE, algorithm = "three.point")
   simmaps <- makeSimmap(phy, data[,c(1,2)], fitMK$solution, 1, nSim = nSim)
   fitOU_est <- lapply(simmaps, function(x) OUwie(x, data, model = "BMS", simmap.tree = TRUE, scaleHeight = FALSE, algorithm = "three.point"))
-  res_hOUwie <- OUwie:::hOUwie(phy, data, 1, model.cor = "ER", model.ou = "BMS", nSim = nSim)
-  res_hOUwie.wt <- OUwie:::hOUwie(phy, data, 1, model.cor = "ER", model.ou = "BMS", nSim = nSim, weighted = TRUE)
+  res_hOUwie <- hOUwie(phy, data, 1, discrete_model = "ER", continuous_model = "BMV", nSim = nSim, adaptive_sampling = TRUE)
   return(list(fitMK = fitMK,
               fitOU_tru = fitOU_tru,
               fitOU_est = fitOU_est,
-              res_hOUwie = res_hOUwie,
-              res_hOUwie.wt = res_hOUwie.wt))
+              res_hOUwie = res_hOUwie))
 }
 
 # for server

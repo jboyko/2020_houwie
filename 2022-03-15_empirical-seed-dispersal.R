@@ -84,7 +84,7 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
     disc_model <- discrete_model_cid
     rate.cat <- 2
   }
-  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 50, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 1, ncores = 1)
+  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 100, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = FALSE, optimizer = "nlopt_ln", n_starts = 10, ncores = 10)
   model.name <- names(all_model_structures)[[index]]
   save(fit, file = paste0("empirical_fit/FitSD=", model.name, ".Rsave"))
   return(fit)

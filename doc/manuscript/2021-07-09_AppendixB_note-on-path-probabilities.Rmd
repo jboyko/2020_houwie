@@ -99,7 +99,7 @@ print(dexp(1/5, 1) * dexp(1/5, 1) * dexp(1/5, 1) * dexp(1/5, 1) * (1 - pexp(1/5,
 
 This is counter-intuitive but that does not necessarily mean it is incorrect. To demonstrate that it is, let us first examine what the probability of a branch starting in state 0 and ending in state 0. 
 
-```{r, message=FALSE}
+```{r}
 library(expm)
 Prob <- function(t, start=0, end=0, Q=matrix(c(-1,1,1,-1), nrow=2)) {
 	return(expm(Q*t)[start+1, end+1])
@@ -118,6 +118,7 @@ print(c("P00_sum_pois_paths"=sum(pois), "P00_all_possible_paths"=Prob(1, start=0
 We can see that the more transitions occur, the less likely a particular path is. Additionally, we find that this number converges to the correct probability of integrating over all possible paths and therefore represents the correct joint probability. 
 
 Now we examine the behavior of our inter node approach to pathway probability. Does it add up the sum of all possible paths?
+
 
 ```{r, message=FALSE}
 # 00
