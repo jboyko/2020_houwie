@@ -247,6 +247,9 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
         failed_optimizations <- which(-multi_logliks > 1e10)
         multi_logliks <- multi_logliks[-failed_optimizations]
         multi_out <- multi_out[-failed_optimizations]
+        if(length(multi_out) == 0){
+          return(NULL)
+        }
       }
       search_summary <- c(best_loglik = -min(multi_logliks), mean_loglik = -log(mean(exp(multi_logliks))), sd_logliks = log(sd(exp(multi_logliks))))
       if(!quiet){
