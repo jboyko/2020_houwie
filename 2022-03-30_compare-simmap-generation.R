@@ -136,7 +136,7 @@ discrete_model <- equateStateMatPars(getFullMat(list(discrete_model_cd, discrete
 
 
 # parameters
-phy <- sim.bdtree(b = .4, d = .2, stop = "taxa", n = ntip) 
+phy <- sim.bdtree(b = .5, d = .25, stop = "taxa", n = 100) 
 phy <- drop.extinct(phy)
 phy$edge.length <- phy$edge.length/max(branching.times(phy))
 
@@ -149,7 +149,7 @@ rate <- .1
 ntip <- 100
 
 i <- 4
-plot_list <- list()
+plot_list <- plot_data_list <- list()
 for(i in 1:length(cd_model_structures)){
   focal_cont_model_structure <- cd_model_structures[[i]]
   model_name <- names(cd_model_structures)[i]
@@ -161,21 +161,36 @@ for(i in 1:length(cd_model_structures)){
   
   true_mapping_res <- hOUwie.fixed(list(houwie_data$simmap), houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, sample_nodes = TRUE, p = p)
   true_mapping_llik <- true_mapping_res$loglik
-  node_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = TRUE, p = p)
-  no_node_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = FALSE, p = p)
+  node_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = TRUE, adaptive_sampling = FALSE, p = p)
+  no_node_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = FALSE, adaptive_sampling = FALSE, p = p)
   node_adpt_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = TRUE, adaptive_sampling = TRUE, p = p)
-  no_node_adpt_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = FALSE, adaptive_sampling = TRUE, p = p)
-  
+  # no_node_adpt_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = FALSE, adaptive_sampling = TRUE, p = p)
   plot_data <- data.frame(
-    node_sampling = node_sampling_res$all_cont_liks + node_sampling_res$all_disc_liks, 
-    no_node_sampling = no_node_sampling_res$all_cont_liks + no_node_sampling_res$all_disc_liks,
-    node_adpt_sampling = node_adpt_sampling_res$all_cont_liks + node_adpt_sampling_res$all_disc_liks,
-    no_adpt_node_sampling = no_node_adpt_sampling_res$all_cont_liks + no_node_adpt_sampling_res$all_disc_liks)
+    cherry_conditional = node_sampling_res$all_cont_liks + node_sampling_res$all_disc_liks, 
+    discrete_only = no_node_sampling_res$all_cont_liks + no_node_sampling_res$all_disc_liks,
+    adaptive_sampling = node_adpt_sampling_res$all_cont_liks + node_adpt_sampling_res$all_disc_liks
+    )
+  
+  plot_data_list[[i]] <- rbind(
+    data.frame(type = "cherry_conditional",
+               disc = node_sampling_res$all_disc_liks,
+               cont = node_sampling_res$all_cont_liks,
+               joint = node_sampling_res$all_cont_liks + node_sampling_res$all_disc_liks),
+    data.frame(type = "discrete_only",
+               disc = no_node_sampling_res$all_disc_liks,
+               cont = no_node_sampling_res$all_cont_liks,
+               joint = no_node_sampling_res$all_cont_liks + no_node_sampling_res$all_disc_liks),
+    data.frame(type = "adaptive_sampling",
+               disc = node_adpt_sampling_res$all_disc_liks,
+               cont = node_adpt_sampling_res$all_cont_liks,
+               joint = node_adpt_sampling_res$all_cont_liks + node_adpt_sampling_res$all_disc_liks))
+    
   plot_data <- melt(plot_data)
   plot_data$variable <- as.factor(plot_data$variable)
   
   plot_list[[i]] <- ggplot(plot_data, aes(x=value, fill=variable)) +
-    geom_histogram(alpha=0.7, color="black") +
+    geom_histogram(alpha=0.66, color="black", position="identity") +
+    scale_fill_manual(values = c("#e41a1c", "#377eb8", "#4daf4a")) + 
     geom_vline(xintercept = true_mapping_llik, linetype="dashed") +
     theme_classic() +
     ggtitle(paste0(letters[i], ") ", model_name))
@@ -183,6 +198,22 @@ for(i in 1:length(cd_model_structures)){
 
 final_plot <- grid.arrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_list[[4]], plot_list[[5]], plot_list[[6]], plot_list[[7]], plot_list[[8]], plot_list[[9]], plot_list[[10]], nrow = 5)
 
+ggsave(final_plot, filename = "figures/raw/compare_simmap_generation.pdf", height = 10, width = 10, units = "in")
+
+
+plot_list_b <- list()
+for(i in 1:length(plot_data_list)){
+  model_name <- names(cd_model_structures)[i]
+  plot_list_b[[i]] <- ggplot(plot_data_list[[i]], aes(x=disc, y = cont, fill = type)) +
+    geom_point(size = 3, shape=21, alpha = 0.75, color = "black") +
+    scale_fill_manual(values = c("#e41a1c", "#377eb8", "#4daf4a")) + 
+    ggtitle(paste0(letters[i], ") ", model_name)) +
+    theme_classic()
+}
+
+final_plot_b <- grid.arrange(plot_list_b[[1]], plot_list_b[[2]], plot_list_b[[3]], plot_list_b[[4]], plot_list_b[[5]], plot_list_b[[6]], plot_list_b[[7]], plot_list_b[[8]], plot_list_b[[9]], plot_list_b[[10]], nrow = 5)
+
+ggsave(final_plot_b, filename = "figures/raw/compare_simmap_generation_points.pdf", height = 10, width = 10, units = "in")
 
 
 

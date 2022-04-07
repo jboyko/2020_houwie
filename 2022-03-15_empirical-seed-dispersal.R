@@ -1,3 +1,4 @@
+setwd("2020_houwie/")
 source("hOUwieNode.R")
 source("Utils.R")
 
@@ -11,6 +12,7 @@ require(phytools)
 require(expm)
 require(POUMM)
 require(geiger)
+require(data.table)
 
 # organize the data
 # dat <- read.csv("Ericaceae_niche.csv")
@@ -84,7 +86,7 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
     disc_model <- discrete_model_cid
     rate.cat <- 2
   }
-  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 100, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = FALSE, optimizer = "nlopt_ln", n_starts = 10, ncores = 10)
+  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 50, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 3, ncores = 3)
   model.name <- names(all_model_structures)[[index]]
   save(fit, file = paste0("empirical_fit/FitSD=", model.name, ".Rsave"))
   return(fit)
@@ -92,11 +94,17 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
 
 model_list <- list()
 for(i in 1:25){
-  model_list[[i]] <- singleRun(phy, dat, i, all_model_structures, discrete_model_cd, discrete_model_cid)
+  model_list[[i]] <- singleRun(phy, dat, 25, all_model_structures, discrete_model_cd, discrete_model_cid)
 }
 
-out <- lapply(1:24, function(x) singleRun(phy, dat, x, all_model_structures, discrete_model_cd, discrete_model_cid))
+out <- mclapply(1:25, function(x) singleRun(phy, dat, x, all_model_structures, discrete_model_cd, discrete_model_cid), mc.cores = 25)
 
+
+# load("empirical_fit/FitSD=CD_OUBM1.Rsave")
+# pars <- fit$p
+# 
+# 
+# refit <- hOUwie(phy, dat, 1, discrete_model = fit$discrete_model, continuous_model = fit$continuous_model, p = pars, nSim = 10, adaptive_sampling = FALSE)
 
 getModelTable(list("BM1" = fitBM1, "OU1" = fitOU1, "CDBMS" = fitBMS, "CDOUM" = fitOUM, "CIDBMS" = fitCIDBMS, "CIDOUM" = fitCIDOUM, "HYBOUM" = fitHYBOUM))
 

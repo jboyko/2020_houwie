@@ -28,17 +28,20 @@
 #'@param sample_tips a boolean which indicates whether the continuous values should inform the discrete tip values when initializing the stochastic mapping (default is TRUE)
 #'@param n_starts a numeric value specifying how many optimizations are to occur
 #'@param ncores a nunmeric value indicating how many cores are to be used, only useful if n_starts is greater than 2.
-hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=FALSE, nodes="internal", p=NULL, ip="fast", optimizer="nlopt_ln", opts=NULL, quiet=FALSE, sample_tips=FALSE, sample_nodes=TRUE, adaptive_sampling=FALSE, n_starts = 1, ncores = 1){
+hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_slice=NULL, nSim=1000, root.p="yang", dual = FALSE, collapse = TRUE, root.station=FALSE, get.root.theta=FALSE, mserr = "none", lb_discrete_model=NULL, ub_discrete_model=NULL, lb_continuous_model=NULL, ub_continuous_model=NULL, recon=FALSE, nodes="internal", p=NULL, ip="fast", optimizer="nlopt_ln", opts=NULL, quiet=FALSE, sample_tips=FALSE, sample_nodes=TRUE, adaptive_sampling=TRUE, n_starts = 1, ncores = 1){
   start_time <- Sys.time()
   # if the data has negative values, shift it right - we will shift it back later
+  negative_values <- FALSE
   if(mserr == "none"){
     if(any(data[,dim(data)[2]] < 0)){
-      cat("Negative values detected... adding 50 to the trait mean\n")
+      cat("Negative values detected... adding 50 to the trait mean for optimization purposes\n")
+      negative_values <- TRUE
       data[,dim(data)[2]] <- data[,dim(data)[2]] + 50
     }
   }else{
     if(any(data[,dim(data)[2]-1] < 0)){
-      cat("Negative values detected... adding 50 to the trait mean\n")
+      cat("Negative values detected... adding 50 to the trait mean for optimization purposes\n")
+      negative_values <- TRUE
       data[,dim(data)[2]-1] <- data[,dim(data)[2]-1] + 50
     }
   }
@@ -239,6 +242,15 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
       #              sample_tips=sample_tips, split.liks=FALSE)
       multi_out <- mclapply(multiple_starts, function(x) nloptr(x0=log(x), eval_f=hOUwie.dev, lb=lower, ub=upper, opts=opts, phy=phy, data=hOUwie.dat$data.ou, rate.cat=rate.cat, mserr=mserr,index.disc=index.disc, index.cont=index.cont, root.p=root.p,edge_liks_list=edge_liks_list, nSim=nSim, all.paths=all.paths, sample_tips=sample_tips, sample_nodes=sample_nodes, adaptive_sampling=adaptive_sampling, split.liks=FALSE, global_liks_mat=global_liks_mat), mc.cores = ncores)
       multi_logliks <- unlist(lapply(multi_out, function(x) x$objective))
+      if(any(-multi_logliks > 1e10)){
+        cat("\nIt appears that an optimization failed. Removing failed optimizations from final output.\n")
+        failed_optimizations <- which(-multi_logliks > 1e10)
+        multi_logliks <- multi_logliks[-failed_optimizations]
+        multi_out <- multi_out[-failed_optimizations]
+        if(length(multi_out) == 0){
+          return(NULL)
+        }
+      }
       search_summary <- c(best_loglik = -min(multi_logliks), mean_loglik = -log(mean(exp(multi_logliks))), sd_logliks = log(sd(exp(multi_logliks))))
       if(!quiet){
         cat("\nOptimization complete. Optimization summary:\n")
@@ -277,6 +289,15 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
   if(recon){
     houwie_recon <- hOUwieRecon(houwie_obj, nodes)
     houwie_obj$recon <- houwie_recon
+  }
+  if(negative_values){
+    if(mserr == "none"){
+      data[,dim(data)[2]] <- data[,dim(data)[2]] - 50
+      houwie_obj$solution.cont[3,] <- houwie_obj$solution.cont[3,] - 50
+    }else{
+      data[,dim(data)[2]-1] <- data[,dim(data)[2]-1] + 50
+      houwie_obj$solution.cont[3,] <- houwie_obj$solution.cont[3,] - 50
+    }
   }
   houwie_obj$all_disc_liks <- liks_houwie$llik_discrete
   houwie_obj$all_cont_liks <- liks_houwie$llik_continuous
