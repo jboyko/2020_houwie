@@ -40,7 +40,9 @@ summarizeFile <- function(focal_file){
   if(mean(cd_sim$bm1_fit$data[,3]) > 25){
     pars_cd[c(6,7)] <- pars_cd[c(6,7)] - 50
   }
-  cd_out <- c(k=model_table_cd$np[3], loglik=model_table_cd$lnLik[3], AICwt=model_table_cd$AICwt[3],best_model=model_table_cd$dAIC[3]==0, pars_cd)
+  AICwts <- model_table_cd$AICwt
+  names(AICwts) <- c("BM1", "OU1", "CD", "CID+")
+  cd_out <- c(k=model_table_cd$np[3], loglik=model_table_cd$lnLik[3], AICwt=AICwts, best_model=model_table_cd$dAIC[3]==0, pars_cd)
   
   # summarize character independent models
   cid_sim <- out$cid_out
@@ -50,7 +52,9 @@ summarizeFile <- function(focal_file){
   if(mean(cid_sim$bm1_fit$data[,3]) > 25){
     pars_cid[c(6,7)] <- pars_cid[c(6,7)] - 50
   }
-  cid_out <- c(k=model_table_cid$np[4], loglik=model_table_cid$lnLik[4], AICwt=model_table_cid$AICwt[4], best_model=model_table_cid$dAIC[4]==0, pars_cid)
+  AICwts <- model_table_cid$AICwt
+  names(AICwts) <- c("BM1", "OU1", "CD", "CID+")
+  cid_out <- c(k=model_table_cid$np[4], loglik=model_table_cid$lnLik[4], AICwt=AICwts, best_model=model_table_cid$dAIC[4]==0, pars_cid)
   
   return(list(cd_out=cd_out, cid_out=cid_out))
 }
@@ -134,54 +138,55 @@ reconstructCIDFits <- function(focal_file){
 # getModelAvgParams(houwie_res)
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
-# model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
-# 
-# ntips <- c(25, 100, 250)
-# nmaps <- c(25, 100, 250)
+model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
+
+ntips <- c(25, 100, 250)
+nmaps <- c(25, 100, 250)
 
 # model_type <- "OUA"
 # ntip <- 25
 # nmap <- 25
 #
 
-# bigger_table <- list()
-# count <- 1
-# for(k in 1:length(nmaps)){
-#   for(j in 1:length(ntips)){
-#     for(i in 1:length(model_types)){
-#       print(count)
-#       nmap <- nmaps[k]
-#       ntip <- ntips[j]
-#       model_type <- model_types[i]
-#       focal_files <- getFocalFiles(model_type, ntip, nmap)
-#       if(length(focal_files) == 0){
-#         next
-#       }
-#       list_of_errors <- lapply(focal_files, summarizeFile)
-#       cd_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cd_out"))
-#       cd_errors <- cbind(model_type = model_type, model_class="CD", nTip=ntip, nMap=nmap, as.data.frame(cd_errors))
-#       cid_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cid_out"))
-#       cid_errors <- cbind(model_type = model_type, model_class="CID", nTip=ntip, nMap=nmap, as.data.frame(cid_errors))
-#       big_table <- rbind(cd_errors, cid_errors)
-#       bigger_table[[count]] <- big_table
-#       count <- count + 1
-#     }
-#   }
-# }
+bigger_table <- list()
+count <- 1
+total_count <- length(model_types) * length(nmaps) * length(ntips)
+for(k in 1:length(nmaps)){
+  nmap <- nmaps[k]
+  for(j in 1:length(ntips)){
+    ntip <- ntips[j]
+    for(i in 1:length(model_types)){
+      model_type <- model_types[i]
+      focal_files <- getFocalFiles(model_type, ntip, nmap)
+      if(length(focal_files) == 0){
+        next
+      }
+      list_of_errors <- lapply(focal_files, summarizeFile)
+      cd_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cd_out"))
+      cd_errors <- cbind(model_type = model_type, model_class="CD", nTip=ntip, nMap=nmap, as.data.frame(cd_errors))
+      cid_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cid_out"))
+      cid_errors <- cbind(model_type = model_type, model_class="CID", nTip=ntip, nMap=nmap, as.data.frame(cid_errors))
+      big_table <- rbind(cd_errors, cid_errors)
+      bigger_table[[count]] <- big_table
+      cat("\r", round(count/total_count, 3) * 100, "% complete ...")
+      count <- count + 1
+    }
+  }
+}
 
-# biggest_table <- do.call(rbind, bigger_table)
-# rownames(biggest_table) <- NULL
+biggest_table <- do.call(rbind, bigger_table)
+rownames(biggest_table) <- NULL
 
 # start here
 
 load("biggest_table.Rsave")
+model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 biggest_table <- as.data.frame(biggest_table)
-biggest_table$model_type <- as.factor(biggest_table$model_type)
+biggest_table$model_type <- factor(biggest_table$model_type, model_types)
 biggest_table$model_class <- as.factor(biggest_table$model_class)
 biggest_table$nTip <- as.factor(biggest_table$nTip)
 biggest_table$nMap <- as.factor(biggest_table$nMap)
 
-model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 
 alpha <- c(3, 1.5)
 sigma.sq <- c(0.35, 1)
@@ -291,8 +296,20 @@ ggsave(filename = "figures/raw/model_error_rates.png", plot = final_plot, height
 #   coord_cartesian(ylim=c(-5,5))
 
 # table by model type and class
+error_table <- biggest_table
+# calculate RMSE
+error_table[,9:15] <- t(log10(t(biggest_table[,9:15])) - log10(pars))
+error_table <- error_table[,c(1:4,7,9:15)] # define what i want here (removing likelihood, AIC, etc.)
+start_col <- which(colnames(error_table) == "rate")
+end_col <- length(colnames(error_table))
+# what percent is removed from setting a threshold of error (misestimattions)
+round(length(which(apply(error_table[,c(start_col:end_col)], 1, function(x) any(x[!is.na(x)] > 500))))/nrow(error_table) * 100, 2) # percent removed
+error_table <- error_table[!apply(error_table[,c(start_col:end_col)], 1, function(x) any(x[!is.na(x)] > 500)),]
+
 rmse_table_type <-  aggregate(error_table[-c(1:4)], by=list(error_table$model_class, error_table$model_type), FUN=mean, na.rm=TRUE)
-rmse_table_type[,-c(1,2)] <- round(rmse_table_type[,-c(1,2)], 4)
+rmse_table_type[,-c(1,2)] <- round(rmse_table_type[,-c(1,2)], 2)
+colnames(rmse_table_type)[1:2] <- c("model_class", "model_type")
+write.csv(rmse_table_type, file = "error-table.csv", row.names = FALSE)
 
 # sign errors
 sign_error_table <- data.frame(model_type = biggest_table$model_type,

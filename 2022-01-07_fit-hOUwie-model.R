@@ -135,10 +135,15 @@ original_files <- dataset_files[1:5]
 original_files <- sapply(original_files, function(x) gsub("simulated_data/", "simulated_fit/", x))
 original_files <- sapply(original_files, function(x) gsub(".Rsave", paste0("_nmap=", nMap, ".Rsave"), x))
 load(original_files[5])
-lapply(out$cd_out, "[[", "AIC")
+lapply(out$cid_out, "[[", "AIC")
 
-try_new <- hOUwie(out$cd_out$cd_fit$phy, out$cd_out$cd_fit$data, 1, out$cd_out$cd_fit$discrete_model, out$cd_out$cd_fit$continuous_model, 1.1, 100, adaptive_sampling = TRUE)
+out$cid_out$cid_fit
 
+try_new <- hOUwie(out$cid_out$cid_fit$phy, out$cid_out$cid_fit$data, 2, out$cid_out$cid_fit$discrete_model, out$cid_out$cid_fit$continuous_model, 1.1, nSim = 25, adaptive_sampling = TRUE)
+
+try_2step <- hOUwie.twostep(out$cid_out$cid_fit$phy, out$cid_out$cid_fit$data, 2, out$cid_out$cid_fit$discrete_model, out$cid_out$cid_fit$continuous_model, 1.1, nSim = 25, adaptive_sampling = TRUE, ncores = 1)
+
+colMeans(do.call(rbind, lapply(try_2step[[2]], function(x) exp(x$solution))))
 
 
 lapply(to_compare_res[[5]]$cid_out, "[[", "AIC")

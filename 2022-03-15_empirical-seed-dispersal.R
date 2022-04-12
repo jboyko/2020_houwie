@@ -17,8 +17,9 @@ require(data.table)
 # organize the data
 # dat <- read.csv("Ericaceae_niche.csv")
 dat <- read.csv("empirical/Ericaceae_niche.csv")
-dat <- data.frame(sp = dat$species, reg = dat$Fruit_type, arid = dat$mean_aridity)
-dat <- dat[which(apply(dat, 1, function(x) !any(is.na(x)))),]
+dat <- data.frame(sp = dat$species, reg = dat$Fruit_type, arid = dat$mean_aridity, se = dat$se_aridity)
+dat$se[is.na(dat$se)] <- mean(dat$se, na.rm = TRUE)
+# dat <- dat[which(apply(dat, 1, function(x) !any(is.na(x)))),]
 
 # organize the phylgoeny
 # phy <- read.tree("Ericaceae_Schwery_etal_2015.tre")
@@ -48,7 +49,9 @@ for(i in 1:length(dat.prop)){
 legend("bottomleft", legend = c("Dry/ Abiotic","Fleshy/ Biotic"), pch=15, col = cols)
 # the 2 discrete models being evaluated
 discrete_model_cd <- getRateCatMat(2)
-discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), equateStateMatPars(getRateCatMat(2), c(1,2)))
+discrete_model_cid <- getFullMat(list(discrete_model_cd, discrete_model_cd), getRateCatMat(2))
+discrete_model_cid <- equateStateMatPars(discrete_model_cid, list(c(1,3), c(2,4)))
+
 
 # set up our continuous character models 
 # variable brownian motion models set up to be character dependent, independent, and a mix of both
@@ -86,27 +89,35 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
     disc_model <- discrete_model_cid
     rate.cat <- 2
   }
-  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 50, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 3, ncores = 3)
+  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 100, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 4, ncores = 2, mserr = "known")
   model.name <- names(all_model_structures)[[index]]
   save(fit, file = paste0("empirical_fit/FitSD=", model.name, ".Rsave"))
   return(fit)
 }
 
-model_list <- list()
-for(i in 1:25){
-  model_list[[i]] <- singleRun(phy, dat, 25, all_model_structures, discrete_model_cd, discrete_model_cid)
-}
+# model_list <- list()
+# for(i in 1:25){
+#   model_list[[i]] <- singleRun(phy, dat, 25, all_model_structures, discrete_model_cd, discrete_model_cid)
+# }
 
 out <- mclapply(1:25, function(x) singleRun(phy, dat, x, all_model_structures, discrete_model_cd, discrete_model_cid), mc.cores = 25)
-
+names(out) <- model_names
+getModelTable(out[unlist(lapply(out, class)) != "try-error"])
 
 # load("empirical_fit/FitSD=CD_OUBM1.Rsave")
 # pars <- fit$p
 # 
 # 
 # refit <- hOUwie(phy, dat, 1, discrete_model = fit$discrete_model, continuous_model = fit$continuous_model, p = pars, nSim = 10, adaptive_sampling = FALSE)
+files <- dir("empirical_fit/", full.names = TRUE)
+model_list <- list()
+for(i in 1:length(files)){
+  load(files[i])
+  model_list[[i]] <- fit
+}
+names(model_list) <- dir("empirical_fit/")
 
-getModelTable(list("BM1" = fitBM1, "OU1" = fitOU1, "CDBMS" = fitBMS, "CDOUM" = fitOUM, "CIDBMS" = fitCIDBMS, "CIDOUM" = fitCIDOUM, "HYBOUM" = fitHYBOUM))
+getModelTable(model_list)
 
 
 res
