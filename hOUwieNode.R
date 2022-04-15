@@ -128,7 +128,7 @@ hOUwie <- function(phy, data, rate.cat, discrete_model, continuous_model, time_s
     }
   }
   if(is.null(time_slice)){
-    time_slice <- Tmax/10
+    time_slice <- Tmax+1
   }
   
   # the number of parameters for each process
@@ -801,6 +801,9 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
     }
   }
   # get the condtional probabilities based on the discrete values
+  for(recon_index in 1:length(edge_liks_list)){
+    edge_liks_list[[recon_index]] <- edge_liks_list[[recon_index]] * edge_liks_list_init[[recon_index]]
+  }
   conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list)
   root_liks <- getRootLiks(conditional_probs, Q, root.p)
   if(is.null(root_liks)){
@@ -853,6 +856,9 @@ hOUwie.dev <- function(p, phy, data, rate.cat, mserr,
       current_ou_expectations <- getOUExpectations(best_mapping, Rate.mat, all.paths)
       # generate a new conditional probability based on the new expected values
       edge_liks_list <- getAdaptiveConditionals(phy, data, Rate.mat, Q, edge_liks_list_init, tip.paths, current_ou_expectations)
+      for(recon_index in 1:length(edge_liks_list)){
+        edge_liks_list[[recon_index]] <- edge_liks_list[[recon_index]] * edge_liks_list_init[[recon_index]]
+      }
       conditional_probs <- getConditionalInternodeLik(phy, Q, edge_liks_list)
       root_liks <- getRootLiks(conditional_probs, Q, root.p)
       # generate a new set of unique mappings based on the new conditional probabilities

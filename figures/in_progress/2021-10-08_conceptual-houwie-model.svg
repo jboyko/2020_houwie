@@ -26,9 +26,9 @@
      inkscape:pagecheckerboard="false"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.92347472"
-     inkscape:cx="551.72057"
-     inkscape:cy="376.29617"
+     inkscape:zoom="0.65299524"
+     inkscape:cx="590.35653"
+     inkscape:cy="239.66484"
      inkscape:window-width="1920"
      inkscape:window-height="961"
      inkscape:window-x="0"
@@ -2139,7 +2139,7 @@
    style="font-size:5.3905px;baseline-shift:sub;fill:#000000;fill-opacity:1;stroke:#ffffff;stroke-width:0.15;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
    id="tspan73718" /></tspan></text>
     <circle
-       style="fill:#ffffff;fill-opacity:1;stroke:#4575b4;stroke-width:4.112;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:4.112;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="circle73728"
        cx="-307.35031"
        cy="30.833796"
@@ -2158,7 +2158,7 @@
    style="font-size:65%;baseline-shift:sub;fill:#000000;fill-opacity:1;stroke:#fff1f1;stroke-width:0.2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
    id="tspan73730" /></tspan></text>
     <circle
-       style="fill:#ffffff;fill-opacity:1;stroke:#d73027;stroke-width:4.11199;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:4.11199;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="circle73738"
        cx="-370.15387"
        cy="30.833796"
@@ -2333,7 +2333,7 @@
    style="font-size:5.77246px;baseline-shift:sub;fill:#0e0e0d;fill-opacity:1;stroke:#ffffff;stroke-width:0.15;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
    id="tspan14801-8">A</tspan></tspan></text>
     <circle
-       style="fill:#ffffff;fill-opacity:1;stroke:#91bfdb;stroke-width:4.112;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-opacity:1;stroke:#999999;stroke-width:4.112;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="circle78808"
        cx="-307.55289"
        cy="172.24309"
@@ -2352,7 +2352,7 @@
    style="font-size:65%;baseline-shift:sub;fill:#000000;fill-opacity:1;stroke:#fff1f1;stroke-width:0.2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
    id="tspan78810" /></tspan></text>
     <circle
-       style="fill:#ffffff;fill-opacity:1;stroke:#fc8d59;stroke-width:4.11199;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-opacity:1;stroke:#999999;stroke-width:4.11199;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="circle78818"
        cx="-370.35645"
        cy="172.24309"
@@ -2405,7 +2405,7 @@
    style="font-size:4.73514px;baseline-shift:sub;fill:#0e0e0d;fill-opacity:1;stroke:#ffffff;stroke-width:0.1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
    id="tspan78838">1B,0B</tspan></tspan></text>
     <circle
-       style="fill:#ffffff;fill-opacity:1;stroke:#4575b4;stroke-width:4.112;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#000000;fill-opacity:0;stroke:#4d4d4d;stroke-width:4.112;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="circle78606"
        cx="-307.55289"
        cy="109.43952"
@@ -2424,7 +2424,7 @@
    style="font-size:65%;baseline-shift:sub;fill:#000000;fill-opacity:1;stroke:#fff1f1;stroke-width:0.2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
    id="tspan78608" /></tspan></text>
     <circle
-       style="fill:#ffffff;fill-opacity:1;stroke:#d73027;stroke-width:4.11199;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-opacity:1;stroke:#4d4d4d;stroke-width:4.11199;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="circle78616"
        cx="-370.35645"
        cy="109.43952"
@@ -3124,6 +3124,6 @@
          id="tspan106453"
          style="stroke-width:0.264583"
          x="-305.54706"
-         y="52.95499"></tspan></text>
+         y="52.95499" /></text>
   </g>
 </svg>
