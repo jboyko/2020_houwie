@@ -40,7 +40,9 @@ summarizeFile <- function(focal_file){
   if(mean(cd_sim$bm1_fit$data[,3]) > 25){
     pars_cd[c(6,7)] <- pars_cd[c(6,7)] - 50
   }
-  cd_out <- c(k=model_table_cd$np[3], loglik=model_table_cd$lnLik[3], AICwt=model_table_cd$AICwt[3],best_model=model_table_cd$dAIC[3]==0, pars_cd)
+  AICwts <- model_table_cd$AICwt
+  names(AICwts) <- c("BM1", "OU1", "CD", "CID+")
+  cd_out <- c(k=model_table_cd$np[3], loglik=model_table_cd$lnLik[3], AICwt=AICwts, best_model=model_table_cd$dAIC[3]==0, pars_cd)
   
   # summarize character independent models
   cid_sim <- out$cid_out
@@ -50,7 +52,9 @@ summarizeFile <- function(focal_file){
   if(mean(cid_sim$bm1_fit$data[,3]) > 25){
     pars_cid[c(6,7)] <- pars_cid[c(6,7)] - 50
   }
-  cid_out <- c(k=model_table_cid$np[4], loglik=model_table_cid$lnLik[4], AICwt=model_table_cid$AICwt[4], best_model=model_table_cid$dAIC[4]==0, pars_cid)
+  AICwts <- model_table_cid$AICwt
+  names(AICwts) <- c("BM1", "OU1", "CD", "CID+")
+  cid_out <- c(k=model_table_cid$np[4], loglik=model_table_cid$lnLik[4], AICwt=AICwts, best_model=model_table_cid$dAIC[4]==0, pars_cid)
   
   return(list(cd_out=cd_out, cid_out=cid_out))
 }
@@ -134,54 +138,55 @@ reconstructCIDFits <- function(focal_file){
 # getModelAvgParams(houwie_res)
 
 # for each model type i want to generate a dataset consistent with the CD and one consistent with CID+
-# model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
-# 
-# ntips <- c(25, 100, 250)
-# nmaps <- c(25, 100, 250)
+model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
+
+ntips <- c(25, 100, 250)
+nmaps <- c(25, 100, 250)
 
 # model_type <- "OUA"
 # ntip <- 25
 # nmap <- 25
 #
 
-# bigger_table <- list()
-# count <- 1
-# for(k in 1:length(nmaps)){
-#   for(j in 1:length(ntips)){
-#     for(i in 1:length(model_types)){
-#       print(count)
-#       nmap <- nmaps[k]
-#       ntip <- ntips[j]
-#       model_type <- model_types[i]
-#       focal_files <- getFocalFiles(model_type, ntip, nmap)
-#       if(length(focal_files) == 0){
-#         next
-#       }
-#       list_of_errors <- lapply(focal_files, summarizeFile)
-#       cd_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cd_out"))
-#       cd_errors <- cbind(model_type = model_type, model_class="CD", nTip=ntip, nMap=nmap, as.data.frame(cd_errors))
-#       cid_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cid_out"))
-#       cid_errors <- cbind(model_type = model_type, model_class="CID", nTip=ntip, nMap=nmap, as.data.frame(cid_errors))
-#       big_table <- rbind(cd_errors, cid_errors)
-#       bigger_table[[count]] <- big_table
-#       count <- count + 1
-#     }
-#   }
-# }
+bigger_table <- list()
+count <- 1
+total_count <- length(model_types) * length(nmaps) * length(ntips)
+for(k in 1:length(nmaps)){
+  nmap <- nmaps[k]
+  for(j in 1:length(ntips)){
+    ntip <- ntips[j]
+    for(i in 1:length(model_types)){
+      model_type <- model_types[i]
+      focal_files <- getFocalFiles(model_type, ntip, nmap)
+      if(length(focal_files) == 0){
+        next
+      }
+      list_of_errors <- lapply(focal_files, summarizeFile)
+      cd_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cd_out"))
+      cd_errors <- cbind(model_type = model_type, model_class="CD", nTip=ntip, nMap=nmap, as.data.frame(cd_errors))
+      cid_errors <- do.call(rbind, lapply(list_of_errors, "[[", "cid_out"))
+      cid_errors <- cbind(model_type = model_type, model_class="CID", nTip=ntip, nMap=nmap, as.data.frame(cid_errors))
+      big_table <- rbind(cd_errors, cid_errors)
+      bigger_table[[count]] <- big_table
+      cat("\r", round(count/total_count, 3) * 100, "% complete ...")
+      count <- count + 1
+    }
+  }
+}
 
-# biggest_table <- do.call(rbind, bigger_table)
-# rownames(biggest_table) <- NULL
+biggest_table <- do.call(rbind, bigger_table)
+rownames(biggest_table) <- NULL
 
 # start here
 
 load("biggest_table.Rsave")
+model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 biggest_table <- as.data.frame(biggest_table)
-biggest_table$model_type <- as.factor(biggest_table$model_type)
+biggest_table$model_type <- factor(biggest_table$model_type, model_types)
 biggest_table$model_class <- as.factor(biggest_table$model_class)
 biggest_table$nTip <- as.factor(biggest_table$nTip)
 biggest_table$nMap <- as.factor(biggest_table$nMap)
 
-model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
 
 alpha <- c(3, 1.5)
 sigma.sq <- c(0.35, 1)
@@ -200,9 +205,9 @@ for(i in 1:nrow(biggest_table)){
   start_col <- which(names(biggest_table[i,]) == "rate")
   end_col <- length(names(biggest_table[i,]))
   if(biggest_table[i, 2] == "CID"){
-    biggest_table[i, 10:11] <- sort(biggest_table[i, 10:11], na.last = TRUE)
-    biggest_table[i, 12:13] <- sort(biggest_table[i, 12:13])
-    biggest_table[i, 14:15] <- sort(biggest_table[i, 14:15], decreasing = TRUE)
+    biggest_table[i, 13:14] <- sort(biggest_table[i, 13:14], na.last = TRUE, decreasing = TRUE)
+    biggest_table[i, 15:16] <- sort(biggest_table[i, 15:16])
+    biggest_table[i, 17:18] <- sort(biggest_table[i, 17:18], decreasing = TRUE)
   }
   biggest_table[i, start_col:end_col] <- biggest_table[i, start_col:end_col] * focal_par_index
   if(biggest_table[i,6] > 1e10){
@@ -210,26 +215,14 @@ for(i in 1:nrow(biggest_table)){
   }
 }
 # remove failed optimizations
+length(which(apply(biggest_table, 1, function(x) all(is.na(x)))))/dim(biggest_table)[1]
 biggest_table <- biggest_table[!apply(biggest_table, 1, function(x) all(is.na(x))),]
 
 # working with an error table
 error_table <- biggest_table
 # calculate RMSE
-error_table[,9:15] <- t(log10(t(biggest_table[,9:15])) - log10(pars))
-error_table <- error_table[,c(1:4,9:15)] # define what i want here (removing likelihood, AIC, etc.)
-start_col <- which(colnames(error_table) == "rate")
-end_col <- length(colnames(error_table))
-# what percent is removed from setting a threshold of error (misestimattions)
-round(length(which(apply(error_table[,c(start_col:end_col)], 1, function(x) any(x[!is.na(x)] > 500))))/nrow(error_table) * 100, 2) # percent removed
-error_table <- error_table[!apply(error_table[,c(start_col:end_col)], 1, function(x) any(x[!is.na(x)] > 500)),]
-# aggregate the table into the broadest categories
-# rmse_table <-  aggregate(error_table[-c(1:4)], by=list(error_table$model_class, error_table$model_type, error_table$nTip, error_table$nMap), FUN=mean, na.rm=TRUE)
-# 
-# colnames(rmse_table)[1:4] <- c("model_class","model_type","nTip","nMap")
-# rmse_table[rmse_table$model_type == "OUMVA",]
-# rmse_table[rmse_table$model_type == "OUM",]
-# 
-# rmse_table
+error_table[,12:18] <- t((t((biggest_table[,12:18]))) - (pars))
+error_table <- error_table[,c(1:4,12:18)] # define what i want here (removing likelihood, AIC, etc.)
 
 ## plotting
 plot_table <- melt(error_table, id = c("model_class","model_type","nTip","nMap"))
@@ -246,41 +239,41 @@ a <- ggplot(plot_table, aes(x = variable, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) + 
   ggtitle("a) Model Type") + 
-  ylab("Log10 diff from sim pars") + 
+  ylab("Difference from generating parameters") + 
   facet_wrap(~model_class) +
   theme_classic() +
   geom_hline(yintercept = 0) +
-  coord_cartesian(ylim=c(-2,2))
+  coord_cartesian(ylim=c(-3,3))
 
 b <- ggplot(plot_table, aes(x = model_type, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) +
   ggtitle("a) Model Type") + 
-  ylab("Log10 diff from sim pars") + 
+  ylab("") + 
   facet_wrap(~model_class) +
   theme_classic() +
   geom_hline(yintercept = 0) +
-  coord_cartesian(ylim=c(-2,2))
+  coord_cartesian(ylim=c(-3,3))
 
 c <- ggplot(plot_table, aes(x = nTip, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) +
   ggtitle("b) Number of Taxa") + 
-  ylab("Log10 diff from sim pars") + 
+  ylab("Difference from generating parameters") + 
   facet_wrap(~model_class) +
   theme_classic() +
   geom_hline(yintercept = 0) +
-  coord_cartesian(ylim=c(-2,2))
+  coord_cartesian(ylim=c(-3,3))
 
 d <- ggplot(plot_table, aes(x = nMap, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
   scale_fill_manual(values = par_cols) +
   ggtitle("c) Number of maps per iteration") + 
-  ylab("Log10 diff from sim pars") + 
+  ylab("") + 
   facet_wrap(~model_class) +
   theme_classic() +
   geom_hline(yintercept = 0) +
-  coord_cartesian(ylim=c(-2,2))
+  coord_cartesian(ylim=c(-3,3))
 
 final_plot <- grid.arrange(b,c,d, nrow=3)
 ggsave(filename = "figures/raw/model_error_rates.png", plot = final_plot, height = 8, width = 12, units = "in")
@@ -290,144 +283,95 @@ ggsave(filename = "figures/raw/model_error_rates.png", plot = final_plot, height
 #   ylab("Raw diff from sim pars") + 
 #   coord_cartesian(ylim=c(-5,5))
 
-# table by model type and class
-rmse_table_type <-  aggregate(error_table[-c(1:4)], by=list(error_table$model_class, error_table$model_type), FUN=mean, na.rm=TRUE)
-rmse_table_type[,-c(1,2)] <- round(rmse_table_type[,-c(1,2)], 4)
+# PARAMATERS - RMSLE
+error_table <- biggest_table
+# calculate RMSE
+error_table[,12:18] <- sqrt(t(((t(biggest_table[,12:18]))) - (pars))^2)
+error_table <- error_table[,c(1:4,12:18)] # define what i want here (removing likelihood, AIC, etc.)
 
-# sign errors
-sign_error_table <- data.frame(model_type = biggest_table$model_type,
-                               model_class = biggest_table$model_class,
-                               nTip = biggest_table$nTip,
-                               nMap = biggest_table$nMap,
-                               alpha_error = abs(biggest_table$alpha_1 - biggest_table$alpha_2) - 1.5,
-                               sigma.sq_error = abs(biggest_table$sigma.sq_2 - biggest_table$sigma.sq_1) - 0.65,
-                               theta_error = abs(biggest_table$theta_1 - biggest_table$theta_2) - 1.25)
-
-sign_plot_table <- melt(sign_error_table, id = c("model_class","model_type","nTip","nMap"))
-# sign_error_table[,c(5,6,7)] <- abs(sign_error_table[,c(5,6,7)])
-# sign_error_table[,c(5,6,7)] <- sign_error_table[,c(5,6,7)] + abs(min(sign_error_table[,c(5,6,7)], na.rm = TRUE)) * 1.1
-# sign_plot_table <- sign_plot_table[!is.na(sign_plot_table$value),]
-# sign_plot_table$value <- factor(sign_plot_table$value, levels = c(FALSE, TRUE))
-
-# ggplot(data = sign_error_table, aes(x = alpha_error, y = sigma.sq_error))+
-#   geom_point() +
-#   theme_classic() +
-#   scale_x_continuous(trans = 'log10') +
-#   scale_y_continuous(trans = 'log10')
-sign_error_table_type <-  aggregate(sign_error_table[-c(1:4)], by=list(sign_error_table$model_class, sign_error_table$model_type), FUN=mean, na.rm=TRUE)
-sign_error_table_type[,-c(1,2)] <- round(sign_error_table_type[,-c(1,2)], 4)
+# by tip number
+aggregate(error_table[-c(1:4)], by=list(error_table$nTip, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by map number
+aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by model type
+aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by model class
+aggregate(error_table[-c(1:4)], by=list(error_table$model_class), FUN=mean, na.rm=TRUE)
 
 
+rmse_table <- aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_clas), FUN=mean, na.rm=TRUE)
+rmse_table[,-c(1,2)] <- round(rmse_table[,-c(1,2)], 2)
+colnames(rmse_table)[1:2] <- c("model_type", "model_class")
+write.csv(rmse_table, file = "tables/error-table.csv", row.names = FALSE)
 
-a <- ggplot(sign_plot_table, aes(x = model_type, y = value, fill = variable)) +
+# PARAMATERS - log errors
+error_table <- biggest_table
+# calculate RMSE
+error_table[,12:18] <- t((t((biggest_table[,12:18]))) - (pars))
+error_table <- error_table[,c(1:4,12:18)] # define what i want here (removing likelihood, AIC, etc.)
+start_col <- which(colnames(error_table) == "rate")
+end_col <- length(colnames(error_table))
+# what percent is removed from setting a threshold of error (misestimattions)
+# round(length(which(apply(error_table[,c(start_col:end_col)], 1, function(x) any(x[!is.na(x)] > 500))))/nrow(error_table) * 100, 2) # percent removed
+# error_table <- error_table[!apply(error_table[,c(start_col:end_col)], 1, function(x) any(x[!is.na(x)] > 500)),]
+
+# by tip number
+aggregate(error_table[-c(1:4)], by=list(error_table$nTip, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by map number
+aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by model type
+aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by model class
+aggregate(error_table[-c(1:4)], by=list(error_table$model_class), FUN=median, na.rm=TRUE)
+
+
+# MODEL COMPARISON
+error_table <- biggest_table
+# calculate RMSE
+error_table <- error_table[,c(1:4,7:11)] # define what i want here (removing likelihood, AIC, etc.)
+
+# by tip number
+aggregate(error_table[-c(1:4)], by=list(error_table$nTip, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by map number
+aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by model type
+aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
+# by model class
+aggregate(error_table[-c(1:4)], by=list(error_table$model_class), FUN=mean, na.rm=TRUE)
+
+model_table <- aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
+model_table[,-c(1,2)] <- round(model_table[,-c(1,2)], 2)
+colnames(model_table)[1:2] <- c("model_type", "model_class")
+write.csv(model_table, file = "tables/model-table.csv", row.names = FALSE)
+
+tip_table <- aggregate(error_table[-c(1:4)], by=list(error_table$nTip, error_table$model_class), FUN=mean, na.rm=TRUE)
+tip_table[,-c(1,2)] <- round(tip_table[,-c(1,2)], 2)
+colnames(tip_table)[1:2] <- c("model_type", "model_class")
+write.csv(tip_table, file = "tables/model-tip-table.csv", row.names = FALSE)
+
+
+## plotting
+error_table <- biggest_table
+# calculate RMSE
+error_table <- error_table[,c(1:4,7:10)] # define what i want here (removing likelihood, AIC, etc.)
+plot_table <- melt(error_table, id = c("model_class","model_type","nTip","nMap"))
+par_cols <- c("#6a3d9a", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c")
+## by model type
+# aggregate(error_table[-c(1:4)], by=list(error_table$model_type), FUN=median, na.rm=TRUE)
+# a <- ggplot(plot_table, aes(x = model_type, y = value, fill = variable)) +
+#   geom_boxplot(outlier.shape = NA) +
+#   scale_fill_manual(values = par_cols) + 
+#   ggtitle("a) Model Type") + 
+#   ylab("Log10 diff from sim pars") + 
+#   coord_cartesian(ylim=c(-2,2))
+
+model_weight_plot <- ggplot(plot_table, aes(x = variable, y = value, fill = variable)) +
   geom_boxplot(outlier.shape = NA) +
-  ggtitle("a) Model Type") + 
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5))
+  scale_fill_manual(values = par_cols) +
+  ylab("AICwt") + 
+  facet_wrap(~model_class + model_type) +
+  theme_classic() +
+  geom_hline(yintercept = 0) +
+  coord_cartesian(ylim=c(0,1))
 
-b <- ggplot(sign_plot_table, aes(x = model_class, y = value, fill = variable)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("b) Model Class") + 
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5))
-
-c <- ggplot(sign_plot_table, aes(x = nTip, y = value, fill = variable)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("c) Number of Taxa") +   
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5))
-
-d <- ggplot(sign_plot_table, aes(x = nMap, y = value, fill = variable)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("d) Number of maps per iteration") + 
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5))
-
-grid.arrange(a,b,c,d, nrow=2)
-
-
-load("biggest_table.Rsave")
-
-model_types <- c("BMV", "OUV", "OUA", "OUM", "OUVA", "OUMV", "OUMA", "OUMVA", "OUBM1", "OUBMV")
-s_vars <- c(NA, 
-  abs(diff(sigma.sq/(2*alpha[1]))), 
-  abs(diff(sigma.sq[1]/(2*alpha))),
-  NA,
-  abs(diff(sigma.sq/(2*alpha))), 
-  abs(diff(sigma.sq/(2*alpha[1]))),
-  abs(diff(sigma.sq[1]/(2*alpha))),
-  abs(diff(sigma.sq/(2*alpha))),
-  NA,
-  NA)
-names(s_vars) <- model_types
-
-v_1 <- biggest_table$sigma.sq_1/(2*biggest_table$alpha_1)
-v_2 <- biggest_table$sigma.sq_2/(2*biggest_table$alpha_2)
-
-s_var_table <- cbind(biggest_table[,1:4], abs(v_1 - v_2))
-colnames(s_var_table)[5] <- c("stat_var")
-s_var_table[,5] <- abs(s_var_table[,5])
-
-s_var_table <- s_var_table[!s_var_table$model_type =="BMV",]
-s_var_table <- s_var_table[!s_var_table$model_type =="OUM",]
-s_var_table <- s_var_table[!s_var_table$model_type =="OUBM1",]
-s_var_table <- s_var_table[!s_var_table$model_type =="OUBMV",]
-
-for(i in 1:length(model_types)){
-  s_var_table[s_var_table$model_type ==model_types[i],5] <- s_var_table[s_var_table$model_type ==model_types[i],5] - s_vars[i]
-}
-
-s_var_table$model_type <- as.factor(s_var_table$model_type)
-s_var_table$model_class <- as.factor(s_var_table$model_class)
-s_var_table$nTip <- as.factor(s_var_table$nTip)
-s_var_table$nMap <- as.factor(s_var_table$nMap)
-
-a <- ggplot(s_var_table, aes(x = model_type, y = stat_var)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("a) Model Type") + 
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5))
-
-b <- ggplot(s_var_table, aes(x = model_class, y = stat_var)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("b) Model Class") + 
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5))
-
-c <- ggplot(s_var_table, aes(x = nTip, y = stat_var)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("c) Number of Taxa") +   
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5)) +
-  facet_wrap(~model_class)
-
-d <- ggplot(s_var_table, aes(x = nMap, y = stat_var)) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("d) Number of maps per iteration") + 
-  scale_fill_brewer() + 
-  theme_classic() + 
-  geom_hline(yintercept = 0) + 
-  coord_cartesian(ylim=c(-5,5)) +
-  facet_wrap(~model_class)
-
-grid.arrange(a,b,c,d, nrow=2)
-
-
-
-
-
-
+ggsave(filename = "figures/raw/model_weight.png", plot = model_weight_plot, height = 8, width = 12, units = "in")
