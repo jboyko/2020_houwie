@@ -25,5 +25,13 @@ checks/ - a folder containing scripts which test some of the properties of the h
 
 doc/ - a folder containing various stages of the writing of the manuscript.
 
+empirical_fit/ - a folder containing all of the fit houwie models to the empirical dataset. unfortunately, the bootstrap result is too large to upload to GitHub, so contact me directly for that (jboyko [at] uark.edu). 
 
+old_code/ - various old code that is no longer needed for the manuscript.
+
+tables/ - tables that appear in the manuscript.
+
+lit-review-houwie.xlsx - an excel worksheet containing brief summaries of similar models 
+
+doc/Appendix_note-on-path-probabilities.pdf - a note describing the calculation differences between what is used in hOUwie and what is described by May and Moore (2020).
 
