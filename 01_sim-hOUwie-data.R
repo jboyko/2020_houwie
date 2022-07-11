@@ -153,13 +153,14 @@ for(i in 1:length(model_types)){
   mclapply(1:50, function(x) save_datasets(model_types[i], model_names, all_model_structures, x, ntips), mc.cores = 50)
 }
 
-focal_model_type <- "OUM"
-focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
-continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
-continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
-focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
-
-tmp <- hOUwie(phy = focal_dat$dat_cd$simmap, data = focal_dat$dat_cd$data, rate.cat = 1, "ER", "OUM", 1.1, 10, sample_nodes = TRUE, adaptive_sampling = TRUE)
+# testing 
+# focal_model_type <- "OUM"
+# focal_models <- sort(model_names[grep(paste0("_", focal_model_type, "$"), model_names)])
+# continuous_model_cd <- all_model_structures[names(all_model_structures) == focal_models[1]][[1]]
+# continuous_model_cid <- all_model_structures[names(all_model_structures) == focal_models[2]][[1]]
+# focal_dat <- generateDataset(nTip, continuous_model_cd, continuous_model_cid, discrete_model_cd, discrete_model_cid, alpha, sigma.sq, theta, rate, root.p)
+# 
+# tmp <- hOUwie(phy = focal_dat$dat_cd$simmap, data = focal_dat$dat_cd$data, rate.cat = 1, "ER", "OUM", 1.1, 10, sample_nodes = TRUE, adaptive_sampling = TRUE)
 
 # 
 # for(i in 1:length(model_types)){
