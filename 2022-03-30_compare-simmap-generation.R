@@ -1,5 +1,5 @@
 # imports and seed
-set.seed(1967)
+set.seed(1)
 setwd("~/2020_houwie/")
 source("hOUwieNode.R")
 
@@ -111,7 +111,6 @@ theta0 <- theta[1]
 rate <- .1
 ntip <- 100
 
-
 plot_list <- plot_data_list <- list()
 for(i in 1:length(cd_model_structures)){
   focal_cont_model_structure <- cd_model_structures[[i]]
@@ -124,8 +123,8 @@ for(i in 1:length(cd_model_structures)){
   
   true_mapping_res <- hOUwie.fixed(list(houwie_data$simmap), houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, sample_nodes = TRUE, p = p)
   true_mapping_llik <- true_mapping_res$loglik
-  no_node_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = FALSE, adaptive_sampling = FALSE, p = p)
-  node_adpt_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = TRUE, adaptive_sampling = TRUE, p = p)
+  no_node_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 50, sample_nodes = FALSE, adaptive_sampling = FALSE, p = p)
+  node_adpt_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 50, sample_nodes = FALSE, adaptive_sampling = TRUE, p = p)
   # no_node_adpt_sampling_res <- hOUwie(houwie_data$simmap, houwie_data$data, 2, discrete_model, focal_cont_model_structure, max(branching.times(houwie_data$simmap))+1, 100, sample_nodes = FALSE, adaptive_sampling = TRUE, p = p)
   plot_data <- data.frame(
     discrete_only = no_node_sampling_res$all_cont_liks + no_node_sampling_res$all_disc_liks,
@@ -152,7 +151,7 @@ for(i in 1:length(cd_model_structures)){
     theme_classic() +
     theme(legend.position = "none") +
     xlab("Joint probability") +
-    ggtitle(paste0(letters[i], ") ", model_name))
+    ggtitle(gsub("_", " ", paste0(letters[i], ") ", model_name)))
 }
 
 final_plot <- grid.arrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_list[[4]], plot_list[[5]], plot_list[[6]], plot_list[[7]], plot_list[[8]], plot_list[[9]], plot_list[[10]], nrow = 5)
@@ -160,10 +159,15 @@ final_plot <- grid.arrange(plot_list[[1]], plot_list[[2]], plot_list[[3]], plot_
 ggsave(final_plot, filename = "figures/raw/compare_simmap_generation.pdf", height = 10, width = 10, units = "in")
 
 model_names[1]
-avg_probs <- do.call(rbind, lapply(plot_data_list, function(x) aggregate(x[,-1], by=list(x$type), mean)))
+avg_probs <- do.call(rbind, lapply(plot_data_list, function(x) aggregate(x[,-1], by=list(x$type), OUwie:::sum_lliks)))
 avg_probs_per_map <- cbind(model_type = rep(model_names[grep("CID\\+", model_names)], each = 2), avg_probs)
 avg_probs_per_map[,-c(1,2)] <- round(avg_probs_per_map[,-c(1,2)], 2)
 colnames(avg_probs_per_map)[2] <- "sampling_procedure"
+model_info <- do.call(rbind, (strsplit(avg_probs_per_map[,1], "_")))
+avg_probs_per_map <- avg_probs_per_map[,-1]
+avg_probs_per_map <- cbind(model_info, avg_probs_per_map)
+colnames(avg_probs_per_map) <- c("Model class", "Model type", "Sampling procedure", "Discrete marginal probability", "Continuous marginal probability", "Joint probability")
+avg_probs_per_map[,3] <- gsub("_", " ", avg_probs_per_map[,3])
 write.csv(avg_probs_per_map, file = "tables/compare_map_generation.csv", row.names = FALSE)
 
 

@@ -89,18 +89,27 @@ singleRun <- function(phy, dat, index, all_model_structures, discrete_model_cd, 
     disc_model <- discrete_model_cid
     rate.cat <- 2
   }
-  fit <- hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 100, time_slice = max(branching.times(phy)) + 1, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 4, ncores = 2, mserr = "known")
   model.name <- names(all_model_structures)[[index]]
+  ip_file_name <- paste0("empirical_fit/old/FitSD=", model.name, ".Rsave")
+  load(ip_file_name)
+  fit <- OUwie:::hOUwie(phy = phy, data = dat, rate.cat = rate.cat, nSim = 100, discrete_model = disc_model, continuous_model = cont_model, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 50, ncores = 50, mserr = "known")
   save(fit, file = paste0("empirical_fit/FitSD=", model.name, ".Rsave"))
   return(fit)
 }
 
-# model_list <- list()
-# for(i in 1:25){
-#   model_list[[i]] <- singleRun(phy, dat, 25, all_model_structures, discrete_model_cd, discrete_model_cid)
-# }
+model_list <- list()
+for(i in 11:25){
+  print(names(all_model_structures)[i])
+  singleRun(phy, dat, i, all_model_structures, discrete_model_cd, discrete_model_cid)
+}
 
-out <- mclapply(1:25, function(x) singleRun(phy, dat, x, all_model_structures, discrete_model_cd, discrete_model_cid), mc.cores = 25)
+# custom_HYB_OUMVA <- all_model_structures$HYB_OUMVA
+# custom_HYB_OUMVA[3,] <- c(9,10,9,11)
+# discrete_model <- equateStateMatPars(discrete_model_cid, c(1,3))
+# fit <- hOUwie(phy = phy, data = dat, rate.cat = 2, nSim = 100, time_slice = max(branching.times(phy)) + 1, discrete_model = discrete_model, continuous_model = custom_HYB_OUMVA, recon = FALSE, sample_tips = FALSE, sample_nodes = TRUE, adaptive_sampling = TRUE, optimizer = "nlopt_ln", n_starts = 5, ncores = 5, mserr = "known")
+
+out <- mclapply(1:3, function(x) singleRun(phy, dat, x, all_model_structures[23:25]
+, discrete_model_cd, discrete_model_cid), mc.cores = 3)
 names(out) <- model_names
 getModelTable(out[unlist(lapply(out, class)) != "try-error"])
 

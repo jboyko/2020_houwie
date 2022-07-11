@@ -97,7 +97,7 @@ model_types <- c("BMV", "OUV", "OUM", "OUMV", "OUA", "OUVA", "OUMA", "OUMVA", "O
 # model_types <- c("OUM")
 
 # for each number of tips
-ntips <- c(100, 250)
+ntips <- c(25)
 # ntips <- c(100, 250)
 
 bm1_model <- all_model_structures[[1]]
@@ -113,7 +113,7 @@ for(j in 1:length(ntips)){
     nTip <- ntips[j]
     focal_dir <- paste0("simulated_data/", focal_model_type, "/", nTip)
     dataset_files <- dir(focal_dir, full.names = TRUE)
-    mclapply(dataset_files, function(x) singleRun(x, 250, continuous_model_cd, continuous_model_cid, n_starts = 1, n_cores = 1), mc.cores = 50)
+    mclapply(dataset_files, function(x) singleRun(x, 100, continuous_model_cd, continuous_model_cid, n_starts = 1, n_cores = 1), mc.cores = 50)
   }
 }
 

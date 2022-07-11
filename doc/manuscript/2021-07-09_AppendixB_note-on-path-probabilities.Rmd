@@ -2,7 +2,9 @@
 title: "Appendix B - Note about the incorrectness of discrete path calculations"
 author: "James D. Boyko"
 date: "09/07/2021"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ## Introduction

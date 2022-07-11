@@ -148,6 +148,24 @@ nmaps <- c(25, 100, 250)
 # nmap <- 25
 #
 
+# for evaluating the proportion of maps that contribute.
+focal_files <- getFocalFiles(model_types[1], 100, 100)
+getPropContribution <- function(focal_file){
+  load(focal_file)
+  cd_joint <- out$cd_out$cd_fit$all_disc_liks + out$cd_out$cd_fit$all_cont_liks
+  prop_map <- exp(cd_joint)/sum(exp(cd_joint))
+  return(prop_map)
+}
+
+thing <- list()
+for(i in 1:length(model_types)){
+  print(i)
+  focal_files <- getFocalFiles(model_types[i], 100, 100)
+  thing[[i]] <- do.call(rbind, lapply(focal_files, getPropContribution))
+}
+(colMeans(do.call(rbind, thing), na.rm=TRUE)[1:2])
+
+# total summary
 bigger_table <- list()
 count <- 1
 total_count <- length(model_types) * length(nmaps) * length(ntips)
@@ -187,7 +205,6 @@ biggest_table$model_class <- as.factor(biggest_table$model_class)
 biggest_table$nTip <- as.factor(biggest_table$nTip)
 biggest_table$nMap <- as.factor(biggest_table$nMap)
 
-
 alpha <- c(3, 1.5)
 sigma.sq <- c(0.35, 1)
 theta <- c(2, 0.75)
@@ -218,6 +235,8 @@ for(i in 1:nrow(biggest_table)){
 length(which(apply(biggest_table, 1, function(x) all(is.na(x)))))/dim(biggest_table)[1]
 biggest_table <- biggest_table[!apply(biggest_table, 1, function(x) all(is.na(x))),]
 
+summary(biggest_table)
+
 # working with an error table
 error_table <- biggest_table
 # calculate RMSE
@@ -226,6 +245,8 @@ error_table <- error_table[,c(1:4,12:18)] # define what i want here (removing li
 
 ## plotting
 plot_table <- melt(error_table, id = c("model_class","model_type","nTip","nMap"))
+plot_table$model_class <- as.character(plot_table$model_class)
+plot_table$model_class[plot_table$model_class == "CID"] <- "CID +"
 par_cols <- c("#6a3d9a", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c")
 ## by model type
 # aggregate(error_table[-c(1:4)], by=list(error_table$model_type), FUN=median, na.rm=TRUE)
@@ -250,6 +271,7 @@ b <- ggplot(plot_table, aes(x = model_type, y = value, fill = variable)) +
   scale_fill_manual(values = par_cols) +
   ggtitle("a) Model Type") + 
   ylab("") + 
+  xlab("Model type") + 
   facet_wrap(~model_class) +
   theme_classic() +
   geom_hline(yintercept = 0) +
@@ -276,7 +298,7 @@ d <- ggplot(plot_table, aes(x = nMap, y = value, fill = variable)) +
   coord_cartesian(ylim=c(-3,3))
 
 final_plot <- grid.arrange(b,c,d, nrow=3)
-ggsave(filename = "figures/raw/model_error_rates.png", plot = final_plot, height = 8, width = 12, units = "in")
+ggsave(filename = "figures/raw/model_error_rates.pdf", plot = final_plot, height = 10, width = 12, units = "in")
 
 # ggplot(plot_table, aes(x = variable, y = value)) +
 #   geom_boxplot() +
@@ -297,6 +319,8 @@ aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$model_clas
 aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
 # by model class
 aggregate(error_table[-c(1:4)], by=list(error_table$model_class), FUN=mean, na.rm=TRUE)
+# by tip and map
+aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$nTip), FUN=mean, na.rm=TRUE)
 
 
 rmse_table <- aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_clas), FUN=mean, na.rm=TRUE)
@@ -323,6 +347,8 @@ aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$model_clas
 aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
 # by model class
 aggregate(error_table[-c(1:4)], by=list(error_table$model_class), FUN=median, na.rm=TRUE)
+# by tip and map
+aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$nTip), FUN=mean, na.rm=TRUE)
 
 
 # MODEL COMPARISON
@@ -338,6 +364,8 @@ aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$model_clas
 aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
 # by model class
 aggregate(error_table[-c(1:4)], by=list(error_table$model_class), FUN=mean, na.rm=TRUE)
+# by tip and map
+aggregate(error_table[-c(1:4)], by=list(error_table$nMap, error_table$nTip), FUN=mean, na.rm=TRUE)
 
 model_table <- aggregate(error_table[-c(1:4)], by=list(error_table$model_type, error_table$model_class), FUN=mean, na.rm=TRUE)
 model_table[,-c(1,2)] <- round(model_table[,-c(1,2)], 2)
@@ -355,6 +383,8 @@ error_table <- biggest_table
 # calculate RMSE
 error_table <- error_table[,c(1:4,7:10)] # define what i want here (removing likelihood, AIC, etc.)
 plot_table <- melt(error_table, id = c("model_class","model_type","nTip","nMap"))
+plot_table$model_class <- as.character(plot_table$model_class)
+plot_table$model_class[plot_table$model_class == "CID"] <- "CID +"
 par_cols <- c("#6a3d9a", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c")
 ## by model type
 # aggregate(error_table[-c(1:4)], by=list(error_table$model_type), FUN=median, na.rm=TRUE)
@@ -374,4 +404,4 @@ model_weight_plot <- ggplot(plot_table, aes(x = variable, y = value, fill = vari
   geom_hline(yintercept = 0) +
   coord_cartesian(ylim=c(0,1))
 
-ggsave(filename = "figures/raw/model_weight.png", plot = model_weight_plot, height = 8, width = 12, units = "in")
+ggsave(filename = "figures/raw/model_weight.pdf", plot = model_weight_plot, height = 8, width = 12, units = "in")
