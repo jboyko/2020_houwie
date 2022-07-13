@@ -1,10 +1,10 @@
 ---
-title: "Appendix B - Note about the incorrectness of discrete path calculations"
-author: "James D. Boyko"
+title: "Note about the probability of discrete path calculations"
+author: ""
 date: "09/07/2021"
 output:
-  word_document: default
   pdf_document: default
+  word_document: default
 ---
 
 ## Introduction
